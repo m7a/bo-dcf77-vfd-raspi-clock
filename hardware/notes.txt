@@ -1,0 +1,8 @@
+Arduino Nano V3
+ * D2--D12 Digitalausgänge
+   davon 3,5,6,9,10,11 PWM-fähig?
+ * A0--A7 können als analoge Inputs verwendet werden
+   dabei 2 und 3 mit Interruptfähigkeit.
+ * VIN kann locker mit 12V betrieben werden
+   (auch unreguliert) bei 5V stehen dann regulierte 5V
+   bereit (Wandler: LM1117IMPX-5.0 der bis zu 800mA macht?)

@@ -1,0 +1,13 @@
+Numbers are LE / BCD
+
+in 10ms: C funktion `time()`
+
+Erfolgreiche Übertragung: (Data + Parity) % 2 = 0
+
+03.01.2016 21:09:43 /
+01010101001011100010110010000100001011000011110000011010001_
+0WARN---------|  ZZ 1MIN---| HOUR-| DAY--|DO|MON-|YEAR---|
+                     EEEEZZZ EEEEZZ EEEEZZ   EEEEZEEEEZZZZ
+                 CET    9  0    1 2    3 0Son   1 6   1
+
+=> Son 03.01.[20]16 21:09:00

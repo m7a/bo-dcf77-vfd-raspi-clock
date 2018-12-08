@@ -1,0 +1,61 @@
+Uhr Teile CSEL
+ * 2x Arduino Nano V3 / 2x8.99€
+   Reichelt: ARD NANO V3
+   5V
+ * 1x DCF77 MODUL / 1x12.99€
+   Conrad: https://www.conrad.de/de/dcf-empfaenger-modul-641138-passend-fuer-serie-c-control-641138.html
+   2.5V bis 15V
+ * 1x OLED / 1x 29.95€
+   (nur) Conrad https://www.conrad.de/de/oled-display-gelb-schwarz-b-x-h-x-t-93-x-70-x-91-mm-vgy12864z-s003-180852.html
+   Fläche: 61.41x30.69
+   1x5V, 250 mW / 25 mA
+
+TBD-Teile
+ * 3x Taster
+ * 2x Spannungsversorgung? 1x 12V 1x 5V --> was können die Module
+ * 2x Eurosteckereingang mit Schraubklemmen (falls möglich)
+ * 2x Gehäuse Plastik
+ * Plastiktrennscheiben
+ * 1x Lichtsensor-Clip
+ * Anschlüsse für die Stifte am Arduino?
+ * Inverter-Array oder ähnlich für VFD-Ansteuerung
+   (CHCK existierende Chips und exakte Belegung VFD)
+ * VFD-Ansteuerung: AC Generator, 12V -> 5V
+   eventuell besser 5V -> 12V da viel am 5V hängt incl. Heizung und
+   12V nur als Hochspannung verwendet.
+ * 1x Summer
+
+3x (2.20€ (Chip) + 0.70€ (Clocksource) + 0.30€ (Kondensatoren) +
+4x0.22€ (Shiftreg) + 5x0.10€ (Fassung) ) + 1x12.90€ (Grundmodul) = 26.64€
+vs. 3x 10€ = 30€ (?)
+
+Bewegt sich zwischen 18€--40€
+
+DIGISPARK MINI (6.99€ 6x I/O)
+ARD NANO V3 8.99€
+ARD UNO DIP VEM 12.90€ (12x I/O)
+Reichelt ungefähr 0.1€/Fassung
+ARD ATMEGA 328 4.50€
+ATMEGA 328P-PU 2.20€
+MCP 23017-E/SP 1.10€ (aber kompliziert SPI, https://www.reichelt.de/ICs-MCP-1-2-/MCP-23017-E-SP/3/index.html?ACTION=3&LA=517&ARTICLE=140074&GROUPID=5471&trstct=lsbght_sldr::90047 / kein Shift register in dem Sinne)
+MCP 23S17-E/SP 1.40€ (aber kompliziert I²C)
+74HC 164 0.22€; teurer aber 16 bit: https://www.conrad.de/de/schnittstellen-ic-e-a-erweiterungen-microchip-technology-mcp23s17-esp-por-spi-10-mhz-spdip-28-651444.html?WT.mc_id=google_pla&WT.srch=1&ef_id=WzNGvgAABDiaM1za:20180627081142:s&gclid=EAIaIQobChMIh8WGy7Lz2wIVyMqyCh1nCQtSEAYYAyABEgJg6fD_BwE&hk=SEM&insert_kz=VQ&s_kwcid=AL!222!3!254339639432!!!g!!
+22x digital + 8x analog: https://www.conrad.de/de/joy-it-board-arduino-nano-v3-atmega328-passend-fuer-arduino-boards-arduino-1678142.html
+Reichelt jeweils ungefähr 6€
+Netzteil 12V 8.49€ https://www.conrad.de/de/acdc-printnetzteil-h-tronic-sp-12-401-a-12-vdc-04-a-48-w-1207808.html
+Netzteil 5V 8.69€ https://www.conrad.de/de/acdc-printnetzteil-mean-well-irm-05-5-5-vdc-1-a-5-w-1293888.html
+
+Reichelt DCF77 Modul -> 13.80€
+https://www.conrad.de/de/dcf-empfaenger-modul-641138-passend-fuer-serie-c-control-641138.html -> 12.99€
+
+NUCLEO F030R8
+
+VFD
+ * LCD-128X64BK AA
+   Fläche 57.48x28.68
+   U = 5V
+   https://www.reichelt.de/vfd-grafikdisplay-128x64-pixel-sw-ws-m-bel-lcd-128x64bk-aa-p197556.html?&trstct=pos_0&SID=95XAWcm6wQAT4AAGQpmvc003cf718cdbcfbaff5373ed6cb813e25
+ 
+Steckverbinder nur beim Conrad?
+ * 0.28€ https://www.conrad.de/de/tru-components-pfosten-steckverbinder-rastermass-254-mm-polzahl-gesamt-20-anzahl-reihen-2-1-st-1560781.html
+ * 1.86€ https://www.conrad.de/de/te-connectivity-buchsenleiste-rastermass-254-mm-polzahl-gesamt-20-anzahl-reihen-2-1-st-1461121.html
