@@ -17,10 +17,29 @@
 #define PIN_CONTROL_DATA_INV PORTB0
 #define PIN_SS               PORTB2
 
+static void write(char is_ctrl, char value)
+{
+	PORTB = (PORTB & ~_BV(PIN_CONTROL_DATA_INV)) |
+					(is_ctrl << PIN_CONTROL_DATA_INV);
+
+	PORTB &= ~_BV(PIN_SS);
+
+	SPDR = value;
+	while(!(SPSR & _BV(SPIF)))
+		;
+
+	PORTB |= _BV(PIN_SS);
+	_delay_us(1);
+
+	if(is_ctrl && value == GP9002_CLEARSCREEN)
+		_delay_us(270);
+}
+
 int main()
 {
 	int i;
 	int n;
+	int j;
 	char ctrl_data[][2] = {
 
 		/* set display mode */
@@ -29,19 +48,16 @@ int main()
 
 		/* set weak brightness */
 		{ 1, GP9002_BRIGHT },
-		{ 0, 0x24 }, /* 40% */
+		{ 0, 0x2a }, /* 40% */
 
 		{ 1, GP9002_CLEARSCREEN },
 
 		{ 1, GP9002_DISPLAY1ON },
 
-		{ 1, GP9002_ADDRL },
-		{ 0, 0x00 },
-		{ 1, GP9002_ADDRH },
-		{ 0, 0x00 },
-
-		{ 1, GP9002_DATAWRITE },
-		{ 0, 0xff },
+		{ 1, GP9002_DRAWCHAR },
+		{ 0, 'A' },
+		{ 0, 'B' },
+		{ 0, 'C' },
 
 	};
 
@@ -67,27 +83,24 @@ int main()
 	PORTB |= _BV(PIN_SS);
 
 	n = sizeof(ctrl_data) / (2 * sizeof(char));
-	for(i = 0; i < n; i++) {
-		PORTB = (PORTB & ~_BV(PIN_CONTROL_DATA_INV)) |
-				(ctrl_data[i][0] << PIN_CONTROL_DATA_INV);
+	for(i = 0; i < n; i++)
+		write(ctrl_data[i][0], ctrl_data[i][1]);
+	
+	while(1) {
+		for(j = 0; j < 58; j += 7) {
+			for(i = 0; i < 120; i++) {
+				write(1, GP9002_CLEARSCREEN); /* ... very radical... */
+				write(1, GP9002_CHARRAM);
+				write(0, i);
+				write(0, 0);
+				write(0, j);
+				write(1, GP9002_DRAWCHAR);
+				write(0, 'X');
 
-		PORTB &= ~_BV(PIN_SS);
-
-		SPDR = ctrl_data[i][1];
-		while(!(SPSR & _BV(SPIF)))
-			;
-
-		PORTB |= _BV(PIN_SS);
-		_delay_us(270);
-
-/*
-		if(ctrl_data[i][0] && ctrl_data[i][1] == GP9002_CLEARSCREEN)
-			_delay_us(270);
-*/
+				_delay_ms(10);
+			}
+		}
 	}
-
-	while(1)
-		;
 
 	return 0;
 }
