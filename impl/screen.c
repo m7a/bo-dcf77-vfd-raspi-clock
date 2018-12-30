@@ -1,0 +1,170 @@
+#include <string.h>
+
+#include "input.h"
+#include "screen.h"
+
+static const char*[4] VERSION_INFO = {
+/*       123456789ABCDEFGHIJKLMNOP */
+	"Ma_Sys.ma VFD Clock v.",
+	"1.0.0, (c)2018 Ma_Sys.ma.",
+	"For further info send an"
+	"email to Ma_Sys.ma@web.de",
+/*       123456789ABCDEFGHIJKLMNOP */
+}
+
+void screen_init(struct screen* screen, struct vfd_gp9002_ctx* vfd)
+{
+	memset(screen, 0, sizeof(struct screen));
+
+	screen->vfd          = vfd;
+	screen->cur          = SCREEN_INITIAL;
+	screen->displayed    = VFD_GP9002_VSCREEN_0;
+	screen->next         = VFD_GP9002_VSCREEN_1;
+
+	strcat(screen->time, "HH:ii:ss");
+	screen->time_len = strlen(screen->time);
+	strcat(screen->date, "DD.MM.YYYY");
+	screen->date_len = strlen(screen->date);
+
+	strcat(screen->alarm, "AH:AM");
+	screen->alarm_len = strlen(screen->alarm);
+
+	draw_init(screen);
+	screen->enable_clear = 1;
+}
+
+static void draw_init(struct screen* screen)
+{
+	char y;
+	if(screen->cur == SCREEN_INITIAL)
+		for(y = 0; y < siezof(VERSION_INFO); y++)
+			vfd_gp9002_draw_string(
+				screen->ctx, screen->next,
+				VFD_GP9002_FONT_NORMAL, y * 8, 0,
+				screen->enable_clear, strlen(VERSION_INFO[i]),
+				VERSION_INFO[i]
+			);
+}
+
+void screen_set_time(struct screen* screen, char* time, size_t time_len)
+{
+	if(time_len > SCREEN_TIME_LEN) {
+		memset(screen->time, 'T', SCREEN_TIME_LEN);
+		screen->time_len = SCREEN_TIME_LEN;
+	} else {
+		memcpy(screen->time, time, time_len);
+		screen->time_len = time_len;
+	}
+	draw_time(screen);
+}
+
+static void draw_time(struct screen* screen)
+{
+	switch(screen->cur) {
+	case SCREEN_DATETIME:
+	case SCREEN_DATETIME_ALARM:
+		vfd_gp9002_draw_string(
+			screen->vfd, screen->next,
+			VFD_GP9002_FONT_TRIPLEW_QUADH, 8,
+			/* center */
+			128 - (screen->time_len * 3 * 5 / 2),
+			screen->enable_clear, screen->time_len, screen->time
+		);
+		break;
+	case SCREEN_STATUS:
+		vfd_gp9002_draw_string(
+			screen->vfd, screen->next, VFD_GP9002_FONT_NORMAL, 0, 0,
+			screen->enable_clear, screen->time_len, screen->time
+		);
+		break;
+	}
+}
+
+void screen_set_date(struct screen* screen, char* date, size_t date_len)
+{
+	if(date_len > SCREEN_DATE_LEN) {
+		memset(screen->date, 'D', SCREEN_DATE_LEN);
+		screen->date_len = SCREEN_DATE_LEN;
+	} else {
+		memcpy(screen->date, date, date_len);
+		screen->date_len = date_len;
+	}
+	draw_date(screen);
+}
+
+static void draw_date(struct screen* screen)
+{
+	switch(screen->cur) {
+	case SCREEN_DATETIME:
+	case SCREEN_DATETIME_ALARM:
+		vfd_gp9002_draw_string(
+			screen->vfd, screen->next, VFD_GP9002_FONT_NORMAL, 40,
+			/* center */
+			128 - (screen->date_len * 5 / 2), screen->enable_clear,
+			screen->date_len, screen->date
+		);
+		break;
+	case SCREEN_STATUS:
+		vfd_gp9002_draw_string(
+			screen->vfd, screen->next,
+			VFD_GP9002_FONT_NORMAL, (SCREEN_TIME_LEN + 1) * 5, 0,
+			screen->enable_clear, screen->date_len, screen->date
+		);
+		break;
+	}
+}
+
+void screen_set_measurements(struct screen* screen,
+		unsigned char mode, unsigned char btn, unsigned char sensor)
+{
+	screen->mode   = mode;
+	screen->btn    = btn;
+	screen->sensor = sensor;
+
+	draw_measurements();
+}
+
+static void draw_measurements(struct screen* screen)
+{
+	char n;
+	char meas_display[9];
+
+	if(screen->cur == SCREEN_STATUS) {
+		/*                      || , || , || 0 => 9 */
+		n = sprintf(meas_display, "%02x,%02x,%02x", screen->mode,
+						screen->btn, screen->sensor);
+		vfd_gp9002_draw_string(
+			screen->vfd, screen->next, VFD_GP9002_FONT_NORMAL,
+			(SCREEN_DATE_LEN + SCREEN_TIME_LEN + 1) * 5, 0,
+			screen->enable_clear, n, meas_display
+		);
+	}
+}
+
+void screen_update(struct screen* screen)
+{
+	enum vfd_gp9002_screen tmp;
+
+	/* display */
+	vfd_show_vscreen(screen->vfd, screen->next);
+
+	/* exchange */
+	tmp = screen->displayed;
+	screen->displayed = next;
+	screen->next = tmp;
+}
+
+void screen_display(struct screen* screen, enum screen_id id)
+{
+	screen->cur = id;
+	vfd_clear(screen->vfd, screen->next);
+	screen->enable_clear = 0;
+	draw_time(screen);
+	draw_date(screen);
+	draw_measurements(screen);
+	screen->enable_clear = 1;
+	screen_update(screen);
+
+	/* provide an empty space for the next picture */
+	vfd_clear(screen->vfd, screen->next);
+}
