@@ -1,18 +1,25 @@
+#include <stdio.h>
 #include <string.h>
 
+#include "vfd_gp9002.h"
 #include "input.h"
 #include "screen.h"
 
-static const char*[4] VERSION_INFO = {
+static void draw_init(struct screen* screen);
+static void draw_time(struct screen* screen);
+static void draw_date(struct screen* screen);
+static void draw_measurements(struct screen* screen);
+
+static const char* VERSION_INFO[] = {
 /*       123456789ABCDEFGHIJKLMNOP */
 	"Ma_Sys.ma VFD Clock v.",
 	"1.0.0, (c)2018 Ma_Sys.ma.",
 	"For further info send an"
 	"email to Ma_Sys.ma@web.de",
 /*       123456789ABCDEFGHIJKLMNOP */
-}
+};
 
-void screen_init(struct screen* screen, struct vfd_gp9002_ctx* vfd)
+void screen_init(struct screen* screen, struct vfd_gp9002* vfd)
 {
 	memset(screen, 0, sizeof(struct screen));
 
@@ -35,18 +42,18 @@ void screen_init(struct screen* screen, struct vfd_gp9002_ctx* vfd)
 
 static void draw_init(struct screen* screen)
 {
-	char y;
+	unsigned char y;
 	if(screen->cur == SCREEN_INITIAL)
-		for(y = 0; y < siezof(VERSION_INFO); y++)
+		for(y = 0; y < (sizeof(VERSION_INFO) / sizeof(char*)); y++)
 			vfd_gp9002_draw_string(
-				screen->ctx, screen->next,
+				screen->vfd, screen->next,
 				VFD_GP9002_FONT_NORMAL, y * 8, 0,
-				screen->enable_clear, strlen(VERSION_INFO[i]),
-				VERSION_INFO[i]
+				screen->enable_clear, strlen(VERSION_INFO[y]),
+				VERSION_INFO[y]
 			);
 }
 
-void screen_set_time(struct screen* screen, char* time, size_t time_len)
+void screen_set_time(struct screen* screen, char* time, unsigned char time_len)
 {
 	if(time_len > SCREEN_TIME_LEN) {
 		memset(screen->time, 'T', SCREEN_TIME_LEN);
@@ -77,10 +84,13 @@ static void draw_time(struct screen* screen)
 			screen->enable_clear, screen->time_len, screen->time
 		);
 		break;
+	case SCREEN_INITIAL:
+		/* ignore others */
+		break;
 	}
 }
 
-void screen_set_date(struct screen* screen, char* date, size_t date_len)
+void screen_set_date(struct screen* screen, char* date, unsigned char date_len)
 {
 	if(date_len > SCREEN_DATE_LEN) {
 		memset(screen->date, 'D', SCREEN_DATE_LEN);
@@ -111,28 +121,35 @@ static void draw_date(struct screen* screen)
 			screen->enable_clear, screen->date_len, screen->date
 		);
 		break;
+	case SCREEN_INITIAL:
+		/* ignore others */
+		break;
 	}
 }
 
 void screen_set_measurements(struct screen* screen,
-		unsigned char mode, unsigned char btn, unsigned char sensor)
+		unsigned char mode, unsigned char btn, unsigned char sensor,
+		char mode_decoded, char btn_decoded)
 {
-	screen->mode   = mode;
-	screen->btn    = btn;
-	screen->sensor = sensor;
+	screen->mode         = mode;
+	screen->mode_decoded = mode;
+	screen->btn          = btn;
+	screen->btn_decoded  = btn_decoded;
+	screen->sensor       = sensor;
 
-	draw_measurements();
+	draw_measurements(screen);
 }
 
 static void draw_measurements(struct screen* screen)
 {
 	char n;
-	char meas_display[9];
+	char meas_display[14];
 
 	if(screen->cur == SCREEN_STATUS) {
-		/*                      || , || , || 0 => 9 */
-		n = sprintf(meas_display, "%02x,%02x,%02x", screen->mode,
-						screen->btn, screen->sensor);
+		/* 3*00 + RMB + ,, + 2*0 + NUL = 14 */
+		n = sprintf(meas_display, "R%02x,%02x,%02xM%dB%d", screen->mode,
+				screen->btn, screen->sensor,
+				screen->mode_decoded, screen->btn_decoded);
 		vfd_gp9002_draw_string(
 			screen->vfd, screen->next, VFD_GP9002_FONT_NORMAL,
 			(SCREEN_DATE_LEN + SCREEN_TIME_LEN + 1) * 5, 0,
@@ -143,14 +160,14 @@ static void draw_measurements(struct screen* screen)
 
 void screen_update(struct screen* screen)
 {
-	enum vfd_gp9002_screen tmp;
+	enum vfd_gp9002_vscreen tmp;
 
 	/* display */
 	vfd_show_vscreen(screen->vfd, screen->next);
 
 	/* exchange */
 	tmp = screen->displayed;
-	screen->displayed = next;
+	screen->displayed = screen->next;
 	screen->next = tmp;
 }
 

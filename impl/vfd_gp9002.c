@@ -48,8 +48,6 @@ void vfd_gp9002_init(struct vfd_gp9002* ctx,
 					enum vfd_gp9002_brightness brightness)
 {
 	unsigned char i;
-	unsigned char n;
-
 	unsigned char initialization_sequence[][2] = {
 
 		/* mode / initialization */
@@ -89,11 +87,12 @@ void vfd_gp9002_init(struct vfd_gp9002* ctx,
 	/* chose /128 instead of /64 for frequency by unsetting SPI2X bit */
 	SPSR &= ~_BV(SPI2X);
 
-	PORTB |= _BV(PIN_SS);
+	PORTB |= _BV(VFD_GP9002_PIN_SS);
 
-	n = sizeof(ctrl_data) / (2 * sizeof(char));
-	for(i = 0; i < n; i++)
-		write(ctrl_data[i][0], ctrl_data[i][1]);
+	for(i = 0; i < (sizeof(initialization_sequence) / (2 * sizeof(char)));
+									i++)
+		write(initialization_sequence[i][0],
+						initialization_sequence[i][1]);
 
 	ctx->lastfont = VFD_GP9002_FONT_NORMAL;
 }
@@ -103,13 +102,13 @@ static void write(char is_ctrl, char value)
 	PORTB = (PORTB & ~_BV(VFD_GP9002_PIN_CONTROL_DATA_INV)) |
 				(is_ctrl << VFD_GP9002_PIN_CONTROL_DATA_INV);
 
-	PORTB &= ~_BV(PIN_SS);
+	PORTB &= ~_BV(VFD_GP9002_PIN_SS);
 
 	SPDR = value;
 	while(!(SPSR & _BV(SPIF)))
 		;
 
-	PORTB |= _BV(PIN_SS);
+	PORTB |= _BV(VFD_GP9002_PIN_SS);
 	_delay_us(1);
 
 	if(is_ctrl && value == GP9002_CLEARSCREEN)
@@ -118,7 +117,7 @@ static void write(char is_ctrl, char value)
 
 void vfd_gp9002_draw_string(struct vfd_gp9002* ctx,
 		enum vfd_gp9002_vscreen vscreen, enum vfd_gp9002_font font,
-		int y, int x, char clear, size_t len, char* string)
+		int y, int x, char clear, unsigned char len, const char* string)
 {
 	char fontw_raw;
 	char fonth_raw;
@@ -126,9 +125,6 @@ void vfd_gp9002_draw_string(struct vfd_gp9002* ctx,
 	int  stringh;
 
 	unsigned char clear_x;
-	unsigned char clear_y;
-	unsigned clear_addr;
-
 	unsigned spos;
 
 	/* font size */

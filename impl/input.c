@@ -1,6 +1,9 @@
 #include <string.h>
+#include <avr/io.h>
 
 #include "input.h"
+
+static unsigned char read_val(unsigned mux);
 
 void input_init(struct input* ctx)
 {
@@ -25,7 +28,7 @@ enum input_mode input_read_mode(struct input* ctx)
 	return INPUT_MODE_INVALID; /* TODO MEASURE THEN IMPLEMENT */
 }
 
-enum input_button_press input_read_btn(struct input* ctx)
+enum input_button_press input_read_buttons(struct input* ctx)
 {
 	ctx->btn = read_val(INPUT_MUX_BUTTONS);
 

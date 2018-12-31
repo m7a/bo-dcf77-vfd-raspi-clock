@@ -11,7 +11,7 @@ enum screen_id {
 
 struct screen {
 	/* private: internal structure, not intended for access from outside */
-	struct vfd_gp9002_ctx* vfd;
+	struct vfd_gp9002* vfd;
 	char enable_clear;
 	enum vfd_gp9002_vscreen displayed;
 	enum vfd_gp9002_vscreen next;
@@ -38,12 +38,12 @@ struct screen {
 
 };
 
-void screen_init(struct screen* screen, struct vfd_gp9002_ctx* vfd);
+void screen_init(struct screen* screen, struct vfd_gp9002* vfd);
 
-void screen_set_time(struct screen* screen, char* time, size_t time_len);
-void screen_set_date(struct screen* screen, char* date, size_t date_len);
-void screen_set_measurements(struct screen* screen,
-		unsigned char mode, unsigned char btn, unsigned char sensor); 
-/* TODO CSTAT SET&DRAW decoded values as well */
+void screen_set_time(struct screen* screen, char* time, unsigned char time_len);
+void screen_set_date(struct screen* screen, char* date, unsigned char date_len);
+void screen_set_measurements(struct screen* screen, unsigned char mode,
+					unsigned char btn, unsigned char sensor,
+					char mode_decoded, char sensor_decoded);
 void screen_update(struct screen* screen);
 void screen_display(struct screen* screen, enum screen_id id);

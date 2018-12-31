@@ -43,7 +43,7 @@ enum vfd_gp9002_font {
 	VFD_GP9002_FONT_TRIPLEW_QUADH = 0x0203
 };
 
-struct vfd_gp9002_ctx {
+struct vfd_gp9002 {
 	/* private: these variables are intended for internal usage only */
 	enum vfd_gp9002_font lastfont;
 };
@@ -53,8 +53,8 @@ void vfd_gp9002_init(struct vfd_gp9002* ctx,
 
 /* For clear, y needs to be a multiple of 8 */
 void vfd_gp9002_draw_string(struct vfd_gp9002* ctx,
-		enum vfd_gp9002_vscreen vscreen, enum vfd_gp9002_font font,
-		int y, int x, char clear, size_t len, char* string);
+	enum vfd_gp9002_vscreen vscreen, enum vfd_gp9002_font font,
+	int y, int x, char clear, unsigned char len, const char* string);
 
 void vfd_show_vscreen(struct vfd_gp9002* ctx, enum vfd_gp9002_vscreen vscreen);
 
