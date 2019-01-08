@@ -8,6 +8,8 @@ void interrupt_enable()
 {
 	return; /* TODO DEBUG ONLY DISABLED FOR SAFETY REASONS */
 
+	cli(); /* asm("cli") */
+
 	/* switch to IN direction */
 	DDRD &= ~_BV(INTERRUPT_USE_PIN_DD);
 
@@ -17,12 +19,14 @@ void interrupt_enable()
 
 	/* read by EIFR & _BV(INTF0) */
 
+	sei();
+
 	/* TODO CSTAT CONTINUE W/ EXTERNAL INTERRUPT... */
 }
 
 ISR(INT0_vect)
 {
-	
+	/* Zeitmessung... gar nicht so einfach, läuft darauf hinaus einen freien timer zu finden -> es scheint man muss einen interrupt benutzen, um eine Art millis() funktion zu realisieren... */
 }
 
 enum interrupt_dcf77_reading interrupt_read()
