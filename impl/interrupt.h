@@ -9,3 +9,5 @@ enum interrupt_dcf77_reading {
 
 void interrupt_enable();
 enum interrupt_dcf77_reading interrupt_read();
+uint32_t interrupt_get_time_ms();
+uint32_t interrupt_get_delta();

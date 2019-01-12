@@ -144,12 +144,13 @@ void vfd_gp9002_draw_string(struct vfd_gp9002* ctx,
 
 		/* Address = x * 8 + y / 8 */
 		for(clear_x = 0; clear_x < stringw; clear_x++)
-			writezero((clear_x + x) * 8 + y / 8, stringh);
+			writezero((clear_x + x) * 8 + y / 8 + (vscreen << 8),
+								stringh);
 	}
 
 	/* target position */
 	write(1, GP9002_CHARRAM);
-	write(0, x);
+	write(0, x + (vscreen == VFD_GP9002_VSCREEN_1? 128: 0));
 	write(0, 0);
 	write(0, y);
 

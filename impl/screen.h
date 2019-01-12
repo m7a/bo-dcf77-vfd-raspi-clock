@@ -35,15 +35,18 @@ struct screen {
 	unsigned char btn;
 	unsigned char btn_decoded;
 	unsigned char sensor;
-
+	size_t info_len;
+	char* info;
+	uint32_t abstime;
 };
 
 void screen_init(struct screen* screen, struct vfd_gp9002* vfd);
 
 void screen_set_time(struct screen* screen, char* time, unsigned char time_len);
 void screen_set_date(struct screen* screen, char* date, unsigned char date_len);
-void screen_set_measurements(struct screen* screen, unsigned char mode,
-					unsigned char btn, unsigned char sensor,
-					char mode_decoded, char sensor_decoded);
+void screen_set_measurements(struct screen* screen,
+		unsigned char mode, unsigned char btn, unsigned char sensor,
+		char mode_decoded, char btn_decoded, size_t info_len,
+		char* info, uint32_t abstime);
 void screen_update(struct screen* screen);
 void screen_display(struct screen* screen, enum screen_id id);
