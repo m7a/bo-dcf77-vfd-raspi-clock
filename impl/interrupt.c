@@ -30,6 +30,8 @@ void interrupt_enable()
 	EICRA = _BV(ISC00); /* generate interrupt on any logic change */
 	EIMSK = _BV(INT0);
 
+	/* READ WITHOUT INTERRUPT BY USING (PIND & _BV(PD...)) */
+
 	/* read by EIFR & _BV(INTF0) */
 
 	/* -- Timing Interrupt -- */
