@@ -1,13 +1,8 @@
-#define INTERRUPT_USE_PIN_DD DDD2
-
-enum interrupt_dcf77_reading {
-	INTERRUPT_DCF77_READING_0,
-	INTERRUPT_DCF77_READING_1,
-	INTERRUPT_DCF77_READING_MARKER,
-	INTERRUPT_DCF77_READING_NOTHING
-};
+/* Pins to read DCF-77 signal from */
+#define INTERRUPT_USE_PIN_DD   DDD2
+#define INTERRUPT_USE_PIN_READ (PIND & _BV(PD2))
 
 void interrupt_enable();
-enum interrupt_dcf77_reading interrupt_read();
 uint32_t interrupt_get_time_ms();
-uint32_t interrupt_get_delta();
+
+/* for dcf77_low_level interface */

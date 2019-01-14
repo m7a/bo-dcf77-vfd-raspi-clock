@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stddef.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -6,59 +7,40 @@
 
 /* TODO ... NEED SOME OTHER DECLARATIONS ETC. */
 
-static volatile char     interrupt_triggered = 0;
-static volatile uint32_t interrupt_last      = 0;
-static volatile uint32_t interrupt_delta     = 0;
-
-static volatile uint32_t interrupt_time      = 0;
+static volatile uint32_t      interrupt_time         = 0;
+static volatile unsigned char interrupt_readings[32];
+static volatile unsigned char interrupt_start        = 0;
+static volatile unsigned char interrupt_next         = 0;
+static volatile unsigned char interrupt_num_overflow = 0;
 
 void interrupt_enable()
 {
-	cli(); /* asm("cli") */
-
-	/* -- Input Interrupts -- */
+	memset(interrupt_readings, 0, sizeof(interrupt_readings));
 
 	/* switch to IN direction */
 	DDRD &= ~_BV(INTERRUPT_USE_PIN_DD);
 
-	/* -- XOND ONLY -- */
-	/* Configure interrupts to trigger on exactly a rising edge of INT 0 */
-	/* TODO z might not be what one wants. Deactivated for now */
-	/* EICRA |= _BV(ISC01) | _BV(ISC00); */
-	/* -- END -- */
-
-	EICRA = _BV(ISC00); /* generate interrupt on any logic change */
-	EIMSK = _BV(INT0);
-
-	/* READ WITHOUT INTERRUPT BY USING (PIND & _BV(PD...)) */
-
-	/* read by EIFR & _BV(INTF0) */
-
 	/* -- Timing Interrupt -- */
-
+	cli(); /* asm("cli") */
 	TCCR0A = _BV(WGM01);            /* timer 0 mode CTC */
 	TCCR0B = _BV(CS02) | _BV(CS00); /* set Clock/1024 prescaler */
 	OCR0A  = 125;                   /* count to 125 (125 times: 0--124) */
 	TIMSK0 = _BV(OCIE0A);           /* Enable output compare interrupt */
-
 	sei();
-}
-
-ISR(INT0_vect)
-{
-	interrupt_delta     = interrupt_time - interrupt_last;
-	interrupt_triggered = !interrupt_triggered;
-	interrupt_last      = interrupt_time;
-}
-
-enum interrupt_dcf77_reading interrupt_read()
-{
-	return INTERRUPT_DCF77_READING_NOTHING;
 }
 
 ISR(TIMER0_COMPA_vect)
 {
+	unsigned char idxh = interrupt_next >> 3;
+	unsigned char idxl = interrupt_next & 7;
+
 	interrupt_time += 8;
+
+	interrupt_readings[idxh] = (interrupt_readings[idxh] & ~_BV(idxl)) |
+					((INTERRUPT_USE_PIN_READ) << idxl);
+	if(++interrupt_next == start)
+		interrupt_num_overflow = ((interrupt_num_overflow == 0xff)?
+					0xff: (interrupt_num_overflow + 1));
 }
 
 uint32_t interrupt_get_time_ms()
@@ -70,15 +52,27 @@ uint32_t interrupt_get_time_ms()
 	return val;
 }
 
-/* @return 0 if no value available */
-uint32_t interrupt_get_delta()
+unsigned char interrupt_get_num_overflow()
 {
-	uint32_t rv = 0;
-	cli();
-	if(interrupt_delta != 0)  {
-		rv = interrupt_delta;
-		interrupt_delta = 0;
-	}
-	sei();
-	return rv;
+	return interrupt_num_overflow;
+}
+
+unsigned char interrupt_get_start()
+{
+	return interrupt_start;
+}
+
+unsigned char interrupt_set_start(unsigned char start)
+{
+	interrupt_start = start;
+}
+
+unsigned char interrupt_get_next()
+{
+	return interrupt_next;
+}
+
+unsigned char interrupt_get_at(unsigned char idx)
+{
+	return interrupt_readings[idx >> 3] & idx;
 }
