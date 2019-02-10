@@ -7,8 +7,10 @@
 
 /* TODO ... NEED SOME OTHER DECLARATIONS ETC. */
 
+#define SIZE_BYTES
+
 static volatile uint32_t      interrupt_time         = 0;
-static volatile unsigned char interrupt_readings[32];
+static volatile unsigned char interrupt_readings[SIZE_BYTES];
 static volatile unsigned char interrupt_start        = 0;
 static volatile unsigned char interrupt_next         = 0;
 static volatile unsigned char interrupt_num_overflow = 0;
@@ -70,6 +72,19 @@ unsigned char interrupt_set_start(unsigned char start)
 unsigned char interrupt_get_next()
 {
 	return interrupt_next;
+}
+
+unsigned char interrupt_get_num_meas()
+{
+	return interrupt_get_num_between(interrupt_start, interrupt_next);
+}
+
+unsigned char intterupt_get_num_between(unsigned char start, unsigned char next)
+{
+	/* next > start || ... start --- next  ... || next - start        */
+	/* start > next || --- next  ... start --- || size - (start-next) */
+	return next >= start? (start - next): ((SIZE_BYTES * 8) -
+								(start - next));
 }
 
 unsigned char interrupt_get_at(unsigned char idx)
