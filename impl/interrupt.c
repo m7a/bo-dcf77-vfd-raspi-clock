@@ -5,9 +5,9 @@
 
 #include "interrupt.h"
 
-/* TODO ... NEED SOME OTHER DECLARATIONS ETC. */
+#define SIZE_BYTES 32
 
-#define SIZE_BYTES
+char last_reading = 0; /* TODO DEBUG ONLY */
 
 static volatile uint32_t      interrupt_time         = 0;
 static volatile unsigned char interrupt_readings[SIZE_BYTES];
@@ -17,7 +17,8 @@ static volatile unsigned char interrupt_num_overflow = 0;
 
 void interrupt_enable()
 {
-	memset(interrupt_readings, 0, sizeof(interrupt_readings));
+	memset((unsigned char*)interrupt_readings, 0,
+						sizeof(interrupt_readings));
 
 	/* switch to IN direction */
 	DDRD &= ~_BV(INTERRUPT_USE_PIN_DD);
@@ -40,7 +41,10 @@ ISR(TIMER0_COMPA_vect)
 
 	interrupt_readings[idxh] = (interrupt_readings[idxh] & ~_BV(idxl)) |
 					((INTERRUPT_USE_PIN_READ) << idxl);
-	if(++interrupt_next == start)
+
+	last_reading = !!INTERRUPT_USE_PIN_READ;
+
+	if(++interrupt_next == interrupt_start)
 		interrupt_num_overflow = ((interrupt_num_overflow == 0xff)?
 					0xff: (interrupt_num_overflow + 1));
 }
@@ -64,7 +68,7 @@ unsigned char interrupt_get_start()
 	return interrupt_start;
 }
 
-unsigned char interrupt_set_start(unsigned char start)
+void interrupt_set_start(unsigned char start)
 {
 	interrupt_start = start;
 }
@@ -79,7 +83,7 @@ unsigned char interrupt_get_num_meas()
 	return interrupt_get_num_between(interrupt_start, interrupt_next);
 }
 
-unsigned char intterupt_get_num_between(unsigned char start, unsigned char next)
+unsigned char interrupt_get_num_between(unsigned char start, unsigned char next)
 {
 	/* next > start || ... start --- next  ... || next - start        */
 	/* start > next || --- next  ... start --- || size - (start-next) */

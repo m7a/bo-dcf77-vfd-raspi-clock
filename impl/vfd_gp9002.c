@@ -81,10 +81,9 @@ void vfd_gp9002_init(struct vfd_gp9002* ctx,
 		_BV(MSTR) | /* SPI master mode */
 		_BV(CPOL) | /* clock polarity: clock idle at 1 */
 		_BV(CPHA) | /* clock phase: sample on leading edge of SCK */
-		_BV(SPR1) | /* clock rate select: selct f/128 (slowest) */
-		_BV(SPR0);  
+		_BV(SPR0);  /* clock rate select: select f/16  */
 
-	/* chose /128 instead of /64 for frequency by unsetting SPI2X bit */
+	/* Uses /16 instead of /8 for frequency by unsetting SPI2X bit */
 	SPSR &= ~_BV(SPI2X);
 
 	PORTB |= _BV(VFD_GP9002_PIN_SS);

@@ -1,6 +1,7 @@
 # depends: avr-libc, avrdude, gcc-avr
 
-OBJECTS = main.o input.o screen.o vfd_gp9002.o alarm.o interrupt.o
+OBJECTS = main.o input.o screen.o vfd_gp9002.o alarm.o interrupt.o \
+		dcf77_low_level.o
 
 %.o: %.c
 	avr-gcc -Wall -O2 -DF_CPU=16000000UL -mmcu=atmega328p -c $*.c

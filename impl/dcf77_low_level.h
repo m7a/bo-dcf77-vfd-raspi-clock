@@ -11,6 +11,9 @@ struct dcf77_low_level {
 	unsigned char havestart;
 	unsigned char evalctr;
 	unsigned char mismatch;
+
+	unsigned char dbgidx;
+	char debug[6];
 };
 
 void dcf77_low_level_init(struct dcf77_low_level* ctx);

@@ -162,7 +162,8 @@ static void draw_measurements(struct screen* screen)
 			16, 0, screen->enable_clear, screen->info_len,
 			screen->info
 		);
-		n = sprintf(meas_display, "Ax%08lx", screen->abstime);
+		/*n = sprintf(meas_display, "Ax%08lx", screen->abstime);*/
+		n = sprintf(meas_display, "Ax%08lu", screen->abstime);
 		vfd_gp9002_draw_string(
 			screen->vfd, screen->next, VFD_GP9002_FONT_NORMAL,
 			24, 0, screen->enable_clear, n, meas_display

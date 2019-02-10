@@ -36,19 +36,31 @@
 #include "input.h"
 #include "screen.h"
 #include "interrupt.h"
+#include "dcf77_low_level.h"
 #include "alarm.h"
+
+#define DELAY_MS_TARGET   100
+#define DELAY_MS_VARIANCE  10
+
+extern char last_reading; /* TODO DEBUG ONLY */
 
 int main()
 {
+	int delay_ms = DELAY_MS_TARGET;
+	int i;
+
 	char debug_counter = 0;
 	char debug_info[64];
-	uint32_t debug_delta;
+	uint32_t time_old = 0;
+	uint32_t time_new;
+	int delta_t;
 	size_t debug_info_len = 0;
 	char debug_alarm = 0;
 
 	struct vfd_gp9002 vfd;
 	struct input in;
 	struct screen scr;
+	struct dcf77_low_level dcflow;
 
 	enum input_mode         in_mode;
 	enum input_button_press in_button;
@@ -57,6 +69,7 @@ int main()
 	alarm_init();
 	input_init(&in);
 	screen_init(&scr, &vfd);
+	dcf77_low_level_init(&dcflow);
 	interrupt_enable();
 
 	/* display version */
@@ -70,17 +83,35 @@ int main()
 		in_mode = input_read_mode(&in);
 		in_button = input_read_buttons(&in);
 		input_read_sensor(&in);
+		dcf77_low_level_proc(&dcflow); /* TODO z RV ignored */
 
-		debug_delta = interrupt_get_delta();
-		if(debug_delta != 0) 
-			debug_info_len = sprintf(debug_info, "%4lu",
-								debug_delta);
+		time_new = interrupt_get_time_ms();
+		delta_t = time_new - time_old;
+		debug_info_len = sprintf(debug_info, "%4d %-5s %u %03d %02x",
+			delta_t, dcflow.debug, last_reading, delay_ms,
+			interrupt_get_num_overflow());
 		screen_set_measurements(&scr, in.mode, in.btn, in.sensor,
 				in_mode, in_button, debug_info_len, debug_info,
 				interrupt_get_time_ms());
 
 		screen_update(&scr);
-		_delay_ms(100);
+
+		time_old = time_new;
+
+		if(!(DELAY_MS_TARGET - DELAY_MS_VARIANCE <= delta_t &&
+				delta_t <= DELAY_MS_TARGET + DELAY_MS_VARIANCE))
+			/* /3 -- do not change too rapidly */
+			delay_ms += (DELAY_MS_TARGET - delta_t) / 3;
+
+		if(delay_ms < 0)
+			delay_ms = 0;
+
+		/* https://www.avrfreaks.net/forum/how-use-delay-variable */
+		for(i = 0; i < delay_ms; i++)
+			_delay_ms(1);
+
+		/* _delay_ms(delay_ms); */
+		/* _delay_ms(50); */
 
 		if(++debug_counter == 100) {
 			if(debug_alarm) {
