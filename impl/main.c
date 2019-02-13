@@ -51,6 +51,7 @@ int main()
 
 	char debug_counter = 0;
 	char debug_info[64];
+
 	uint32_t time_old = 0;
 	uint32_t time_new;
 	int delta_t;
@@ -80,6 +81,7 @@ int main()
 	screen_display(&scr, SCREEN_STATUS);
 
 	while(1) {
+		/* == Read Sensors == */
 		in_mode = input_read_mode(&in);
 		in_button = input_read_buttons(&in);
 		input_read_sensor(&in);
@@ -87,6 +89,8 @@ int main()
 
 		time_new = interrupt_get_time_ms();
 		delta_t = time_new - time_old;
+
+		/* == Process == */
 		debug_info_len = sprintf(debug_info, "%4d %-5s %u %03d %02x",
 			delta_t, dcflow.debug, last_reading, delay_ms,
 			interrupt_get_num_overflow());
@@ -96,6 +100,7 @@ int main()
 
 		screen_update(&scr);
 
+		/* == Delay == */
 		time_old = time_new;
 
 		if(!(DELAY_MS_TARGET - DELAY_MS_VARIANCE <= delta_t &&
@@ -110,9 +115,7 @@ int main()
 		for(i = 0; i < delay_ms; i++)
 			_delay_ms(1);
 
-		/* _delay_ms(delay_ms); */
-		/* _delay_ms(50); */
-
+		/* == TODO DEBUG ONLY == */
 		if(++debug_counter == 100) {
 			if(debug_alarm) {
 				alarm_disable();
