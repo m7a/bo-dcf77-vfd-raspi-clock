@@ -1,25 +1,15 @@
-#define DCF77_LOW_LEVEL_MATRIX_TIME_DIM 150
-#define DCF77_LOW_LEVEL_MATRIX_DEPTH_LOW  5
-#define DCF77_LOW_LEVEL_MATRIX_DEPTH_HIGH 30
-#define DCF77_LOW_LEVEL_MATRIX_DEPTH_DIM \
-	(DCF77_LOW_LEVEL_MATRIX_DEPTH_HIGH - DCF77_LOW_LEVEL_MATRIX_DEPTH_LOW)
+/* TODO CSTAT SHOULD NOW BE THEORETICALLY COMPLETE -> NEXT TRY TO USE THIS! */
+
+#define DCF77_LOW_LEVEL_DIM_SERIES 150
+#define DCF77_LOW_LEVEL_DEPTH_LOW  5
+#define DCF77_LOW_LEVEL_DEPTH_HIGH 30
 
 struct dcf77_low_level {
-	/*
-	 * Counts the number of "1" bits seen depth cells into the future from
-	 * a given time index.
-	 *
-	 * 1st index  v time
-	 * 2nd index -> depth
-	 */
-	unsigned char matrix[DCF77_LOW_LEVEL_MATRIX_TIME_DIM]
-				[DCF77_LOW_LEVEL_MATRIX_DEPTH_DIM];
-
-	/* Whenever cursors overlap each other, the matrix is empty. */
-	unsigned char matrix_read;  /* read cursor index */
-	unsigned char matrix_write; /* write cursor index */
-
-	signed char intervals_of_100ms_passed;
+	unsigned char cursor;
+	unsigned char series_high[DCF77_LOW_LEVEL_DIM_SERIES];
+	unsigned char series_low[DEC77_LOW_LEVEL_DIM_SERIES];
+	signed   char intervals_of_100ms_passed;
+	unsigned char overflow;
 };
 
 enum dcf77_low_level_reading {
@@ -51,11 +41,8 @@ enum dcf77_low_level_reading {
 
 /* ----------------------------- IMPLEMENTATION ----------------------------- */
 
-/*
- * Defines a matrix percentage limit at which we may accept an element as
- * "signal"
- */
-#define DCF77_LOW_LEVEL_MATRIX_LIM_HEXPERC 191 /* ~ 75% */
+/* Defines a percentage limit at which we may accept an element as "signal" */
+#define DCF77_LOW_LEVEL_LIM_HEXPERC 191 /* ~ 75% */
 
 void dcf77_low_level_init(struct dcf77_low_level* ctx)
 {
@@ -77,42 +64,35 @@ void dcf77_low_level_init(struct dcf77_low_level* ctx)
  */
 enum dcf77_low_level_reading dcf77_low_level_proc(struct dcf77_low_level* ctx)
 {
-	update_matrix(ctx);
+	unsigned char iidx;
+	unsigned char val;
+	for(iidx = interrupt_get_start(); iidx != interrupt_get_next();
+								iidx++) {
+		if(ctx->cursor == DCF77_LOW_LEVEL_DIM_SERIES) {
+			if(ctx->overflow < 0xff)
+				ctx->overflow++;
+			break;
+		}
+		val = interrupt_get_at(iidx);
+		process_measured_value(val, ctx->cursor, ctx->series_low,
+						DCF77_LOW_LEVEL_DEPTH_LOW);
+		process_measured_value(val, ctx->cursor, ctx->series_high,
+						DCF77_LOW_LEVEL_DEPTH_HIGH);
+		ctx->cursor++;
+	}
 	return process_second(ctx);
 }
 
-static void update_matrix(struct dcf77_low_level* ctx)
+static void process_measured_value(unsigned char val, unsigned char cursor,
+					unsigned char* series, unsigned char n)
 {
-	unsigned char next = interrupt_get_next();
 	unsigned char i;
-	unsigned char j;
-	for(i = interrupt_get_start(); i < next; i++) {
-		/* Set all of the current elements to the measurement result */
-		memset(ctx->matrix + ctx->matrix_write, interrupt_get_at(i),
-					DCF77_LOW_LEVEL_MATRIX_DEPTH_DIM *
-					sizeof(unsigned char));
-		/* Counting backwards update past measurements */
-		/* TODO CSTAT MATRIX UPDATE ROUTINE */
-		/*
-		for(j = 0; j < DCF77_LOW_LEVEL_MATRIX_DEPTH_DIM; j++) {
-			
-		}
-		*/
-	}
+	series[cursor] = 0;
+	for(i = cursor; i >= 0 && (cursor - i) < n; i--)
+		series[i] += val;
 }
 
-static unsigned char time_idx_forward(unsigned char idx)
-{
-	return (idx + 1) % DCF77_LOW_LEVEL_MATRIX_TIME_DIM;
-}
-
-/*
-static unsigned char time_idx_backward(unsigned char idx)
-{
-	return (idx > 0)? (idx - 1): (DCF77_LOW_LEVEL_MATRIX_TIME_DIM - 1);
-}
-*/
-
+/* TODO REV */
 static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 {
 	enum dcf77_low_level_reading rv;
@@ -122,22 +102,25 @@ static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 	if(++ctx->intervals_of_100ms_passed < 10)
 		return DCF77_LOW_LEVEL_NO_UPDATE;
 
-	if(matrix_num_elements(ctx) < DCF77_LOW_LEVEL_MATRIX_DEPTH_HIGH) {
+	if(ctx->cursor < DCF77_LOW_LEVEL_DEPTH_HIGH) {
 		/*
-		 * Too few elements in matrix and second has already passed.
+		 * Too few elements in series and second has already passed.
 		 * Next time please query later.
 		 */
 		next_time_query_later(ctx);
+		ctx->cursor = 0; /* discard buffer */
 		return DCF77_LOW_LEVEL_NO_SIGNAL;
 	} else {
-		/* Enough elements to check the matrix for elements */
+		/* Enough elements to check the series for elements */
 
 		/* Decode bit */
-		findpos = findn(ctx, DCF77_LOW_LEVEL_MATRIX_DEPTH_HIGH);
-		if(findpos == DCF77_LOW_LEVEL_MATRIX_TIME_DIM) {
+		findpos = findn(ctx->cursor, ctx->series_high,
+						DCF77_LOW_LEVEL_DEPTH_HIGH);
+		if(findpos == DCF77_LOW_LEVEL_DIM_SERIES) {
 			/* no high count found (no 1 bit detected) */
-			findpos = findn(ctx, DCF77_LOW_LEVEL_MATRIX_DEPTH_LOW);
-			if(findpos == DCF77_LOW_LEVEL_MATRIX_TIME_DIM) {
+			findpos = findn(ctx->cursor, ctx->series_low,
+						DCF77_LOW_LEVEL_DEPTH_LOW);
+			if(findpos == DCF77_LOW_LEVEL_DIM_SERIES) {
 				/* no 1 and no 0 detected */
 				rv = DCF77_LOW_LEVEL_NO_SIGNAL;
 			} else {
@@ -156,21 +139,14 @@ static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 		 */
 		if(findpos <= 3)
 			next_time_query_earlier();
-		else if(findpos > DCF77_LOW_LEVEL_MATRIX_TIME_DIM/2)
+		else if(findpos > (DCF77_LOW_LEVEL_DIM_SERIES / 2))
 			next_time_query_later();
 		else
 			ctx->intervals_of_100ms_passed = 0; /* query same */
 
-		/* Discard buffer */
-		ctx->matrix_read = ctx->matrix_write;
-
+		ctx->cursor = 0; /* discard buffer */
 		return rv;
 	}
-}
-
-static unsigned char matrix_num_elements(struct dcf77_low_level* ctx)
-{
-	return ctx->matrix_write - ctx->matrix_read;
 }
 
 static void next_time_query_earlier(struct dcf77_low_level* ctx)
@@ -187,25 +163,28 @@ static void next_time_query_later(struct dcf77_low_level* ctx)
  * Check if there is any location where n 1es have been detected
  * (or at least to HEXPERC hex-percent)
  *
- * @return DCF77_LOW_LEVEL_MATRIX_TIME_DIM if none found.
+ * @return DCF77_LOW_LEVEL_DIM_SERIES if none found.
  */
-static unsigned char findn(struct dcf77_low_level* ctx, unsigned char n)
+static unsigned char findn(unsigned char cursor, unsigned char* series, 
+							unsigned char n)
 {
-	unsigned char t;
-	unsigned short matrix_perc;
+	unsigned char i;
+	unsigned short perc;
 
 	/* t_max out of range for time series [0;_DIM-1] => invalid */
-	unsigned char t_max = DCF77_LOW_LEVEL_MATRIX_TIME_DIM;
+	unsigned char t_max = DCF77_LOW_LEVEL_DIM_SERIES;
 	/* need to find at least HEXPERC */
-	unsigned short matrix_perc_max = DCF77_LOW_LEVEL_MATRIX_LIM_HEXPERC;
+	unsigned short perc_max = DCF77_LOW_LEVEL_LIM_HEXPERC;
 
-	for(t = ctx->matrix_read; t != ctx->matrix_write;
-						t = time_idx_forward()) {
-		matrix_perc = ctx->matrix[t][n -
-				DCF77_LOW_LEVEL_MATRIX_DEPTH_LOW] * 0xff / n;
-		if(matrix_perc > matrix_perc_max) {
-			matrix_perc_max = matrix_perc;
-			t_max = t;
+	for(i = n; i < cursor; i++) {
+		perc = series[i] * 0xff / n;
+		if(perc > perc_max) {
+			perc_max = perc;
+			/*
+			 * As the series are backwards-populated the starting
+			 * point in question is actually i - n
+			 */
+			t_max = i - n;
 		}
 	}
 
