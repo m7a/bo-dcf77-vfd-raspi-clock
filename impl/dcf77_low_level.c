@@ -1,153 +1,156 @@
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h> /* TODO z only for sprintf temporarily imported */
+/* Defines a percentage limit at which we may accept an element as "signal" */
+#define DCF77_LOW_LEVEL_LIM_HEXPERC 191 /* ~ 75% */
 
-/* TODO CSTAT AUSWERTEALGORITHMUS FUNKTIONIERT  NICHT, DA ES SICH NICHT RICHTIG SYNCHRONISIERT. EVENTUELL ERSTMAL EINEN EINFACHEREN ANSATZ MACHEN, DER EINFACH "ZUSAMMENHÄNGENDE" Folgen von Einsen erkennt und jeweils auswertet? Besser wäre es natürlich, den aktuellen Ansatz zu korrigieren, eventuell indem man bei findstart() einen Anfang mit 0en, eine Mitte mit 1en und ein Ende mit 0en erlaubt? -> könnte man ja einfach mal mit einer geschachtelten Suche testen, wenn zu lange dauert muss eben etwas einfacheres genommen werden? */
-
-#include "interrupt.h"
-#include "dcf77_low_level.h"
-
-#define NUM_MEAS_BIT    125
-#define NUM_MEAS_MARKER 250
-
-static int findstart(unsigned char start);
-static unsigned char count_bits(unsigned char start, unsigned char end_excl,
-							unsigned char bit);
-static char is_within(unsigned char val, unsigned char base, unsigned char pm);
-static enum dcf77_low_level_reading proc_bit(struct dcf77_low_level* ctx,
-				unsigned char start, unsigned char locstart);
-static enum dcf77_low_level_reading proc_marker(struct dcf77_low_level* ctx,
-				unsigned char start, unsigned char locstart);
-
-static void debugchr(struct dcf77_low_level* ctx, char chr)
-{
-	ctx->debug[ctx->dbgidx % 5] = chr;
-	ctx->debug[ctx->dbgidx = ((ctx->dbgidx + 1) % 5)] = '<';
-}
+static void process_measured_value(unsigned char val, unsigned char cursor,
+					unsigned char* series, unsigned char n);
+static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx);
+static void next_time_query_earlier(struct dcf77_low_level* ctx);
+static void next_time_query_later(struct dcf77_low_level* ctx);
+static unsigned char findn(unsigned char cursor, unsigned char* series, 
+							unsigned char n);
 
 void dcf77_low_level_init(struct dcf77_low_level* ctx)
 {
+	/* initialize by setting everything to 0 */
 	memset(ctx, 0, sizeof(struct dcf77_low_level));
 }
 
+/*
+ * REQUIRES
+ * Invoke this every 100ms.
+ *
+ * PROVIDES
+ * NO_UPDATE if no second has passed yet and 0/1/NO_SIGNAL about every second.
+ * A jitter of +/- 100ms is to be expected in order to align the measurement
+ * process with the signal timing.
+ *
+ * DEPENDS
+ * Makes use of interrupt.h
+ */
 enum dcf77_low_level_reading dcf77_low_level_proc(struct dcf77_low_level* ctx)
 {
-	enum dcf77_low_level_reading rv;
-	unsigned char start;
-	int locstart;
-	char sb;
-	char mb;
-
-	rv       = DCF77_LOW_LEVEL_NOTHING;
-	start    = interrupt_get_start();
-	locstart = findstart(start);
-
-	if(locstart != -1) {
-		sb = is_within(locstart - start, NUM_MEAS_BIT,    4);
-		mb = is_within(locstart - start, NUM_MEAS_MARKER, 5);
-		if(sb || mb) {
-			ctx->evalctr   = 0;
-			ctx->mismatch  = 0;
-			if(ctx->havestart)
-				rv = sb? proc_bit(ctx, start, locstart):
-					proc_marker(ctx, start, locstart);
-			ctx->havestart = 1;
-			interrupt_set_start(locstart);
-		} else {
-			ctx->mismatch++;
-			if(ctx->mismatch >= 3 || !ctx->havestart) {
-				ctx->evalctr   = 0;
-				ctx->mismatch  = 0;
-				ctx->havestart = 1;
-				interrupt_set_start(locstart);
-			}
-		}
-	}
-
-	ctx->evalctr++;
-
-	/*
-	if( could be marker && ctx->evalctr >= 22) {
-	}
-	*/
-
-	/*  else  */ if(ctx->evalctr >= 11) {
-		/* procByteLost */
-		debugchr(ctx, '_');
-		ctx->evalctr = 0;
-		/* TODO z might want to check that  start not set  beyond cursor pos? */
-		interrupt_set_start(start + 120);
-	}
-
-	return rv;
-}
-
-static int findstart(unsigned char start)
-{
-	unsigned char next = interrupt_get_next();
-	unsigned char i;
-	unsigned char n;
-	unsigned char n0;
-	unsigned char n1;
-
-	/* require at least 12 measurements, i.e. 12*8 = 96ms */
-	if(interrupt_get_num_meas() < 12)
-		return -1;
-
-	/* TODO ASTAT THE PROBLEM MIGHT BE THIS: WE EXPECT OUR INPUT TO LOOK LIKE THIS ____---- but in reality it is ____--_____. This will never be detected as a valid ``start'' so what should we do? */
-
-	for(i = start; i != next; i++) {
-		if(!interrupt_get_at(i) && interrupt_get_at(i + 1)) {
-			n = interrupt_get_num_between(start, i);
-			n0 = count_bits(start, i, 0);
-			if(n0 * 2 < n)
-				continue;
-
-			n = interrupt_get_num_between(i, next);
-			n1 = count_bits(i, next, 1);
-			if(n1 * 2 < n)
-				continue;
-
-			return i;
-		}
-	}
-
-	return -1;
-}
-
-static unsigned char count_bits(unsigned char start, unsigned char end_excl,
-							unsigned char bit)
-{
-	unsigned char n = 0;
-	unsigned char i;
+	unsigned char iidx;
 	unsigned char val;
-	for(i = start; i != end_excl; i++) {
-		val = interrupt_get_at(i);
-		if((val && bit) || (!val && !bit))
-			n++;
+	for(iidx = interrupt_get_start(); iidx != interrupt_get_next();
+								iidx++) {
+		if(ctx->cursor == DCF77_LOW_LEVEL_DIM_SERIES) {
+			if(ctx->overflow < 0xff)
+				ctx->overflow++;
+			break;
+		}
+		val = interrupt_get_at(iidx);
+		process_measured_value(val, ctx->cursor, ctx->series_low,
+						DCF77_LOW_LEVEL_DEPTH_LOW);
+		process_measured_value(val, ctx->cursor, ctx->series_high,
+						DCF77_LOW_LEVEL_DEPTH_HIGH);
+		ctx->cursor++;
 	}
-	return n;
+	return process_second(ctx);
 }
 
-static char is_within(unsigned char val, unsigned char base, unsigned char pm)
+static void process_measured_value(unsigned char val, unsigned char cursor,
+					unsigned char* series, unsigned char n)
 {
-	return ((base - pm) <= val) && (val <= (base + pm));
+	unsigned char i;
+	series[cursor] = 0;
+	for(i = cursor; i >= 0 && (cursor - i) < n; i--)
+		series[i] += val;
 }
 
-static enum dcf77_low_level_reading proc_bit(struct dcf77_low_level* ctx,
-				unsigned char start, unsigned char locstart)
+static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 {
-	unsigned char numBits = count_bits(start, locstart, 1);
-	char buf[2];
-	sprintf(buf, "%x", (numBits > 15? 0xf: numBits));
-	debugchr(ctx, buf[0]);
-	return DCF77_LOW_LEVEL_NOTHING; /* TODO z */
+	enum dcf77_low_level_reading rv;
+	
+	unsigned char findpos;
+
+	if(++ctx->intervals_of_100ms_passed < 10)
+		return DCF77_LOW_LEVEL_NO_UPDATE;
+
+	if(ctx->cursor < DCF77_LOW_LEVEL_DEPTH_HIGH) {
+		/*
+		 * Too few elements in series and second has already passed.
+		 * Next time please query later.
+		 */
+		next_time_query_later(ctx);
+		ctx->cursor = 0; /* discard buffer */
+		return DCF77_LOW_LEVEL_NO_SIGNAL;
+	} else {
+		/* Enough elements to check the series for elements */
+
+		/* Decode bit */
+		findpos = findn(ctx->cursor, ctx->series_high,
+						DCF77_LOW_LEVEL_DEPTH_HIGH);
+		if(findpos == DCF77_LOW_LEVEL_DIM_SERIES) {
+			/* no high count found (no 1 bit detected) */
+			findpos = findn(ctx->cursor, ctx->series_low,
+						DCF77_LOW_LEVEL_DEPTH_LOW);
+			if(findpos == DCF77_LOW_LEVEL_DIM_SERIES) {
+				/* no 1 and no 0 detected */
+				rv = DCF77_LOW_LEVEL_NO_SIGNAL;
+			} else {
+				/* low count found (0 bit detected) */
+				rv = DCF77_LOW_LEVEL_0;
+			}
+		} else {
+			/* high count found (1 bit detected) */
+			rv = DCF77_LOW_LEVEL_1;
+		}
+
+		/* Update timing */
+		/*
+		 * TODO z beware that this comes into effect after the next
+		 * measurement has finished at the earliest!
+		 */
+		if(findpos <= 3)
+			next_time_query_earlier();
+		else if(findpos > (DCF77_LOW_LEVEL_DIM_SERIES / 2))
+			next_time_query_later();
+		else
+			ctx->intervals_of_100ms_passed = 0; /* query same */
+
+		ctx->cursor = 0; /* discard buffer */
+		return rv;
+	}
 }
 
-static enum dcf77_low_level_reading proc_marker(struct dcf77_low_level* ctx,
-				unsigned char start, unsigned char locstart)
+static void next_time_query_earlier(struct dcf77_low_level* ctx)
 {
-	/* not expected to occur during testing */
-	debugchr(ctx, '!');
-	return DCF77_LOW_LEVEL_NOTHING; /* TODO z */
+	ctx->intervals_of_100ms_passed = 1;
+}
+
+static void next_time_query_later(struct dcf77_low_level* ctx)
+{
+	ctx->intervals_of_100ms_passed = -1;
+}
+
+/*
+ * Check if there is any location where n 1es have been detected
+ * (or at least to HEXPERC hex-percent)
+ *
+ * @return DCF77_LOW_LEVEL_DIM_SERIES if none found.
+ */
+static unsigned char findn(unsigned char cursor, unsigned char* series, 
+								unsigned char n)
+{
+	unsigned char i;
+	unsigned short perc;
+
+	/* t_max out of range for time series [0;_DIM-1] => invalid */
+	unsigned char t_max = DCF77_LOW_LEVEL_DIM_SERIES;
+	/* need to find at least HEXPERC */
+	unsigned short perc_max = DCF77_LOW_LEVEL_LIM_HEXPERC;
+
+	for(i = n; i < cursor; i++) {
+		perc = series[i] * 0xff / n;
+		if(perc > perc_max) {
+			perc_max = perc;
+			/*
+			 * As the series are backwards-populated the starting
+			 * point in question is actually i - n
+			 */
+			t_max = i - n;
+		}
+	}
+
+	return t_max;
 }

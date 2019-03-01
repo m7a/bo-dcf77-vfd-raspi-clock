@@ -42,8 +42,6 @@
 #define DELAY_MS_TARGET   100
 #define DELAY_MS_VARIANCE  10
 
-extern char last_reading; /* TODO DEBUG ONLY */
-
 int main()
 {
 	int delay_ms = DELAY_MS_TARGET;
@@ -51,6 +49,7 @@ int main()
 
 	char debug_counter = 0;
 	char debug_info[64];
+	enum dcf77_low_level_reading reading = DCF77_LOW_LEVEL_NO_UPDATE;
 
 	uint32_t time_old = 0;
 	uint32_t time_new;
@@ -77,7 +76,7 @@ int main()
 	screen_update(&scr);
 	_delay_ms(2000);
 
-	/* TODO DEBUG ONLY */
+	/* TODO DEBUG ONLY  | CSTAT IT IS READY FOR A TEST COMPILE AND ON HW? */
 	screen_display(&scr, SCREEN_STATUS);
 
 	while(1) {
@@ -85,14 +84,14 @@ int main()
 		in_mode = input_read_mode(&in);
 		in_button = input_read_buttons(&in);
 		input_read_sensor(&in);
-		dcf77_low_level_proc(&dcflow); /* TODO z RV ignored */
+		reading = dcf77_low_level_proc(&dcflow)
 
 		time_new = interrupt_get_time_ms();
 		delta_t = time_new - time_old;
 
 		/* == Process == */
 		debug_info_len = sprintf(debug_info, "%4d %-5s %u %03d %02x",
-			delta_t, dcflow.debug, last_reading, delay_ms,
+			delta_t, dcflow.debug, reading, delay_ms,
 			interrupt_get_num_overflow());
 		screen_set_measurements(&scr, in.mode, in.btn, in.sensor,
 				in_mode, in_button, debug_info_len, debug_info,

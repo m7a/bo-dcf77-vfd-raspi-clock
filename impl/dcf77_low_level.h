@@ -1,22 +1,41 @@
-enum dcf77_low_level_reading {
-	DCF77_LOW_LEVEL_0,
-	DCF77_LOW_LEVEL_1,
-	DCF77_LOW_LEVEL_MARKER,
-	DCF77_LOW_LEVEL_UNKNOWN,
-	DCF77_LOW_LEVEL_UNKNOWN_2,
-	DCF77_LOW_LEVEL_NOTHING
-};
+#define DCF77_LOW_LEVEL_DIM_SERIES 150
+#define DCF77_LOW_LEVEL_DEPTH_LOW  5
+#define DCF77_LOW_LEVEL_DEPTH_HIGH 30
 
 struct dcf77_low_level {
-	unsigned char havestart;
-	unsigned char evalctr;
-	unsigned char mismatch;
+	unsigned char cursor;
+	unsigned char series_high[DCF77_LOW_LEVEL_DIM_SERIES];
+	unsigned char series_low[DEC77_LOW_LEVEL_DIM_SERIES];
+	signed   char intervals_of_100ms_passed;
+	unsigned char overflow;
+};
 
-	unsigned char dbgidx;
-	char debug[6];
+enum dcf77_low_level_reading {
+
+	/*
+	 * corresponds to a "0" received from the receiver module
+	 * ("1" for _1 respectively)
+	 */
+	DCF77_LOW_LEVEL_0,
+
+	DCF77_LOW_LEVEL_1,
+
+	/*
+	 * _proc continued processing but a second has not passed yet
+	 * (no update in the second counter necessary)
+	 */
+	DCF77_LOW_LEVEL_NO_UPDATE,
+
+	/*
+	 * _proc detected that a second has passed but there was no signal
+	 * detected from the receiver. This can mean two things:
+	 * (1) some sort of disruption caused no signal to be decoded by the
+	 *     receiver / receiver is not connected etc.
+	 * (2) end of minute marker was received
+	 */
+	DCF77_LOW_LEVEL_NO_SIGNAL,
+
 };
 
 void dcf77_low_level_init(struct dcf77_low_level* ctx);
-
-/* Should be invoked around every 100ms */
 enum dcf77_low_level_reading dcf77_low_level_proc(struct dcf77_low_level* ctx);
