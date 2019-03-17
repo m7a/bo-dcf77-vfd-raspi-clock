@@ -42,6 +42,8 @@
 #define DELAY_MS_TARGET   100
 #define DELAY_MS_VARIANCE  10
 
+extern char last_reading; /* interrupt.c debug exported symbol */
+
 int main()
 {
 	int delay_ms = DELAY_MS_TARGET;
@@ -84,15 +86,16 @@ int main()
 		in_mode = input_read_mode(&in);
 		in_button = input_read_buttons(&in);
 		input_read_sensor(&in);
-		reading = dcf77_low_level_proc(&dcflow)
+		reading = dcf77_low_level_proc(&dcflow);
 
 		time_new = interrupt_get_time_ms();
 		delta_t = time_new - time_old;
 
 		/* == Process == */
-		debug_info_len = sprintf(debug_info, "%4d %-5s %u %03d %02x",
-			delta_t, dcflow.debug, reading, delay_ms,
-			interrupt_get_num_overflow());
+		/* delta T, P: processed, R: raw, D: delay, +: overflows */
+		debug_info_len = sprintf(debug_info, "%4dP%uR%uD%03d+%02x%02x",
+			delta_t, reading, last_reading, delay_ms,
+			dcflow.overflow, interrupt_get_num_overflow());
 		screen_set_measurements(&scr, in.mode, in.btn, in.sensor,
 				in_mode, in_button, debug_info_len, debug_info,
 				interrupt_get_time_ms());

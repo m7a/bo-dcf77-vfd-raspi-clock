@@ -5,7 +5,7 @@
 struct dcf77_low_level {
 	unsigned char cursor;
 	unsigned char series_high[DCF77_LOW_LEVEL_DIM_SERIES];
-	unsigned char series_low[DEC77_LOW_LEVEL_DIM_SERIES];
+	unsigned char series_low[DCF77_LOW_LEVEL_DIM_SERIES];
 	signed   char intervals_of_100ms_passed;
 	unsigned char overflow;
 };

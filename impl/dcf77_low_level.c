@@ -1,3 +1,9 @@
+#include <stdint.h>
+#include <string.h>
+
+#include "interrupt.h"
+#include "dcf77_low_level.h"
+
 /* Defines a percentage limit at which we may accept an element as "signal" */
 #define DCF77_LOW_LEVEL_LIM_HEXPERC 191 /* ~ 75% */
 
@@ -102,9 +108,9 @@ static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 		 * measurement has finished at the earliest!
 		 */
 		if(findpos <= 3)
-			next_time_query_earlier();
+			next_time_query_earlier(ctx);
 		else if(findpos > (DCF77_LOW_LEVEL_DIM_SERIES / 2))
-			next_time_query_later();
+			next_time_query_later(ctx);
 		else
 			ctx->intervals_of_100ms_passed = 0; /* query same */
 
