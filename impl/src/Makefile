@@ -1,10 +1,12 @@
+# Regular compilation
 # depends: avr-libc, avrdude, gcc-avr
 
 OBJECTS = main.o input.o screen.o vfd_gp9002.o alarm.o interrupt.o \
 		dcf77_low_level.o
 
 %.o: %.c
-	avr-gcc -Wall -O2 -DF_CPU=16000000UL -mmcu=atmega328p -c $*.c
+	avr-gcc -I ../interface -Wall -O2 -DF_CPU=16000000UL \
+						-mmcu=atmega328p -c $*.c
 
 build: $(OBJECTS)
 	avr-gcc -mmcu=atmega328p $(OBJECTS) -o ma_dcf77_vfd

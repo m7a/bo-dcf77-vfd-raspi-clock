@@ -37,6 +37,7 @@ enum dcf77_low_level_reading dcf77_low_level_proc(struct dcf77_low_level* ctx)
 {
 	unsigned char iidx;
 	unsigned char val;
+	/* TODO z might we need to mark data as processed afterwards by means of set_start? */
 	for(iidx = interrupt_get_start(); iidx != interrupt_get_next();
 								iidx++) {
 		if(ctx->cursor == DCF77_LOW_LEVEL_DIM_SERIES) {
@@ -59,8 +60,12 @@ static void process_measured_value(unsigned char val, unsigned char cursor,
 {
 	unsigned char i;
 	series[cursor] = 0;
-	for(i = cursor; i >= 0 && (cursor - i) < n; i--)
+	for(i = cursor; (cursor - i) < n; i--) {
 		series[i] += val;
+		/* If we are at the beginning, no further processing needed */
+		if(i == 0)
+			break;
+	}
 }
 
 static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
