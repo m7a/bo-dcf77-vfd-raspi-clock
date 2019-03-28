@@ -13,4 +13,6 @@ unsigned char interrupt_get_num_meas();
 unsigned char interrupt_get_num_between(unsigned char start,
 							unsigned char next);
 unsigned char interrupt_get_next();
+
+/* returns 0 if 0 and a value different from 0 for 1 */
 unsigned char interrupt_get_at(unsigned char idx);

@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <stdio.h> /* TODO CSTAT DEBUG ONLY */
+
 #include "interrupt.h"
 #include "dcf77_low_level.h"
 
@@ -37,7 +39,6 @@ enum dcf77_low_level_reading dcf77_low_level_proc(struct dcf77_low_level* ctx)
 {
 	unsigned char iidx;
 	unsigned char val;
-	/* TODO z might we need to mark data as processed afterwards by means of set_start? */
 	for(iidx = interrupt_get_start(); iidx != interrupt_get_next();
 								iidx++) {
 		if(ctx->cursor == DCF77_LOW_LEVEL_DIM_SERIES) {
@@ -46,12 +47,14 @@ enum dcf77_low_level_reading dcf77_low_level_proc(struct dcf77_low_level* ctx)
 			break;
 		}
 		val = interrupt_get_at(iidx);
+		printf("<%d>", !!val);
 		process_measured_value(val, ctx->cursor, ctx->series_low,
 						DCF77_LOW_LEVEL_DEPTH_LOW);
 		process_measured_value(val, ctx->cursor, ctx->series_high,
 						DCF77_LOW_LEVEL_DEPTH_HIGH);
 		ctx->cursor++;
 	}
+	interrupt_set_start(iidx);
 	return process_second(ctx);
 }
 
@@ -60,11 +63,16 @@ static void process_measured_value(unsigned char val, unsigned char cursor,
 {
 	unsigned char i;
 	series[cursor] = 0;
-	for(i = cursor; (cursor - i) < n; i--) {
-		series[i] += val;
-		/* If we are at the beginning, no further processing needed */
-		if(i == 0)
-			break;
+	if(val) {
+		for(i = cursor; (cursor - i) < n; i--) {
+			series[i]++;
+			/*
+			 * If we are at the beginning, no further processing is
+			 * needed
+			 */
+			if(i == 0)
+				break;
+		}
 	}
 }
 
@@ -84,6 +92,7 @@ static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 		 */
 		next_time_query_later(ctx);
 		ctx->cursor = 0; /* discard buffer */
+		printf(" -- too few --\n");
 		return DCF77_LOW_LEVEL_NO_SIGNAL;
 	} else {
 		/* Enough elements to check the series for elements */
@@ -96,13 +105,16 @@ static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 			findpos = findn(ctx->cursor, ctx->series_low,
 						DCF77_LOW_LEVEL_DEPTH_LOW);
 			if(findpos == DCF77_LOW_LEVEL_DIM_SERIES) {
+				printf(" -- no 1 no 0 --\n");
 				/* no 1 and no 0 detected */
 				rv = DCF77_LOW_LEVEL_NO_SIGNAL;
 			} else {
+				printf(" -- 0 --\n");
 				/* low count found (0 bit detected) */
 				rv = DCF77_LOW_LEVEL_0;
 			}
 		} else {
+			printf(" -- 1 --\n");
 			/* high count found (1 bit detected) */
 			rv = DCF77_LOW_LEVEL_1;
 		}
@@ -114,7 +126,8 @@ static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 		 */
 		if(findpos <= 3)
 			next_time_query_earlier(ctx);
-		else if(findpos > (DCF77_LOW_LEVEL_DIM_SERIES / 2))
+		else if(findpos > (DCF77_LOW_LEVEL_DIM_SERIES / 2) &&
+				findpos != DCF77_LOW_LEVEL_DIM_SERIES)
 			next_time_query_later(ctx);
 		else
 			ctx->intervals_of_100ms_passed = 0; /* query same */
@@ -146,14 +159,18 @@ static unsigned char findn(unsigned char cursor, unsigned char* series,
 	unsigned char i;
 	unsigned short perc;
 
+	printf("[find n n=%d]", n);
+
 	/* t_max out of range for time series [0;_DIM-1] => invalid */
 	unsigned char t_max = DCF77_LOW_LEVEL_DIM_SERIES;
 	/* need to find at least HEXPERC */
 	unsigned short perc_max = DCF77_LOW_LEVEL_LIM_HEXPERC;
 
 	for(i = n; i < cursor; i++) {
+		printf(" %d.%d", i, series[i]);
 		perc = series[i] * 0xff / n;
 		if(perc > perc_max) {
+			printf("Y");
 			perc_max = perc;
 			/*
 			 * As the series are backwards-populated the starting
