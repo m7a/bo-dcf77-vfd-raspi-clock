@@ -1,6 +1,6 @@
-#define DCF77_LOW_LEVEL_DIM_SERIES 150
-#define DCF77_LOW_LEVEL_DEPTH_LOW  5
-#define DCF77_LOW_LEVEL_DEPTH_HIGH 30
+#define DCF77_LOW_LEVEL_DIM_SERIES 140
+#define DCF77_LOW_LEVEL_DEPTH_LOW  10
+#define DCF77_LOW_LEVEL_DEPTH_HIGH 20
 
 struct dcf77_low_level {
 	unsigned char cursor;
@@ -16,15 +16,15 @@ enum dcf77_low_level_reading {
 	 * corresponds to a "0" received from the receiver module
 	 * ("1" for _1 respectively)
 	 */
-	DCF77_LOW_LEVEL_0,
+	DCF77_LOW_LEVEL_0 = 0,
 
-	DCF77_LOW_LEVEL_1,
+	DCF77_LOW_LEVEL_1 = 1,
 
 	/*
 	 * _proc continued processing but a second has not passed yet
 	 * (no update in the second counter necessary)
 	 */
-	DCF77_LOW_LEVEL_NO_UPDATE,
+	DCF77_LOW_LEVEL_NO_UPDATE = 2,
 
 	/*
 	 * _proc detected that a second has passed but there was no signal
@@ -33,7 +33,7 @@ enum dcf77_low_level_reading {
 	 *     receiver / receiver is not connected etc.
 	 * (2) end of minute marker was received
 	 */
-	DCF77_LOW_LEVEL_NO_SIGNAL,
+	DCF77_LOW_LEVEL_NO_SIGNAL = 3,
 
 };
 

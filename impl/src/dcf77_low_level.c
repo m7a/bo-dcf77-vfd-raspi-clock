@@ -1,8 +1,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <stdio.h> /* TODO CSTAT DEBUG ONLY */
-
 #include "interrupt.h"
 #include "dcf77_low_level.h"
 

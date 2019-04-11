@@ -43,6 +43,7 @@
 #define DELAY_MS_VARIANCE  10
 
 extern char last_reading; /* interrupt.c debug exported symbol */
+extern unsigned char last_reading_delta_t; /* same */
 
 int main()
 {
@@ -71,14 +72,15 @@ int main()
 	alarm_init();
 	input_init(&in);
 	screen_init(&scr, &vfd);
-	dcf77_low_level_init(&dcflow);
-	interrupt_enable();
 
 	/* display version */
 	screen_update(&scr);
 	_delay_ms(2000);
 
-	/* TODO DEBUG ONLY  | CSTAT IT IS READY FOR A TEST COMPILE AND ON HW? */
+	dcf77_low_level_init(&dcflow);
+	interrupt_enable();
+
+	/* TODO DEBUG ONLY */
 	screen_display(&scr, SCREEN_STATUS);
 
 	while(1) {
@@ -91,11 +93,23 @@ int main()
 		time_new = interrupt_get_time_ms();
 		delta_t = time_new - time_old;
 
+		/* TODO CSTAT SUBSTAT Auswertung funktioniert nicht, aber F-Anzeige
+			erlaubt händisches Dekodieren ~10:0 ~20:1... also könnte man vielleicht
+			doch das nutzen. Zusätzlich: Ende eines 1-Eventes aufschreiben und
+			dafür sorgen, dass das Ende kurz vor Beginn der Rechnung liegt,
+			sodass man immer neue Ereignisse verarbeitet. Wenn mal nichts
+			kam, dann wird eben ein X-Wert generiert. Also effektiv kein
+			"Buffer", sondern nur einzelne Variablen => es kann sofort
+			zum Overflow kommen, dafür ist die Auswertung wesentlich
+			einfacher! */
+
 		/* == Process == */
 		/* delta T, P: processed, R: raw, D: delay, +: overflows */
-		debug_info_len = sprintf(debug_info, "%4dP%uR%uD%03d+%02x%02x",
-			delta_t, reading, last_reading, delay_ms,
-			dcflow.overflow, interrupt_get_num_overflow());
+		debug_info_len = sprintf(debug_info,
+			"P%uR%u+%02x%02x:%3uF",
+			reading, last_reading,
+			dcflow.overflow, interrupt_get_num_overflow(),
+			last_reading_delta_t);
 		screen_set_measurements(&scr, in.mode, in.btn, in.sensor,
 				in_mode, in_button, debug_info_len, debug_info,
 				interrupt_get_time_ms());

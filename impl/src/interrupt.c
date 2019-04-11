@@ -8,6 +8,9 @@
 #define SIZE_BYTES 32
 
 char last_reading = 0; /* TODO DEBUG ONLY */
+static char last_reading_before = 0;
+static char last_reading_delta_sub = 0;
+unsigned char last_reading_delta_t = 0;
 
 static volatile uint32_t      interrupt_time         = 0;
 static volatile unsigned char interrupt_readings[SIZE_BYTES];
@@ -42,7 +45,17 @@ ISR(TIMER0_COMPA_vect)
 	interrupt_readings[idxh] = (interrupt_readings[idxh] & ~_BV(idxl)) |
 					((INTERRUPT_USE_PIN_READ) << idxl);
 
+	/* -- TODO BEGIN DEBUG LOGIC -- */
 	last_reading = !!INTERRUPT_USE_PIN_READ;
+	if(last_reading == last_reading_before) {
+		if(last_reading_delta_sub != 0xff)
+			last_reading_delta_sub++;
+	} else {
+		last_reading_before = last_reading;
+		last_reading_delta_t = last_reading_delta_sub;
+		last_reading_delta_sub = 0;
+	}
+	/* -- END DEBUG LOGIC -- */
 
 	if(++interrupt_next == interrupt_start)
 		interrupt_num_overflow = ((interrupt_num_overflow == 0xff)?
