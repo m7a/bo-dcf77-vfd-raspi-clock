@@ -93,5 +93,5 @@ unsigned char interrupt_get_num_between(unsigned char start, unsigned char next)
 
 unsigned char interrupt_get_at(unsigned char idx)
 {
-	return interrupt_readings[idx >> 3] & idx;
+	return interrupt_readings[idx >> 3] & (_BV((idx & 7)));
 }

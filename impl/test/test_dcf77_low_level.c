@@ -4,7 +4,7 @@
 #include "interrupt.h"
 #include "dcf77_low_level.h"
 
-#define _BV(N) (1 << N)
+#define _BV(N) (1 << (N))
 
 /* 125 measurements/second */
 /* hight: ~30x1, low: ~5x1 */
@@ -62,7 +62,6 @@ int main(int argc, char** argv)
 
 	for(i = 0; i < TESTSEQLEN; i++) {
 		for(j = 0; j < MEAS_PER_SEC; j++) {
-			/* printf("ADD BIT %d %d %d\n", i, j, testseq[i][j]); */
 			add_bit_from_interrupt(testseq[i][j]);
 			if(++twelves >= 12) {
 				printf("[%2d|%3d] INVOKE READING ", i, j);
@@ -74,7 +73,7 @@ int main(int argc, char** argv)
 				case DCF77_LOW_LEVEL_1:
 					puts("-> READING      1"); break;
 				case DCF77_LOW_LEVEL_NO_UPDATE:
-					puts("-> NO_UPDATE"); break;
+					puts("-> NO_UPDATE");      break;
 				case DCF77_LOW_LEVEL_NO_SIGNAL:
 					puts("-> NO_SIGNAL    _"); break;
 				default:
@@ -96,9 +95,11 @@ static void add_bit_from_interrupt(char bitval)
 	interrupt_readings[idxh] = (interrupt_readings[idxh] & ~_BV(idxl)) |
 					(bitval << idxl);
 
-	if(++interrupt_next == interrupt_start)
+	if(++interrupt_next == interrupt_start) {
 		interrupt_num_overflow = ((interrupt_num_overflow == 0xff)?
 					0xff: (interrupt_num_overflow + 1));
+		printf("-- OVERFLOW=%d --", interrupt_num_overflow);
+	}
 }
 
 unsigned char interrupt_get_start()
@@ -113,7 +114,7 @@ unsigned char interrupt_get_next()
 
 unsigned char interrupt_get_at(unsigned char idx)
 {
-	return interrupt_readings[idx >> 3] & idx;
+	return interrupt_readings[idx >> 3] & (_BV(idx & 7));
 }
 
 void interrupt_set_start(unsigned char start)

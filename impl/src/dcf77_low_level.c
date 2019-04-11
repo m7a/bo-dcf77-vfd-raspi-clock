@@ -47,7 +47,6 @@ enum dcf77_low_level_reading dcf77_low_level_proc(struct dcf77_low_level* ctx)
 			break;
 		}
 		val = interrupt_get_at(iidx);
-		printf("<%d>", !!val);
 		process_measured_value(val, ctx->cursor, ctx->series_low,
 						DCF77_LOW_LEVEL_DEPTH_LOW);
 		process_measured_value(val, ctx->cursor, ctx->series_high,
@@ -92,7 +91,6 @@ static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 		 */
 		next_time_query_later(ctx);
 		ctx->cursor = 0; /* discard buffer */
-		printf(" -- too few --\n");
 		return DCF77_LOW_LEVEL_NO_SIGNAL;
 	} else {
 		/* Enough elements to check the series for elements */
@@ -105,16 +103,13 @@ static enum dcf77_low_level_reading process_second(struct dcf77_low_level* ctx)
 			findpos = findn(ctx->cursor, ctx->series_low,
 						DCF77_LOW_LEVEL_DEPTH_LOW);
 			if(findpos == DCF77_LOW_LEVEL_DIM_SERIES) {
-				printf(" -- no 1 no 0 --\n");
 				/* no 1 and no 0 detected */
 				rv = DCF77_LOW_LEVEL_NO_SIGNAL;
 			} else {
-				printf(" -- 0 --\n");
 				/* low count found (0 bit detected) */
 				rv = DCF77_LOW_LEVEL_0;
 			}
 		} else {
-			printf(" -- 1 --\n");
 			/* high count found (1 bit detected) */
 			rv = DCF77_LOW_LEVEL_1;
 		}
@@ -159,18 +154,14 @@ static unsigned char findn(unsigned char cursor, unsigned char* series,
 	unsigned char i;
 	unsigned short perc;
 
-	printf("[find n n=%d]", n);
-
 	/* t_max out of range for time series [0;_DIM-1] => invalid */
 	unsigned char t_max = DCF77_LOW_LEVEL_DIM_SERIES;
 	/* need to find at least HEXPERC */
 	unsigned short perc_max = DCF77_LOW_LEVEL_LIM_HEXPERC;
 
 	for(i = n; i < cursor; i++) {
-		printf(" %d.%d", i, series[i]);
 		perc = series[i] * 0xff / n;
 		if(perc > perc_max) {
-			printf("Y");
 			perc_max = perc;
 			/*
 			 * As the series are backwards-populated the starting
