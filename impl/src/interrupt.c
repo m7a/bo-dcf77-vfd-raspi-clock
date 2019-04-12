@@ -35,6 +35,12 @@ void interrupt_enable()
 	sei();
 }
 
+/*
+ATOMIC READ AND UNSET (LOAD AND CLEAR)
+https://rn-wissen.de/wiki/index.php?title=Inline-Assembler_in_avr-gcc
+asm volatile("lac %1, %0": "=r" (output_register_to_load), "+z" (memory_location_to_load_and_clear))
+*/
+
 ISR(TIMER0_COMPA_vect)
 {
 	unsigned char idxh = interrupt_next >> 3;
