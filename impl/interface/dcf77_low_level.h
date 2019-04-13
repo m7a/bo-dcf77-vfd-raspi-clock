@@ -1,14 +1,8 @@
-#define DCF77_LOW_LEVEL_DIM_SERIES 140
-#define DCF77_LOW_LEVEL_DEPTH_LOW  10
-#define DCF77_LOW_LEVEL_DEPTH_HIGH 20
-
-struct dcf77_low_level {
-	unsigned char cursor;
-	unsigned char series_high[DCF77_LOW_LEVEL_DIM_SERIES];
-	unsigned char series_low[DCF77_LOW_LEVEL_DIM_SERIES];
-	signed   char intervals_of_100ms_passed;
-	unsigned char overflow;
-};
+/*
+ * Transforms time values from interrupt into 0/1/X-values.
+ * 
+ * Input/Output is performed through variables in struct dcf77_low_level
+ */
 
 enum dcf77_low_level_reading {
 
@@ -37,5 +31,26 @@ enum dcf77_low_level_reading {
 
 };
 
+struct dcf77_low_level {
+	/* private */
+	signed char private_intervals_of_100ms_passed;
+	/* input: set before calling _proc */
+	unsigned char in_val;
+	unsigned char in_ticks_ago;
+	/* output: read after calling _proc */
+	enum dcf77_low_level_reading out_reading;
+	/*
+	 * If this is returned as 1, the access to interrupt data came in bad
+	 * timing (too close to the interrupt writing the variables). Next
+	 * time query later by e.g. adding some delay of 3 ticks or so (24ms)
+	 */
+	char out_misaligned;
+	/*
+	 * This is a status value/error counter for the number of times a
+	 * signal's semantics could not be understood.
+	 */
+	unsigned char out_unidentified;
+};
+
 void dcf77_low_level_init(struct dcf77_low_level* ctx);
-enum dcf77_low_level_reading dcf77_low_level_proc(struct dcf77_low_level* ctx);
+void dcf77_low_level_proc(struct dcf77_low_level* ctx);

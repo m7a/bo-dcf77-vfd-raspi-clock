@@ -23,3 +23,88 @@ Frames    Val  DeltaF   T0        T1         DeltaTInner  DeltaTOuter
 0241-0243 1    3
 0244-0285 0
 0286-0270 1    5
+
+---
+
+Decode telegrams
+
+-----------------------------------------------------------|
+                              111010011001001100100100110001
+301011101101011100100110010101111010011001001100100100110001
+30100011101111000010010000110011101001100100110010010
+-----------------------------------------------------------|
+
+https://de.wikipedia.org/wiki/DCF77
+
+0     CONST0  Start der Minute
+1     IGN     Wetterinformationen+Kat-Schutz
+2     IGN     Wetterinformationen+Kat-Schutz
+3     IGN     Wetterinformationen+Kat-Schutz
+4     IGN     Wetterinformationen+Kat-Schutz
+5     IGN     Wetterinformationen+Kat-Schutz
+6     IGN     Wetterinformationen+Kat-Schutz
+7     IGN     Wetterinformationen+Kat-Schutz
+8     IGN     Wetterinformationen+Kat-Schutz
+9     IGN     Wetterinformationen+Kat-Schutz
+10    IGN     Wetterinformationen+Kat-Schutz
+11    IGN     Wetterinformationen+Kat-Schutz
+12    IGN     Wetterinformationen+Kat-Schutz
+13    IGN     Wetterinformationen+Kat-Schutz
+14    IGN     Wetterinformationen+Kat-Schutz
+15    IGN     Rufbit
+16    SCHALT  bei 1: Am Ende dieser Stunde Zeitumstellung!
+17    SCHALT  bei 1: Sommerzeit, 0: Winterzeit \_ also 10 Sommerzeit
+18    SCHALT  bei 1: Winterzeit, 0: Sommerzeit /       01 Winterzeit
+19    SCHALT  bei 1: Am Ende dieser Stunde Schaltsekunde!
+20    CONST1  Start Zeitinformationen 
+21    VAL     Minute Einer   (1)        \_ müssen +1-Regel folgen, könnten aber
+22    VAL     Minute Einer   (2)        |  für 10min-Genauigkeit erstmal
+23    VAL     Minute Einer   (4)        |  ignoriert werden.
+24    VAL     Minute Einer   (8)        /
+25    VAL     Minute Zehner (10)
+26    VAL     Minute Zehner (20)
+27    VAL     Minute Zehner (40)
+28    CHCK    Parität Minute           Anzahl der 1-en 21--28 muss gerade sein
+29    VAL     Stunde Einer   (1)
+30    VAL     Stunde Einer   (2)
+31    VAL     Stunde Einer   (4)
+32    VAL     Stunde Einer   (8)
+33    VAL     Stunde Zehner (10)
+34    VAL     Stunde Zehner (20)
+35    VAL     Stunde Zehner (40)
+36    CHCK    Parität Stunde           Anzahl der 1-en 29--36 muss gerade sein
+36    VAL     Tag Einer
+37    VAL     Tag Einer
+38    VAL     Tag Einer
+39    VAL     Tag Einer
+40    VAL     Tag Zehner
+41    VAL     Tag Zehner
+42    VAL     Wochentag (nur Einer von Mon1-Son7)
+43    VAL     Wochentag
+44    VAL     Wochentag
+45    VAL     Monat Einer
+46    VAL     Monat EIner
+47    VAL     Monat Einer
+48    VAL     Monat Einer
+49    VAL     Monat Zehner (1 für +10, 0 für einstellige Monate)
+50    VAL     Jahr Einer
+51    VAL     Jahr Einer
+52    VAL     Jahr Einer
+53    VAL     Jahr Einer
+54    VAL     Jahr Zehner
+55    VAL     Jahr Zehner
+56    VAL     Jahr Zehner
+57    VAL     Jahr Zehner
+58    CHCK    Parität Datum            Anzahl der 1-en 36-58 muss gerade sein
+59    SPECIAL Endmarkierung -- kein Signal (3)
+
+0 IGN               S So S C MinEi MinZe P StEi StZ P Te   Tz Dow MonE MZ YE  YZ   P
+0 [101110110101110] 0 10 0 1 1001  010   1 1110 10  0 1100 10 011 0010 0 1001 1000 1 3
+                             9     20      7    10    3    10   6    4 0 9    10
+                                    m=29       h=17      d=13        M=4 Y=19
+
+Schaltsekunden: Normal: bei 59 "keine Sekundenmarke" 3,
+                Schaltsekunde: bei 59 1x 0 und dannach 3
+
+Es werden immer die Informationen der Folgeminute übertragen, also -1min rechnen
+vor dem Anzeigen? (Prüft man wohl am besten mit einer Vergleichsuhr)

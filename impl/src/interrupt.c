@@ -4,30 +4,22 @@
 #include <avr/interrupt.h>
 
 #include "interrupt.h"
-
-#define SIZE_BYTES 32
-
-char last_reading = 0; /* TODO DEBUG ONLY */
-static char last_reading_before = 0;
-static char last_reading_delta_sub = 0;
-unsigned char last_reading_delta_t = 0;
+#include "inc_sat.h"
 
 static volatile uint32_t      interrupt_time         = 0;
-static volatile unsigned char interrupt_readings[SIZE_BYTES];
-static volatile unsigned char interrupt_start        = 0;
-static volatile unsigned char interrupt_next         = 0;
+static volatile unsigned char interrupt_is_1         = 0;
+static volatile unsigned char interrupt_n1           = 0;
+static volatile unsigned char interrupt_n1_out       = 0;
+static volatile unsigned char interrupt_ticks_ago    = 0;
 static volatile unsigned char interrupt_num_overflow = 0;
 
 void interrupt_enable()
 {
-	memset((unsigned char*)interrupt_readings, 0,
-						sizeof(interrupt_readings));
-
 	/* switch to IN direction */
 	DDRD &= ~_BV(INTERRUPT_USE_PIN_DD);
 
 	/* -- Timing Interrupt -- */
-	cli(); /* asm("cli") */
+	cli();                          /* asm("cli") */
 	TCCR0A = _BV(WGM01);            /* timer 0 mode CTC */
 	TCCR0B = _BV(CS02) | _BV(CS00); /* set Clock/1024 prescaler */
 	OCR0A  = 125;                   /* count to 125 (125 times: 0--124) */
@@ -35,37 +27,28 @@ void interrupt_enable()
 	sei();
 }
 
-/*
-ATOMIC READ AND UNSET (LOAD AND CLEAR)
-https://rn-wissen.de/wiki/index.php?title=Inline-Assembler_in_avr-gcc
-asm volatile("lac %1, %0": "=r" (output_register_to_load), "+z" (memory_location_to_load_and_clear))
-*/
-
 ISR(TIMER0_COMPA_vect)
 {
-	unsigned char idxh = interrupt_next >> 3;
-	unsigned char idxl = interrupt_next & 7;
-
+	/* Forward time by 8ms */
 	interrupt_time += 8;
 
-	interrupt_readings[idxh] = (interrupt_readings[idxh] & ~_BV(idxl)) |
-					((INTERRUPT_USE_PIN_READ) << idxl);
+	/* Process DCF77 input */
+	INC_SATURATED(interrupt_ticks_ago);
+	if(INTERRUPT_USE_PIN_READ) {
+		if(!interrupt_is_1) {
+			interrupt_n1   = 1;
+			interrupt_is_1 = 1;
+		} else {
+			INC_SATURATED(interrupt_n1);
+		}
+	} else if(interrupt_is_1) {
+		if(interrupt_n1_out != 0)
+			INC_SATURATED(interrupt_num_overflow);
 
-	/* -- TODO BEGIN DEBUG LOGIC -- */
-	last_reading = !!INTERRUPT_USE_PIN_READ;
-	if(last_reading == last_reading_before) {
-		if(last_reading_delta_sub != 0xff)
-			last_reading_delta_sub++;
-	} else {
-		last_reading_before = last_reading;
-		last_reading_delta_t = last_reading_delta_sub;
-		last_reading_delta_sub = 0;
+		interrupt_is_1      = 0;
+		interrupt_ticks_ago = 0;
+		interrupt_n1_out    = interrupt_n1;
 	}
-	/* -- END DEBUG LOGIC -- */
-
-	if(++interrupt_next == interrupt_start)
-		interrupt_num_overflow = ((interrupt_num_overflow == 0xff)?
-					0xff: (interrupt_num_overflow + 1));
 }
 
 uint32_t interrupt_get_time_ms()
@@ -82,35 +65,36 @@ unsigned char interrupt_get_num_overflow()
 	return interrupt_num_overflow;
 }
 
-unsigned char interrupt_get_start()
+/* Procedure to read. Writes to output parameters. No update if val=0 */
+void interrupt_read_dcf77_signal(unsigned char* val, unsigned char* ticks_ago)
 {
-	return interrupt_start;
-}
+	register unsigned char extracted_n1;
+	register unsigned char extracted_ticks_ago;
 
-void interrupt_set_start(unsigned char start)
-{
-	interrupt_start = start;
-}
+	/*
+	 * Read data by means of atomic Load And Clear instruction.
+	 *
+	 * If we are interrupted between the two calls, the ISR will notice
+	 * this because one of the variables will be non-zero and this will
+	 * in turn cause an overflow to be generated.
+	 *
+	 * This would work were the chip to support it :( :(
 
-unsigned char interrupt_get_next()
-{
-	return interrupt_next;
-}
+	   asm volatile("lac %1, %0": "=r"(extracted_ticks_ago),
+						"+z"(interrupt_ticks_ago));
 
-unsigned char interrupt_get_num_meas()
-{
-	return interrupt_get_num_between(interrupt_start, interrupt_next);
-}
+	   asm volatile("lac %1, %0": "=r"(extracted_n1),
+						"+z"(interrupt_n1_out));
+	 *
+	 * As it is not supported, cli()/sei() is needed :(
+	 */
 
-unsigned char interrupt_get_num_between(unsigned char start, unsigned char next)
-{
-	/* next > start || ... start --- next  ... || next - start        */
-	/* start > next || --- next  ... start --- || size - (start-next) */
-	return next >= start? (start - next): ((SIZE_BYTES * 8) -
-								(start - next));
-}
+	cli();
+	extracted_n1        = interrupt_n1_out;
+	interrupt_n1_out    = 0;
+	extracted_ticks_ago = interrupt_ticks_ago;
+	sei();
 
-unsigned char interrupt_get_at(unsigned char idx)
-{
-	return interrupt_readings[idx >> 3] & (_BV((idx & 7)));
+	*ticks_ago = extracted_ticks_ago;
+	*val       = extracted_n1;
 }

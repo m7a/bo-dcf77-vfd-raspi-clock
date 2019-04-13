@@ -6,13 +6,8 @@ void interrupt_enable();
 uint32_t interrupt_get_time_ms();
 unsigned char interrupt_get_num_overflow();
 
-/* for dcf77_low_level interface */
-unsigned char interrupt_get_start();
-void interrupt_set_start(unsigned char start);
-unsigned char interrupt_get_num_meas();
-unsigned char interrupt_get_num_between(unsigned char start,
-							unsigned char next);
-unsigned char interrupt_get_next();
-
-/* returns 0 if 0 and a value different from 0 for 1 */
-unsigned char interrupt_get_at(unsigned char idx);
+/*
+ * new interface for DCF77 but should be invoked in main() rather than
+ * dcf77_low_level.
+ */
+void interrupt_read_dcf77_signal(unsigned char* val, unsigned char* ticks_ago);

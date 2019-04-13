@@ -42,9 +42,6 @@
 #define DELAY_MS_TARGET   100
 #define DELAY_MS_VARIANCE  10
 
-extern char last_reading; /* interrupt.c debug exported symbol */
-extern unsigned char last_reading_delta_t; /* same */
-
 int main()
 {
 	int delay_ms = DELAY_MS_TARGET;
@@ -52,13 +49,12 @@ int main()
 
 	char debug_counter = 0;
 	char debug_info[64];
-	enum dcf77_low_level_reading reading = DCF77_LOW_LEVEL_NO_UPDATE;
+	size_t debug_info_len = 0;
+	char debug_alarm = 0;
 
 	uint32_t time_old = 0;
 	uint32_t time_new;
 	int delta_t;
-	size_t debug_info_len = 0;
-	char debug_alarm = 0;
 
 	struct vfd_gp9002 vfd;
 	struct input in;
@@ -75,7 +71,7 @@ int main()
 
 	/* display version */
 	screen_update(&scr);
-	_delay_ms(2000);
+	_delay_ms(1500);
 
 	dcf77_low_level_init(&dcflow);
 	interrupt_enable();
@@ -88,32 +84,28 @@ int main()
 		in_mode = input_read_mode(&in);
 		in_button = input_read_buttons(&in);
 		input_read_sensor(&in);
-		reading = dcf77_low_level_proc(&dcflow);
+		/* process DCF-77 signal */
+		interrupt_read_dcf77_signal(&dcflow.in_val,
+							&dcflow.in_ticks_ago);
+		dcf77_low_level_proc(&dcflow);
 
 		time_new = interrupt_get_time_ms();
 		delta_t = time_new - time_old;
 
-		/* TODO CSTAT SUBSTAT Auswertung funktioniert nicht, aber F-Anzeige
-			erlaubt händisches Dekodieren ~10:0 ~20:1... also könnte man vielleicht
-			doch das nutzen. Zusätzlich: Ende eines 1-Eventes aufschreiben und
-			dafür sorgen, dass das Ende kurz vor Beginn der Rechnung liegt,
-			sodass man immer neue Ereignisse verarbeitet. Wenn mal nichts
-			kam, dann wird eben ein X-Wert generiert. Also effektiv kein
-			"Buffer", sondern nur einzelne Variablen => es kann sofort
-			zum Overflow kommen, dafür ist die Auswertung wesentlich
-			einfacher! */
+		/* Additional delay if misaligned -- not counted in delta_t */
+		if(dcflow.out_misaligned)
+			_delay_ms(25);
 
-		/* == Process == */
-		/* delta T, P: processed, R: raw, D: delay, +: overflows */
-		debug_info_len = sprintf(debug_info,
-			"P%uR%u+%02x%02x:%3uF",
-			reading, last_reading,
-			dcflow.overflow, interrupt_get_num_overflow(),
-			last_reading_delta_t);
+		/* == Display == */
+		debug_info_len = sprintf(
+			debug_info, "P%uV%03dA%03dM%u+%02x%02x",
+			dcflow.out_reading, dcflow.in_val, dcflow.in_ticks_ago,
+			dcflow.out_misaligned,
+			interrupt_get_num_overflow(), dcflow.out_unidentified
+		);
 		screen_set_measurements(&scr, in.mode, in.btn, in.sensor,
 				in_mode, in_button, debug_info_len, debug_info,
-				interrupt_get_time_ms());
-
+				time_new);
 		screen_update(&scr);
 
 		/* == Delay == */
