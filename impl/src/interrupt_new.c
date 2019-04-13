@@ -1,0 +1,101 @@
+#include <string.h>
+#include <stddef.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+/* -- DECL (first part unchanged) -- */
+/* Pins to read DCF-77 signal from */
+#define INTERRUPT_USE_PIN_DD   DDD2
+#define INTERRUPT_USE_PIN_READ (PIND & _BV(PD2))
+
+void interrupt_enable();
+uint32_t interrupt_get_time_ms();
+unsigned char interrupt_get_num_overflow();
+
+/*
+ * new interface for DCF77 but should be invoked in main() rather than
+ * dcf77_low_level?
+ */
+void interrupt_read_dcf77_signal(unsigned char* val, unsigned char* ticks_ago);
+
+/* IMPL */
+
+#define INC_SATURATED(VAR) { if((VAR) != 0xff) { ++(VAR); } }
+
+static volatile uint32_t      interrupt_time         = 0;
+static volatile unsigned char interrupt_is_1         = 0;
+static volatile unsigned char interrupt_n1           = 0;
+static volatile unsigned char interrupt_n1_out       = 0;
+static volatile unsigned char interrupt_ticks_ago    = 0;
+static volatile unsigned char interrupt_num_overflow = 0;
+
+void interrupt_enable()
+{
+	/* switch to IN direction */
+	DDRD &= ~_BV(INTERRUPT_USE_PIN_DD);
+
+	/* -- Timing Interrupt -- */
+	cli();                          /* asm("cli") */
+	TCCR0A = _BV(WGM01);            /* timer 0 mode CTC */
+	TCCR0B = _BV(CS02) | _BV(CS00); /* set Clock/1024 prescaler */
+	OCR0A  = 125;                   /* count to 125 (125 times: 0--124) */
+	TIMSK0 = _BV(OCIE0A);           /* Enable output compare interrupt */
+	sei();
+}
+
+ISR(TIMER0_COMPA_vect)
+{
+	/* Forward time by 8ms */
+	interrupt_time += 8;
+
+	/* Process DCF77 input */
+	INC_SATURATED(interrupt_ticks_ago);
+	if(INTERRUPT_USE_PIN_READ) {
+		if(!interrupt_is_1) {
+			interrupt_n1    = 1;
+			interrupt_is_n1 = 1;
+		} else {
+			INC_SATURATED(interrupt_n1);
+		}
+	} else if(is_n1) {
+		if(interrupt_n1_out != 0)
+			INC_SATURATED(interrupt_num_overflow);
+
+		interrupt_is_1      = 0;
+		interrupt_ticks_ago = 0;
+		interrupt_n1_out    = n1;
+	}
+}
+
+uint32_t interrupt_get_time_ms()
+{
+	uint32_t val;
+	cli();
+	val = interrupt_time;
+	sei();
+	return val;
+}
+
+unsigned char interrupt_get_num_overflow()
+{
+	return interrupt_num_overflow;
+}
+
+/* Procedure to read. Writes to output parameters. No update if val=0 */
+void interrupt_read_dcf77_signal(unsigned char* val, unsigned char* ticks_ago)
+{
+	register unsigned char extracted_n1;
+
+	/* Then read data by means of atomic Load And Clear instruction */
+	asm volatile("lac %1, %0": "=r"(extracted_n1), "+z"(interrupt_n1_out));
+
+	/*
+	 * Here, an interrupt may happen. This might reset ticks_ago but then
+	 * we have a sort of unnoticed overflow. The signal processing
+	 * implementation can detect this as unwanted.
+	 */
+	
+	/* Then read ticks_ago */
+	*ticks_ago = interrupt_ticks_ago;
+	*val = extracted_n1;
+}
