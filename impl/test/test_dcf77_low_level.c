@@ -1,3 +1,4 @@
+/* This test is currently defunct */
 #include <stdio.h>
 #include <stdint.h>
 
