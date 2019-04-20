@@ -1,10 +1,53 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "dcf77_low_level.h"
 
+/* definition here is debug only */
+static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
+		unsigned char* in_telegram_1, unsigned char* in_out_telegram_2);
+
 int main(int argc, char** argv)
 {
-
+	unsigned char i;
+	unsigned char j;
+	unsigned char example_data[3][60] = {
+		/* 13.04.19 */
+		{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3}, /* 17:28 */
+        /*       0 1 2 3 4 5 6 7 8 9101112131415161718 */
+		{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3}, /* 17:29 */
+		/* Verrauschtes Testtelegram funktioniert auch: */
+		/*{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,3,3,3,3,3,3,3,3,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3}, * 17:29 */
+		{0,1,0,0,0,1,1,1,0,1,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,1,0,0,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,3,3,3,3,3,3,3,3}, /* 17:30 */
+	};
+	unsigned char telegram_1[15];
+	unsigned char telegram_2[15];
+	unsigned char* telegram[] = { telegram_1, telegram_2 };
+	unsigned char bitval;
+	memset(telegram_1, 0, sizeof(telegram_1) / sizeof(unsigned char));
+	memset(telegram_2, 0, sizeof(telegram_1) / sizeof(unsigned char));
+	for(i = 0; i < 2; i++) {
+		for(j = 0; j < 60; j++) {
+			switch(example_data[i][j]) {
+			case 0:  bitval = 2; break;
+			case 1:  bitval = 3; break;
+			case 2:  bitval = 0; break;
+			case 3:  bitval = 1; break;
+			default: puts("<<<ERROR1>>>"); return 64;
+			}
+			telegram[i][j / 4] |= bitval << ((j % 4) * 2);
+		}
+		printf("Telegram %d:    ", i);
+		for(j = 0; j < sizeof(telegram_1)/sizeof(unsigned char); j++)
+			printf("%02x,", telegram[i][j]);
+		puts("");
+	}
+	i = xeliminate(60, 60, telegram_1, telegram_2);
+	printf("Eliminated [%d] ", i);
+	for(j = 0; j < sizeof(telegram_2)/sizeof(unsigned char); j++)
+		printf("%02x,", telegram_2[j]);
+	puts("");
+	return 0;
 }
 
 /* interface */
@@ -13,7 +56,7 @@ int main(int argc, char** argv)
 #define DCF77_HIGH_LEVEL_TIME_LEN 8
 #define DCF77_HIGH_LEVEL_DATE_LEN 10
 
-enum dcf77_high_level_input_mode;
+enum dcf77_high_level_input_mode { IN_INIT, IN_ALIGNED, IN_UNKNOWN };
 
 struct dcf77_high_level {
 	/* private */
@@ -34,12 +77,14 @@ void dcf77_high_level_init(struct dcf77_high_level* ctx);
 void dcf77_high_level_process(struct dcf77_high_level* ctx);
 
 /* internal */
-enum dcf77_high_level_input_mode { IN_INIT, IN_ALIGNED, IN_UNKNOWN };
-
 #define VAL_EPSILON 0 /* 00 */
 #define VAL_X       1 /* 01 */
 #define VAL_0       2 /* 10 */
 #define VAL_1       3 /* 11 */
+
+static char xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
+							unsigned char entry);
+static unsigned char read_entry(unsigned char in, unsigned char entry);
 
 /* implementation */
 void dcf77_high_level_init(struct dcf77_high_level* ctx)
@@ -64,7 +109,7 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 	}
 }
 
-/* -----------------------------------------[ Procedures for X-elimination ]-- */
+/* ----------------------------------------[ Procedures for X-elimination ]-- */
 /*
  * The purpose of this part is to implement a logic for merging information
  * from adjacent minutes as to reconstruct noisy telegrams. This works by
@@ -78,33 +123,42 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
  * @return 0 if mismatch, 1 if OK
  */
 static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
-		unsigned char* in_telgram_1, unsigned char* in_out_telegram_2)
+		unsigned char* in_telegram_1, unsigned char* in_out_telegram_2)
 {
 	unsigned char i;
 	unsigned char etmp;
 	unsigned char etmp2;
 
 	/* 0:    entry has to match and be constant 0 */
-	if(!xeliminate_entry(*in_telegram_1, in_out_telegram_2, 0))
+	if(!xeliminate_entry(*in_telegram_1, in_out_telegram_2, 0)) {
+		puts("<<<ERROR2>>>");
 		return 0;
+	}
 
 	etmp = read_entry(*in_out_telegram_2, 0);
-	if(etmp == VAL_1)
+	if(etmp == VAL_1) {
+		puts("<<<ERROR3>>>");
 		return 0; /* constant 0 violated */
+	}
 
 	/* 16--20: entries have to match */
-	for(i = 16; i <= 20; i++)
+	for(i = 16; i <= 20; i++) {
 		if(!xeliminate_entry(in_telegram_1[i / 4],
-					in_out_telegram_2 + (i / 4), i % 4))
+					in_out_telegram_2 + (i / 4), i % 4)) {
+			puts("<<<ERROR4>>>");
 			return 0;
+		}
+	}
 
 	/* 17+18: needs to be 10 or 01 */
 	etmp  = read_entry(in_out_telegram_2[4], 1);
 	etmp2 = read_entry(in_out_telegram_2[4], 2);
 	/* assertion violated if 00 or 11 found */
 	if((etmp == VAL_0 && etmp2 == VAL_0) ||
-					(etmp == VAL_1 && etmp2 == VAL_1))
+					(etmp == VAL_1 && etmp2 == VAL_1)) {
+		printf("<<<ERROR5,etmp1=%u,etmp2=%u>>>\n", etmp, etmp2);
 		return 0;
+	}
 	if(etmp2 == VAL_X && etmp != VAL_X && etmp != VAL_EPSILON) {
 		/*
 		 * use 17 to infer value of 18
@@ -122,23 +176,29 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 
 	/* 20:     entry has to match and be constant 1 */
 	etmp = read_entry(in_out_telegram_2[5], 0);
-	if(etmp == VAL_0)
+	if(etmp == VAL_0) {
+		puts("<<<ERROR6>>>");
 		return 0; /* constant 1 violated */
+	}
 
 	/* 25--58: entries have to match */
-	for(i = 25; i <= 58; i++)
+	for(i = 25; i <= 58; i++) {
 		if(!xeliminate_entry(in_telegram_1[i / 4],
-					in_out_telegram_2 + (i / 4), i % 4))
+					in_out_telegram_2 + (i / 4), i % 4)) {
+			printf("<<<ERROR7,i=%u>>>\n", i);
 			return 0;
+		}
+	}
 
 	/* 59:   entries have to match and be constant X
 	 *       (or special case leap second) */
 	if(telegram_1_len == telegram_2_len) {
 		/* needs to be X */
-		return (read_entry(in_telegram_1[12], 0) == VAL_X &&
-				read_entry(in_out_telegram_2[12], 0) == VAL_X);
+		return (read_entry(in_telegram_1[14], 3) == VAL_X &&
+				read_entry(in_out_telegram_2[14], 3) == VAL_X);
 	} else {
 		/* leap second case TODO N_IMPL THEN FOLLOWUP WRITE SOME TEST CASES FOR XELIMINATE FUNCTION (AND XELIMINATE ENTRY, READ_ENTRY ETC?) */
+		return 0;
 	}
 } 
 
@@ -164,5 +224,5 @@ static char xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
 
 static unsigned char read_entry(unsigned char in, unsigned char entry)
 {
-	return in & (3 << (entry * 2)) >> (entry * 2);
+	return (in & (3 << (entry * 2))) >> (entry * 2);
 }
