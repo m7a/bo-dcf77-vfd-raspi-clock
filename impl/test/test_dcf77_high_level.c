@@ -128,6 +128,8 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 	unsigned char i;
 	unsigned char etmp;
 	unsigned char etmp2;
+	unsigned char* telleap;
+	unsigned char* telregular;
 
 	/* 0:    entry has to match and be constant 0 */
 	if(!xeliminate_entry(*in_telegram_1, in_out_telegram_2, 0)) {
@@ -192,12 +194,36 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 
 	/* 59:   entries have to match and be constant X
 	 *       (or special case leap second) */
-	if(telegram_1_len == telegram_2_len) {
+	if(telegram_1_len == 60 && telegram_2_len == 60) {
 		/* needs to be X */
 		return (read_entry(in_telegram_1[14], 3) == VAL_X &&
 				read_entry(in_out_telegram_2[14], 3) == VAL_X);
+	} else if((telegram_1_len == 61 && telegram_2_len == 60) ||
+			(telegram_1_len == 60 && telegram_2_len == 61)) {
+		/* Check the larger one */
+		if(telegram_1_len == 61) {
+			telleap    = in_telegram_1;
+			telregular = in_out_telegram_2;
+		} else {
+			telleap    = in_out_telegram_2;
+			telregular = in_telegram_1;
+		}
+		/*
+		 * Now the check to perform is that the added part
+		 * just before the end marker needs to be a `0` (X is
+		 * allowed as well)
+		 *
+		 * Leap seconds are rare. We do not use them to
+		 * correct data in the telegram (does not make sense
+		 * to write to telegram_1 which is an in-variable
+		 * anyways).
+		 */
+		return (read_entry(telleap[14],    3) == VAL_X  ||
+			read_entry(telleap[14],    3) == VAL_0) &&
+			read_entry(telleap[14],    4) == VAL_X  &&
+			read_entry(telregular[14], 3) == VAL_X;
 	} else {
-		/* leap second case TODO N_IMPL THEN FOLLOWUP WRITE SOME TEST CASES FOR XELIMINATE FUNCTION (AND XELIMINATE ENTRY, READ_ENTRY ETC?) */
+		/* not a minute's telegram -> invalid */
 		return 0;
 	}
 } 
