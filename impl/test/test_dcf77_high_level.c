@@ -9,47 +9,6 @@ static void run_xeliminate_testcases();
 int main(int argc, char** argv)
 {
 	run_xeliminate_testcases();
-#if 0
-	unsigned char i;
-	unsigned char j;
-	unsigned char example_data[3][60] = {
-		/* 13.04.19 */
-		{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3}, /* 17:28 */
-        /*       0 1 2 3 4 5 6 7 8 9101112131415161718 */
-		{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3}, /* 17:29 */
-		/* Verrauschtes Testtelegram funktioniert auch: */
-		/*{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,3,3,3,3,3,3,3,3,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3}, * 17:29 */
-		{0,1,0,0,0,1,1,1,0,1,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,1,0,0,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,3,3,3,3,3,3,3,3}, /* 17:30 */
-	};
-	unsigned char telegram_1[15];
-	unsigned char telegram_2[15];
-	unsigned char* telegram[] = { telegram_1, telegram_2 };
-	unsigned char bitval;
-	memset(telegram_1, 0, sizeof(telegram_1) / sizeof(unsigned char));
-	memset(telegram_2, 0, sizeof(telegram_1) / sizeof(unsigned char));
-	for(i = 0; i < 2; i++) {
-		for(j = 0; j < 60; j++) {
-			switch(example_data[i][j]) {
-			case 0:  bitval = 2; break;
-			case 1:  bitval = 3; break;
-			case 2:  bitval = 0; break;
-			case 3:  bitval = 1; break;
-			default: puts("<<<ERROR1>>>"); return 64;
-			}
-			telegram[i][j / 4] |= bitval << ((j % 4) * 2);
-		}
-		printf("Telegram %d:    ", i);
-		for(j = 0; j < sizeof(telegram_1)/sizeof(unsigned char); j++)
-			printf("%02x,", telegram[i][j]);
-		puts("");
-	}
-	i = xeliminate(60, 60, telegram_1, telegram_2);
-	printf("Eliminated [%d] ", i);
-	for(j = 0; j < sizeof(telegram_2)/sizeof(unsigned char); j++)
-		printf("%02x,", telegram_2[j]);
-	puts("");
-	return 0;
-#endif
 }
 
 /* -----------------------------------------------------[ Test XELIMINATE ]-- */
@@ -59,6 +18,7 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 		unsigned char* in_telegram_1, unsigned char* in_out_telegram_2);
 
 struct xeliminate_testcase {
+	char* description;
 	unsigned char num_lines;
 	unsigned char line_len[9];
 	unsigned char data[9][61];
@@ -68,6 +28,7 @@ struct xeliminate_testcase {
 
 struct xeliminate_testcase xeliminate_testcases[] = {
 	{
+		.description = "17:28 -> 17:29 eliminates correctly",
 		.num_lines = 2,
 		.line_len = { 60, 60 },
 		.data = {
@@ -78,7 +39,99 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 		},
 		.recovery_ok = 1,
 		.recovers_to = {0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a},
-	}
+	},
+	{
+		.description = "17:29 -> 17:30 fails to eliminate",
+		.num_lines = 2,
+		.line_len = { 60, 60 },
+		.data = {
+			/* 13.04.19 17:29 */
+			{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+			/* 17:30 */
+			{0,1,0,0,0,1,1,1,0,1,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,1,0,0,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,3,3,3,3,3,3,3,3},
+		},
+		.recovery_ok = 0,
+	},
+	{
+		.description = "17:28 -> 17:29 recover noisy telegram",
+		.num_lines = 2,
+		.line_len = { 60, 60 },
+		.data = {
+			/* 13.04.19 17:28 */
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+			/* 17:29 */
+			{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,3,3,3,3,3,3,3,3,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+		},
+		.recovery_ok = 1,
+		.recovers_to = {0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a},
+	},
+	{
+		.description = "17:28 -> 17:29 recover summertime bit 17 from 18",
+		.num_lines = 2,
+		.line_len = { 60, 60 },
+		.data = {
+			/* 13.04.19 17:28 */
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+			/* 17:29 bit 17 defunct */
+			{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,3,0,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+		},
+		.recovery_ok = 1,
+		.recovers_to = {0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a},
+	},
+	{
+		.description = "17:28 -> 17:29 recover summertime bit 18 from 17",
+		.num_lines = 2,
+		.line_len = { 60, 60 },
+		.data = {
+			/* 13.04.19 17:28 */
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+			/* 17:29 bit 18 defunct */
+			{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,3,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+		},
+		.recovery_ok = 1,
+		.recovers_to = {0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a},
+	},
+	{
+		.description = "17:28 -> 17:29 summertime recovery fails if both defunct",
+		.num_lines = 2,
+		.line_len = { 60, 60 },
+		.data = {
+			/* 13.04.19 17:28 */
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+			/* 17:29 bits 17+18 defunct */
+			{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,3,3,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+		},
+		.recovery_ok = 1,
+		.recovers_to = {0xee,0xef,0xbb,0xbf,0x96,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a},
+	},
+	/*
+		https://www.dcf77logs.de/live  22.04.2019
+		22:50 {0,1,1,0,1,1,0,1,1,1,0,1,1,1,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,}
+		22:51 {0,1,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0,1,1,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,}
+		22:52 {0,0,0,1,1,0,1,1,0,1,1,0,0,0,1,0,0,1,0,0,1,0,1,0,0,1,0,1,1,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,}
+		22:53 {0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,1,0,0,1,1,1,0,0,1,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,}
+	*/
+	{
+		.description = "22:41 -> 22:49 complete correct entries recover to latest entry",
+		.num_lines = 9,
+		.line_len = { 60, 60, 60,  60, 60, 60,  60, 60, 60 },
+		.data = {
+			/* 22.04.19 22:41 */
+			{0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
+			{0,1,0,1,1,1,0,1,1,1,0,0,0,1,0,0,0,1,0,0,1,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
+			{0,0,1,1,0,0,0,0,0,0,0,1,1,0,1,0,0,1,0,0,1,1,1,0,0,0,0,1,1,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
+			{0,0,1,0,0,0,1,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
+			{0,0,0,1,0,1,1,1,1,1,1,1,0,0,1,0,0,1,0,0,1,1,0,1,0,0,0,1,1,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
+			{0,0,1,0,1,0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,1,0,1,1,0,0,0,1,1,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
+			{0,0,0,0,0,1,1,1,0,0,0,0,0,1,1,0,0,1,0,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
+			{0,1,1,0,0,0,1,1,1,1,0,0,0,1,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
+			/* 22.04.19 22:49 */
+			{0,0,1,1,1,0,0,1,0,1,0,1,0,1,0,0,0,1,0,0,1,1,0,0,1,0,0,1,1,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
+		},
+		.recovery_ok = 1,
+		.recovers_to = {0xfa,0xeb,0xee,0xae,0xae,0xaf,0xeb,0xbb,0xba,0xae,0xbe,0xea,0xba,0xbe,0x7a},
+	},
+	/* TODO CSTAT Test cases for leap seconds and more than two noisy entries... */
 };
 
 static void run_xeliminate_testcases()
@@ -117,20 +170,20 @@ static void run_xeliminate_testcases()
 			*/
 		}
 		rv = 1;
-		for(i = 1; i < xeliminate_testcases[curtest].num_lines; i++) {
-			rv = rv && xeliminate(
+		for(i = 1; rv == 1 && i < xeliminate_testcases[curtest].num_lines; i++)
+			rv = xeliminate(
 				xeliminate_testcases[curtest].line_len[i - 1],
 				xeliminate_testcases[curtest].line_len[i],
 				telegram[i - 1],
 				telegram[i]
 			);
-		}
+
 		if(rv == xeliminate_testcases[curtest].recovery_ok) {
-			if(memcmp(telegram[xeliminate_testcases[curtest].num_lines - 1],
+			if(rv == 1 && memcmp(telegram[xeliminate_testcases[curtest].num_lines - 1],
 					xeliminate_testcases[curtest].recovers_to, 15) != 0) {
 				/* fail */
-				printf("[FAIL] Test %d telegram mismatch\n",
-								curtest);
+				printf("[FAIL] Test %d: %s -- telegram mismatch\n",
+					curtest, xeliminate_testcases[curtest].description);
 				printf("       Expected  ");
 				for(j = 0; j < 15; j++)
 					printf(
@@ -148,11 +201,13 @@ static void run_xeliminate_testcases()
 				puts("");
 			} else {
 				/* pass */
-				printf("[ OK ] Test %d\n", curtest);
+				printf("[ OK ] Test %d: %s\n", curtest,
+					xeliminate_testcases[curtest].description);
 			}
 		} else {
 			/* fail */
-			printf("[FAIL] Test %d unexpected rv\n", curtest);
+			printf("[FAIL] Test %d: %s -- unexpected rv idx=%d\n", curtest,
+					xeliminate_testcases[curtest].description, i);
 		}
 		
 	}
@@ -295,6 +350,13 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 
 	/* 25--58: entries have to match */
 	for(i = 25; i <= 58; i++) {
+		/*
+		 * except for minute parity bit (28) which may change depending
+		 * on minute unit value
+		 */
+		if(i == 28)
+			continue;
+
 		if(!xeliminate_entry(in_telegram_1[i / 4],
 					in_out_telegram_2 + (i / 4), i % 4)) {
 			printf("<<<ERROR7,i=%u>>>\n", i);
