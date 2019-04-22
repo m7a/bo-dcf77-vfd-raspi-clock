@@ -1,14 +1,15 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "dcf77_low_level.h"
 
-/* definition here is debug only */
-static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
-		unsigned char* in_telegram_1, unsigned char* in_out_telegram_2);
+static void run_xeliminate_testcases();
 
 int main(int argc, char** argv)
 {
+	run_xeliminate_testcases();
+#if 0
 	unsigned char i;
 	unsigned char j;
 	unsigned char example_data[3][60] = {
@@ -48,7 +49,116 @@ int main(int argc, char** argv)
 		printf("%02x,", telegram_2[j]);
 	puts("");
 	return 0;
+#endif
 }
+
+/* -----------------------------------------------------[ Test XELIMINATE ]-- */
+
+/* definition here is debug only */
+static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
+		unsigned char* in_telegram_1, unsigned char* in_out_telegram_2);
+
+struct xeliminate_testcase {
+	unsigned char num_lines;
+	unsigned char line_len[9];
+	unsigned char data[9][61];
+	unsigned char recovery_ok;
+	unsigned char recovers_to[15];
+};
+
+struct xeliminate_testcase xeliminate_testcases[] = {
+	{
+		.num_lines = 2,
+		.line_len = { 60, 60 },
+		.data = {
+			/* 13.04.19 17:28 */
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+			/* 17:29 */
+			{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
+		},
+		.recovery_ok = 1,
+		.recovers_to = {0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a},
+	}
+};
+
+static void run_xeliminate_testcases()
+{
+	unsigned char curtest;
+	unsigned char i;
+	unsigned char j;
+	unsigned char bitval;
+	unsigned char rv;
+	unsigned char telegram[9][15];
+	
+	for(curtest = 0; curtest <
+			(sizeof(xeliminate_testcases) /
+			sizeof(struct xeliminate_testcase)); curtest++) {
+
+		memset(telegram, 0, sizeof(telegram));
+
+		for(i = 0; i < xeliminate_testcases[curtest].num_lines; i++) {
+			for(j = 0; j <
+			xeliminate_testcases[curtest].line_len[i]; j++) {
+				switch(xeliminate_testcases[curtest].
+								data[i][j]) {
+				case 0:  bitval = 2; break;
+				case 1:  bitval = 3; break;
+				case 2:  bitval = 0; break;
+				case 3:  bitval = 1; break;
+				default: puts("<<<ERROR1>>>"); exit(64);
+				}
+				telegram[i][j / 4] |= bitval << ((j % 4) * 2);
+			}
+			/*
+			printf("Telegram %d:    ", i);
+			for(j = 0; j < sizeof(telegram_1)/sizeof(unsigned char); j++)
+				printf("%02x,", telegram[i][j]);
+			puts("");
+			*/
+		}
+		rv = 1;
+		for(i = 1; i < xeliminate_testcases[curtest].num_lines; i++) {
+			rv = rv && xeliminate(
+				xeliminate_testcases[curtest].line_len[i - 1],
+				xeliminate_testcases[curtest].line_len[i],
+				telegram[i - 1],
+				telegram[i]
+			);
+		}
+		if(rv == xeliminate_testcases[curtest].recovery_ok) {
+			if(memcmp(telegram[xeliminate_testcases[curtest].num_lines - 1],
+					xeliminate_testcases[curtest].recovers_to, 15) != 0) {
+				/* fail */
+				printf("[FAIL] Test %d telegram mismatch\n",
+								curtest);
+				printf("       Expected  ");
+				for(j = 0; j < 15; j++)
+					printf(
+						"%02x,",
+						xeliminate_testcases[curtest].
+						recovers_to[j]
+					);
+				printf("\n       Got       ");
+				for(j = 0; j < 15; j++)
+					printf(
+						"%02x,",
+						telegram[xeliminate_testcases[
+						curtest].num_lines - 1][j]
+					);
+				puts("");
+			} else {
+				/* pass */
+				printf("[ OK ] Test %d\n", curtest);
+			}
+		} else {
+			/* fail */
+			printf("[FAIL] Test %d unexpected rv\n", curtest);
+		}
+		
+	}
+}
+
+/* ---------------------------------------------------[ Logic Declaration ]-- */
 
 /* interface */
 #define DCF77_HIGH_LEVEL_MEM   138
@@ -86,7 +196,7 @@ static char xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
 							unsigned char entry);
 static unsigned char read_entry(unsigned char in, unsigned char entry);
 
-/* implementation */
+/* ------------------------------------------------[ Logic Implementation ]-- */
 void dcf77_high_level_init(struct dcf77_high_level* ctx)
 {
 	ctx->private_inmode = IN_INIT;
