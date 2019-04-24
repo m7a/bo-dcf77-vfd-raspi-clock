@@ -23,7 +23,7 @@ struct xeliminate_testcase {
 	unsigned char line_len[9];
 	unsigned char data[9][61];
 	unsigned char recovery_ok;
-	unsigned char recovers_to[15];
+	unsigned char recovers_to[16];
 };
 
 struct xeliminate_testcase xeliminate_testcases[] = {
@@ -131,7 +131,48 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 		.recovery_ok = 1,
 		.recovers_to = {0xfa,0xeb,0xee,0xae,0xae,0xaf,0xeb,0xbb,0xba,0xae,0xbe,0xea,0xba,0xbe,0x7a},
 	},
-	/* TODO CSTAT Test cases for leap seconds and more than two noisy entries... */
+	{
+		.description = "22:41 -> 22:49 noisy entries recover to full entry",
+		.num_lines = 9,
+		.line_len = { 60, 60, 60,  60, 60, 60,  60, 60, 60 },
+		.data = {
+			/*
+			 * 22.04.19 22:41 all weather information deleted.
+			 *
+			 * also each message has only six bits which still
+			 * allows for the recovery of datetime information
+			 * over the course of ten minutes
+			 */
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,0,1,0,0,3,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,},
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,0,0,0,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,},
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,1,0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,},
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,0,1,0,0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,},
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,0,1,1,0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,},
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,0,1,0,0,1,0,3,3,3,3,3,3,3,3,},
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,0,1,1,0,0,0,3,3,},
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,3,},
+			/* 22.04.19 22:49 highly distorted (everything lost except for minute ones bits) */
+			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,0,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,},
+		},
+		.recovery_ok = 1,
+		.recovers_to = {0x56,0x55,0x55,0x55,0xae,0xaf,0xeb,0xb9,0xba,0xae,0xbe,0xea,0xba,0xbe,0x7a},
+	},
+	{
+		.description = "02:00 -> 02:02 leap second",
+		.num_lines = 3,
+		.line_len = { 61, 60, 60, },
+		.data = {
+			/* 01.07.12 02:00 w/ leap second */
+			{0,0,0,0,1,1,0,1,1,1,1,1,1,0,1,0,0,1,0,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,0,3,},
+			/* 02:01 */
+			{0,0,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,0,0,1,1,0,0,0,0,0,0,1,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3,},
+			/* 02:02 */
+			{0,0,1,0,0,1,1,1,0,0,1,1,1,0,1,0,0,1,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3,},
+		},
+		.recovery_ok = 1,
+		.recovers_to = {},
+	},
+	/* TODO CSTAT Test cases for leap seconds */
 };
 
 static void run_xeliminate_testcases()
@@ -141,7 +182,7 @@ static void run_xeliminate_testcases()
 	unsigned char j;
 	unsigned char bitval;
 	unsigned char rv;
-	unsigned char telegram[9][15];
+	unsigned char telegram[9][16];
 	
 	for(curtest = 0; curtest <
 			(sizeof(xeliminate_testcases) /
@@ -216,7 +257,7 @@ static void run_xeliminate_testcases()
 /* ---------------------------------------------------[ Logic Declaration ]-- */
 
 /* interface */
-#define DCF77_HIGH_LEVEL_MEM   138
+#define DCF77_HIGH_LEVEL_MEM   144 /* ceil(61*2/8) * 9 */
 #define DCF77_HIGH_LEVEL_LINES 9
 #define DCF77_HIGH_LEVEL_TIME_LEN 8
 #define DCF77_HIGH_LEVEL_DATE_LEN 10
@@ -298,7 +339,8 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 
 	/* 0:    entry has to match and be constant 0 */
 	if(!xeliminate_entry(*in_telegram_1, in_out_telegram_2, 0)) {
-		puts("<<<ERROR2>>>");
+		printf("<<<ERROR2,%02x,%02x>>>\n", *in_telegram_1,
+							*in_out_telegram_2);
 		return 0;
 	}
 
@@ -306,13 +348,16 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 	if(etmp == VAL_1) {
 		puts("<<<ERROR3>>>");
 		return 0; /* constant 0 violated */
+	} else if(etmp == VAL_X) {
+		/* correct to 0 */
+		*in_out_telegram_2 = (*in_out_telegram_2 & ~3) | VAL_0;
 	}
 
 	/* 16--20: entries have to match */
 	for(i = 16; i <= 20; i++) {
 		if(!xeliminate_entry(in_telegram_1[i / 4],
 					in_out_telegram_2 + (i / 4), i % 4)) {
-			puts("<<<ERROR4>>>");
+			printf("<<<ERROR4,%d>>>\n", i);
 			return 0;
 		}
 	}
@@ -346,6 +391,9 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 	if(etmp == VAL_0) {
 		puts("<<<ERROR6>>>");
 		return 0; /* constant 1 violated */
+	} else if(etmp == VAL_X) {
+		/* unset => correct to 1 */
+		in_out_telegram_2[5] = (in_out_telegram_2[5] & ~3) | VAL_1;
 	}
 
 	/* 25--58: entries have to match */
@@ -380,6 +428,8 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 			telleap    = in_out_telegram_2;
 			telregular = in_telegram_1;
 		}
+		/* TODO z Though they are rare, leap seconds are an interesting opportunity to recover many things: We know that they only appear at the end of hours and thus can derive all minute bits (need to be BCD 0). Additionally, when seing a leap second, we should check bit 19 which needs to be 1 (or X respectively). In case the leap second is in the 2nd telegram this allows us to recover bit 19 (must be 1...)? One might want to implement such recovery mechanisms but only if they are tested very extensively because otherwise the clock will likely crash on the first leap second encountered w/o possibility of debugging?
+		TODO CSTAT CURRENTLY FAILS W/ ERROR 4 [BIT 19 which is leap second marker mismatches] -> seems one should implement it with more than just this little comparison in the end? */
 		/*
 		 * Now the check to perform is that the added part
 		 * just before the end marker needs to be a `0` (X is
@@ -391,7 +441,7 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 		 * anyways).
 		 */
 		return (read_entry(telleap[14],    3) == VAL_X  ||
-			read_entry(telleap[14],    3) == VAL_0) &&
+			read_entry(telleap[14],    3) == VAL_0) && /* marker */
 			read_entry(telleap[14],    4) == VAL_X  &&
 			read_entry(telregular[14], 3) == VAL_X;
 	} else {
