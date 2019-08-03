@@ -155,7 +155,7 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,0,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,},
 		},
 		.recovery_ok = 1,
-		.recovers_to = {0x56,0x55,0x55,0x55,0xae,0xaf,0xeb,0xb9,0xba,0xae,0xbe,0xea,0xba,0xbe,0x7a},
+		.recovers_to = {0x56,0x55,0x55,0x55,0x6e,0xaf,0xeb,0xb9,0xba,0xae,0xbe,0xea,0xba,0xbe,0x7a},
 	},
 	{
 		.description = "02:00 -> 02:02 leap second",
@@ -170,9 +170,9 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 			{0,0,1,0,0,1,1,1,0,0,1,1,1,0,1,0,0,1,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3,},
 		},
 		.recovery_ok = 1,
-		.recovers_to = {},
+		.recovers_to = {0xba,0xfe,0xfa,0xbb,0xae,0xbb,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a},
 	},
-	/* TODO CSTAT Test cases for leap seconds */
+	/* TODO CSTAT Test cases for leap seconds (make them appear in the middle of the array once and then be done with it...) */
 };
 
 static void run_xeliminate_testcases()
@@ -205,7 +205,7 @@ static void run_xeliminate_testcases()
 			}
 			/*
 			printf("Telegram %d:    ", i);
-			for(j = 0; j < sizeof(telegram_1)/sizeof(unsigned char); j++)
+			for(j = 0; j < sizeof(telegram[0])/sizeof(unsigned char); j++)
 				printf("%02x,", telegram[i][j]);
 			puts("");
 			*/
@@ -355,7 +355,11 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 
 	/* 16--20: entries have to match */
 	for(i = 16; i <= 20; i++) {
-		if(!xeliminate_entry(in_telegram_1[i / 4],
+		/*
+		 * i != 19: skip leap second marker. for now it is not used for
+		 *          correction...
+		 */
+		if(i != 19 && !xeliminate_entry(in_telegram_1[i / 4],
 					in_out_telegram_2 + (i / 4), i % 4)) {
 			printf("<<<ERROR4,%d>>>\n", i);
 			return 0;
@@ -399,13 +403,10 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 	/* 25--58: entries have to match */
 	for(i = 25; i <= 58; i++) {
 		/*
-		 * except for minute parity bit (28) which may change depending
-		 * on minute unit value
+		 * i != 28: except for minute parity bit (28) which may change
+		 *          depending on minute unit value
 		 */
-		if(i == 28)
-			continue;
-
-		if(!xeliminate_entry(in_telegram_1[i / 4],
+		if(i != 28 && !xeliminate_entry(in_telegram_1[i / 4],
 					in_out_telegram_2 + (i / 4), i % 4)) {
 			printf("<<<ERROR7,i=%u>>>\n", i);
 			return 0;
@@ -415,7 +416,7 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 	/* 59:   entries have to match and be constant X
 	 *       (or special case leap second) */
 	if(telegram_1_len == 60 && telegram_2_len == 60) {
-		/* needs to be X */
+		/* needs to be X -- regular mintues */
 		return (read_entry(in_telegram_1[14], 3) == VAL_X &&
 				read_entry(in_out_telegram_2[14], 3) == VAL_X);
 	} else if((telegram_1_len == 61 && telegram_2_len == 60) ||
@@ -428,8 +429,6 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 			telleap    = in_out_telegram_2;
 			telregular = in_telegram_1;
 		}
-		/* TODO z Though they are rare, leap seconds are an interesting opportunity to recover many things: We know that they only appear at the end of hours and thus can derive all minute bits (need to be BCD 0). Additionally, when seing a leap second, we should check bit 19 which needs to be 1 (or X respectively). In case the leap second is in the 2nd telegram this allows us to recover bit 19 (must be 1...)? One might want to implement such recovery mechanisms but only if they are tested very extensively because otherwise the clock will likely crash on the first leap second encountered w/o possibility of debugging?
-		TODO CSTAT CURRENTLY FAILS W/ ERROR 4 [BIT 19 which is leap second marker mismatches] -> seems one should implement it with more than just this little comparison in the end? */
 		/*
 		 * Now the check to perform is that the added part
 		 * just before the end marker needs to be a `0` (X is
@@ -442,9 +441,10 @@ static char xeliminate(size_t telegram_1_len, size_t telegram_2_len,
 		 */
 		return (read_entry(telleap[14],    3) == VAL_X  ||
 			read_entry(telleap[14],    3) == VAL_0) && /* marker */
-			read_entry(telleap[14],    4) == VAL_X  &&
+			read_entry(telleap[15],    0) == VAL_X  &&
 			read_entry(telregular[14], 3) == VAL_X;
 	} else {
+		printf("<<<ERROR8>>>\n");
 		/* not a minute's telegram -> invalid */
 		return 0;
 	}
