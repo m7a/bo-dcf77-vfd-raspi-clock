@@ -5,6 +5,8 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 
+import java.util.function.Consumer;
+
 class VirtualDisplay extends JComponent implements SerialDisplayInterface {
 
 	private static final int DISPLAY_WIDTH_PX    = 128;
@@ -16,9 +18,11 @@ class VirtualDisplay extends JComponent implements SerialDisplayInterface {
 	private static final int PX_BETWEEN          =   1;
 
 	private static final Color BG_ON  = new Color(0x30, 0x30, 0x30);
-	private static final Color BG_OFF = Color.BLACK;
+	private static final Color BG_OFF = Color.RED;
 	private static final Color FG_ON  = new Color(0x00, 0xff, 0xee);
 	private static final Color FG_OFF = new Color(0x90, 0x90, 0x90);
+
+	private final Consumer<String> log;
 
 	private int[]       memory              = new int[0x909];
 	private boolean[]   screenOn            = new boolean[] { false, false };
@@ -31,8 +35,9 @@ class VirtualDisplay extends JComponent implements SerialDisplayInterface {
 	private int         currentAddress      = 0; /* auto increment */
 	private DisplayCtrl lastCtrl            = DisplayCtrl.NONE;
 
-	VirtualDisplay() {
+	VirtualDisplay(Consumer<String> log) {
 		super();
+		this.log = log;
 	}
 
 	@Override
@@ -78,7 +83,7 @@ class VirtualDisplay extends JComponent implements SerialDisplayInterface {
 	}
 
 	@Override
-	public void write(boolean isCtrl, int data) {
+	public void accept(Boolean isCtrl, Integer data) {
 		if(isCtrl) {
 			switch(lastCtrl = DisplayCtrl.fromCode(data)) {
 			case DISPLAYSOFF:
@@ -119,7 +124,16 @@ class VirtualDisplay extends JComponent implements SerialDisplayInterface {
 				currentAddress = lowerRWAddress |
 						(higherRWAddress << 8);
 				break;
-			case DATAWRITE: memory[currentAddress++] = data; break;
+			case DATAWRITE:
+				if(currentAddress >= memory.length)
+					log.accept(String.format(
+						"[WARN] DATAWRITE out of " +
+						"bounds ignored with " +
+						"address=0x%x, maxExcl=0x%x",
+						currentAddress, memory.length));
+				else
+					memory[currentAddress++] = data;
+				break;
 			}
 		}
 	}

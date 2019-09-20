@@ -8,9 +8,11 @@ void ll_delay_ms(unsigned num)
 {
 	char lbuf[256];
 	printf("ll_delay_ms,%u\n", num);
+	fflush(stdout);
 
 	if(fgets(lbuf, sizeof(lbuf), stdin) == NULL) {
 		puts("ERROR,Terminated by end of file on input.");
+		fflush(stdout);
 		exit(1);
 	} else {
 		if(strcmp(lbuf, "ACK,ll_delay_ms\n") != 0) {

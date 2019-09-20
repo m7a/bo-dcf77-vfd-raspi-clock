@@ -275,7 +275,7 @@ static void display_draw(struct display_ctx* ctx, unsigned char x,
 				char* text, unsigned char length)
 {
 	/* for now we blindly assume y % 8 = 0! */
-	unsigned addr = x * 8 + y / 8;
+	unsigned addr = x * 8 + y / 8 + (ctx->vscreen << 10);
 	unsigned char i;
 	unsigned char rx;
 
@@ -324,13 +324,13 @@ static unsigned char remap(char in, unsigned char font)
 			return in - '-';
 		} else {
 			switch(in) {
-			case '(': return 0 + (':' - '-');
-			case '!': return 1 + (':' - '-');
-			case ')': return 2 + (':' - '-');
-			case '*': return 3 + (':' - '-');
-			case '#': return 4 + (':' - '-');
-			case ' ': return 5 + (':' - '-');
-			default:  return 1 + (':' - '-'); /* error */
+			case '(': return 1 + (':' - '-');
+			case '!': return 2 + (':' - '-');
+			case ')': return 3 + (':' - '-');
+			case '*': return 4 + (':' - '-');
+			case '#': return 5 + (':' - '-');
+			case ' ': return 6 + (':' - '-');
+			default:  return 2 + (':' - '-'); /* error */
 			}
 		}
 	default:

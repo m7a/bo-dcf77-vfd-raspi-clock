@@ -9,10 +9,11 @@ void ll_out_display(char is_ctrl, unsigned char value)
 {
 	char lbuf[256];
 	printf("ll_out_display,%d,%u\n", is_ctrl, value);
-
+	fflush(stdout);
 
 	if(fgets(lbuf, sizeof(lbuf), stdin) == NULL) {
 		puts("ERROR,Terminated by end of file on input.");
+		fflush(stdout);
 		exit(1);
 	} else {
 		if(strcmp(lbuf, "ACK,ll_out_display\n") != 0) {

@@ -19,7 +19,7 @@ class TestVirtualDisplay {
 
 	static void testVirtualDisplay(VirtualDisplay d) {
 		for(int[] cmd: INITIALIZATION_SEQUENCE)
-			d.write(cmd[0] == 1, cmd[1]);
+			d.accept(cmd[0] == 1, cmd[1]);
 
 		// For testing, we would like to display a rectangle of size
 		// 40x20 at 5,10. The address for 5,10 is 0x20 (X) + 1 (Y)
@@ -36,13 +36,13 @@ class TestVirtualDisplay {
 							address += 8, numW++) {
 			int lower  = address & 0xff;
 			int higher = (address & 0xf00) >> 8;
-			d.write(true, DisplayCtrl.ADDRL.code);
-			d.write(false, lower);
-			d.write(true, DisplayCtrl.ADDRH.code);
-			d.write(false, higher);
-			d.write(true, DisplayCtrl.DATAWRITE.code);
+			d.accept(true, DisplayCtrl.ADDRL.code);
+			d.accept(false, lower);
+			d.accept(true, DisplayCtrl.ADDRH.code);
+			d.accept(false, higher);
+			d.accept(true, DisplayCtrl.DATAWRITE.code);
 			for(int b: data)
-				d.write(false, b);
+				d.accept(false, b);
 		}
 	}
 
