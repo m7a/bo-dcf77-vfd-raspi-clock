@@ -1,4 +1,4 @@
-DEPS = display.o
+DEPS = display.o interrupt.o
 
 compile: $(DEPS)
 

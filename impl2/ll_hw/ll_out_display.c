@@ -1,6 +1,7 @@
 #include <avr/io.h>
 
 #include "ll_display.h"
+#include "ll_display_pins.h"
 #include "ll_out_display.h"
 
 void ll_out_display(char is_ctrl, unsigned char value)

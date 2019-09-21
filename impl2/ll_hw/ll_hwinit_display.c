@@ -1,6 +1,7 @@
 #include <avr/io.h>
 
 #include "ll_display_shared.h"
+#include "ll_display_pins.h"
 #include "ll_display.h"
 #include "ll_hwinit_display.h"
 

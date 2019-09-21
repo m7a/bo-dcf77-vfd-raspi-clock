@@ -1,4 +1,5 @@
-DEPS = ll_hwinit_display.o ll_delay.o ll_out_display.o
+DEPS = ll_hwinit_display.o ll_delay.o ll_out_display.o ll_interrupt.o \
+	ll_test_acklogic_and_interrupt.o
 
 compile: $(DEPS)
 	

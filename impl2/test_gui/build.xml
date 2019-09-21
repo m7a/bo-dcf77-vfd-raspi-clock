@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project default="compile">
+	<target name="compile">
+		<!--<echo>javac = ${java.version}</echo>-->
+		<javac includeantruntime="false" srcdir="."/>
+	</target>
+	<target name="run" depends="compile">
+		<java fork="true" classname="ma.dcf77t.Main"/>
+	</target>
+	<target name="clean">
+		<delete>
+			<fileset dir="ma">
+				<filename name="**/*.class"/>
+			</fileset>
+		</delete>
+	</target>
+</project>
