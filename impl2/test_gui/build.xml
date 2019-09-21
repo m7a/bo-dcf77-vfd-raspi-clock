@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project default="compile">
+<!--
+<project default="compile" xmlns:ma="http://.../">
+	<target name="test">
+		<ma:x>5</ma:x>
+	</target>
+-->
+
+<project default="compile" xmlns:ma="http://.../">
 	<target name="compile">
 		<!--<echo>javac = ${java.version}</echo>-->
 		<javac includeantruntime="false" srcdir="."/>
