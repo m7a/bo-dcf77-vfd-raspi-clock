@@ -11,12 +11,12 @@ class ComProcInQueue implements ComProcInQueueReceiverSide,
 
 	@Override
 	public void sendDelayCompletedToComProc() {
-		q.add(ComProcInMsg.MSG_TICK);
+		q.add(ComProcInMsg.MSG_DELAY_COMPLETED);
 	}
 
 	@Override
 	public void sendTickToComProc() {
-		q.add(ComProcInMsg.MSG_DELAY_COMPLETED);
+		q.add(ComProcInMsg.MSG_TICK);
 	}
 
 	@Override

@@ -15,8 +15,3 @@ void ll_interrupt_handling_enable()
 {
 	/* nop */
 }
-
-char ll_interrupt_read_pin()
-{
-	return ll_test_interrupt_read_pin();
-}

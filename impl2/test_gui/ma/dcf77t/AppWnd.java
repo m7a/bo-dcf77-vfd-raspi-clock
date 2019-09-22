@@ -4,6 +4,8 @@ import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import javax.swing.*;
+import javax.swing.plaf.metal.MetalLookAndFeel;
+import javax.swing.plaf.metal.MetalTheme;
 import javax.swing.border.TitledBorder;
 import java.util.function.Supplier;
 
@@ -16,6 +18,8 @@ class AppWnd {
 
 	static void createAndShow(VirtualDisplay disp, final Signal onClose,
 							Supplier<String> log) {
+		setDesign();
+
 		final JFrame wnd = new JFrame("Ma_Sys.ma DCF-77 VFD Module " +
 					"Clock Interactive Test Application");
 		Container cp = wnd.getContentPane();
@@ -71,6 +75,7 @@ class AppWnd {
 		Box analysisUnit = new Box(BoxLayout.Y_AXIS);
 
 		final JTextArea logArea = new JTextArea();
+		logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
 		logArea.setEditable(false);
 		Box sub = new Box(BoxLayout.Y_AXIS);
 		sub.add(new JScrollPane(logArea));
@@ -101,6 +106,18 @@ class AppWnd {
 
 		wnd.setVisible(true);
 		timer.start();
+	}
+
+	private static void setDesign() {
+		System.setProperty("sun.awt.noerasebackground", "true");
+		Toolkit.getDefaultToolkit().setDynamicLayout(true);
+		MetalTheme theme = new LabyrintheTheme();
+		MetalLookAndFeel.setCurrentTheme(theme);
+		try {
+			UIManager.setLookAndFeel(new MetalLookAndFeel());
+		} catch(Exception ex) {
+			ex.printStackTrace();
+		}
 	}
 
 }

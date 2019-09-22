@@ -24,7 +24,7 @@ void ll_interrupt_enable()
 
 ISR(TIMER0_COMPA_vect)
 {
-	interrupt_service_routine();
+	interrupt_service_routine(INTERRUPT_USE_PIN_READ);
 }
 
 void ll_interrupt_handling_disable()
@@ -35,9 +35,4 @@ void ll_interrupt_handling_disable()
 void ll_interrupt_handling_enable()
 {
 	sei();
-}
-
-char ll_interrupt_read_pin()
-{
-	return INTERRUPT_USE_PIN_READ;
 }

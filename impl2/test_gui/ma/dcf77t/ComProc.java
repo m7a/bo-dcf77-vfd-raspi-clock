@@ -1,5 +1,6 @@
 package ma.dcf77t;
 
+import java.util.function.Consumer;
 import java.io.IOException;
 
 class ComProc extends Thread {
@@ -8,6 +9,7 @@ class ComProc extends Thread {
 	private final ComProcOutLine             outLine;
 	private final ComProcOutRequestDelay     outRequestDelay;
 	private final SerialDisplayInterface     outSerial;
+	private final Consumer<String>           outLog;
 
 	private int wantAck = 0;
 
@@ -15,12 +17,14 @@ class ComProc extends Thread {
 		ComProcInQueueReceiverSide in,
 		ComProcOutLine             outLine,
 		ComProcOutRequestDelay     outRequestDelay,
-		SerialDisplayInterface     outSerial
+		SerialDisplayInterface     outSerial,
+		Consumer<String>           outLog
 	) {
 		this.in              = in;
 		this.outLine         = outLine;
 		this.outRequestDelay = outRequestDelay;
 		this.outSerial       = outSerial;
+		this.outLog          = outLog;
 	}
 
 	@Override
@@ -30,27 +34,24 @@ class ComProc extends Thread {
 			try {
 				msg = in.inComProcReceiveMsg();
 			} catch(InterruptedException ex) {
-				ex.printStackTrace(); // harmless
+				outLog.accept("[INFORMAT] ComProc shutdown " +
+						"due to InterruptedException " +
+						"(usually harmless)");
 				return;
 			}
 			try {
 				procMsg(msg);
 			} catch(IOException ex) {
-				ex.printStackTrace(); // TODO report to user
+				outLog.accept("[WARNING ] ComProc.run: " + ex);
 			}
 		}
 	}
 
 	private void procMsg(ComProcInMsg msg) throws IOException {
 		if(msg == ComProcInMsg.MSG_TICK) {
-			try {
-				// TODO ATM IT IS ALWYS ZERO!
-				outLine.writeLine(
-					"interrupt_service_routine,0");
-				wantAck++;
-			} catch(IOException ex) {
-				ex.printStackTrace(); // TODO z report
-			}
+			// TODO ATM IT IS ALWYS ZERO! Need to poll a DCF77 simulator for this!
+			outLine.writeLine("interrupt_service_routine,0");
+			wantAck++;
 		} else if(msg == ComProcInMsg.MSG_DELAY_COMPLETED) {
 			outLine.writeLine("ACK,ll_delay_ms");
 		} else {
@@ -66,7 +67,12 @@ class ComProc extends Thread {
 					wantAck--;
 					return;
 				} else {
-					System.out.println("[WARN] Mismatch: Expected ACK,interrupt_service_routine but got " + msg.line); // TODO PROPERLY REPORT TO USER
+					outLog.accept(
+						"[WARNING ] Mismatch: " +
+						"Expected ACK,interrupt_" +
+						"service_routine but got " +
+						msg.line
+					);
 				}
 			}
 
@@ -75,17 +81,15 @@ class ComProc extends Thread {
 				outRequestDelay.accept(Integer.parseInt(val));
 				break;
 			case "ll_out_display":
-				// send this display request to the
-				// display.
 				processDisplay(val);
 				break;
 			case "ERROR":
-				// TODO z something to report to the user
-				System.out.println(msg.line);
+				outLog.accept("[ERROR   ] ComProc.procMsg: " +
+									val);
 				break;
 			default:
-				// TODO z also report but different error.
-				System.out.println(msg.line);
+				outLog.accept("[WARNING ] ComProc.procMsg: " +
+						"unknown line: " + msg.line);
 				break;
 			}
 		}
@@ -98,8 +102,8 @@ class ComProc extends Thread {
 			int data = Integer.parseInt(val.substring(idx + 1));
 			outSerial.accept(ctrl, data);
 		} catch(RuntimeException ex) {
-			// TODO z report this to the user
-			ex.printStackTrace();
+			outLog.accept("[WARNING ] ComProc.processDisplay: " +
+								ex.toString());
 		}
 		// in any case: ack the message
 		outLine.writeLine("ACK,ll_out_display");

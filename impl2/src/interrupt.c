@@ -13,14 +13,14 @@ static volatile unsigned char interrupt_n1_out       = 0;
 static volatile unsigned char interrupt_ticks_ago    = 0;
 static volatile unsigned char interrupt_num_overflow = 0;
 
-void interrupt_service_routine()
+void interrupt_service_routine(char pinval)
 {
 	/* Forward time by 8ms */
 	interrupt_time += 8;
 
 	/* Process DCF77 input */
 	INC_SATURATED(interrupt_ticks_ago);
-	if(ll_interrupt_read_pin()) {
+	if(pinval) {
 		if(!interrupt_is_1) {
 			interrupt_n1   = 1;
 			interrupt_is_1 = 1;

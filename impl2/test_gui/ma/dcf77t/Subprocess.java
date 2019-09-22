@@ -9,6 +9,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /** Derived from ma.d5man.lib.export.proc.AbstractConverterProcess */
 class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 
+	private final long bootTime = System.currentTimeMillis();
+
 	private final String executable;
 	private final Consumer<String> log;
 	private final ComProcInQueueLineProcessorSide lineStream;
@@ -30,14 +32,19 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 		try {
 			while(!isInterrupted() &&
 					(line = stdout.readLine()) != null) {
-				log.accept(line);
+				// Reduce clutter by not showing ISR.
+				if(!line.equals("ACK,interrupt_service_" +
+								"routine"))
+					log.accept(String.format("[%8d] %s",
+							deltaT(), line));
 				lineStream.sendLineToComProc(line);
 			}
 		} catch(IOException ex) {
-			ex.printStackTrace(); // TODO report
+			log.accept("[ERROR   ] Subprocess terminated due to " +
+							"IOException: " + ex);
 		}
 		if(line == null)
-			log.accept("[WARN] Subporcess EOF.");
+			log.accept("[WARNING ] Subporcess EOF.");
 	}
 
 	/** also call this in the very beginning */
@@ -60,10 +67,16 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 
 	@Override
 	public void writeLine(String str) throws IOException {
-		log.accept("> " + str);
+		// reduce log clutter by not sowing ISR
+		if(!str.startsWith("interrupt_service_routine,"))
+			log.accept(String.format("[%8d] > %s", deltaT(), str));
 		stdin.write(str);
 		stdin.write('\n');
 		stdin.flush();
+	}
+
+	private long deltaT() {
+		return System.currentTimeMillis() - bootTime;
 	}
 
 	@Override
@@ -76,12 +89,10 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 
 		// Nested construction: Try all of these things, even if some
 		// fail...
-		try {
-			stdin.close();
-		} finally {
-			try {
-				stdout.close();
-			} finally {
+		Exception es = ChainedTries.tryThem(
+			() -> stdin.close(),
+			() -> stdout.close(),
+			() -> {
 				try {
 					proc.waitFor();
 				} catch(Exception ex) {
@@ -90,11 +101,14 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 						"Failed to wait for process " +
 						"termination.", ex
 					);
-				} finally {
-					proc = null;
 				}
-			}
-		}
+			},
+			() -> { proc = null; }
+		);
+
+		// just throw the first one, the remainder is already logged
+		if(es != null)
+			throw new IOException(es);
 	}
 
 }

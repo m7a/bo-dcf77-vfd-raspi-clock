@@ -6,6 +6,7 @@
 
 void ll_out_display(char is_ctrl, unsigned char value)
 {
+	ll_test_handle_pending_interrupts();
 	printf("ll_out_display,%d,%u\n", is_ctrl, value);
 	fflush(stdout);
 	ll_test_acklogic_and_interrupt("ACK,ll_out_display\n");

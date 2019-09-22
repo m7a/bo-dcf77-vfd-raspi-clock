@@ -2,5 +2,5 @@
 
 void ll_hwinit_display()
 {
-	/* pass */
+	/* nop */
 }

@@ -7,7 +7,7 @@ import java.awt.Graphics;
 
 import java.util.function.Consumer;
 
-class VirtualDisplay extends JComponent implements SerialDisplayInterface {
+class VirtualDisplay extends JComponent {
 
 	private static final int DISPLAY_WIDTH_PX    = 128;
 	private static final int DISPLAY_HEIGHT_PX   =  64;
@@ -22,22 +22,11 @@ class VirtualDisplay extends JComponent implements SerialDisplayInterface {
 	private static final Color FG_ON  = new Color(0x00, 0xff, 0xee);
 	private static final Color FG_OFF = new Color(0x90, 0x90, 0x90);
 
-	private final Consumer<String> log;
+	private final VirtualDisplaySPI backend;
 
-	private int[]       memory              = new int[0x909];
-	private boolean[]   screenOn            = new boolean[] { false, false };
-	private int[]       lowerScreenAddress  = new int[] { 0, 0 };
-	private int[]       higherScreenAddress = new int[] { 0, 0 };
-
-	/* protocol */
-	private int         lowerRWAddress      = 0;
-	private int         higherRWAddress     = 0;
-	private int         currentAddress      = 0; /* auto increment */
-	private DisplayCtrl lastCtrl            = DisplayCtrl.NONE;
-
-	VirtualDisplay(Consumer<String> log) {
+	VirtualDisplay(VirtualDisplaySPI backend) {
 		super();
-		this.log = log;
+		this.backend = backend;
 	}
 
 	@Override
@@ -50,20 +39,21 @@ class VirtualDisplay extends JComponent implements SerialDisplayInterface {
 
 	@Override
 	public void paintComponent(Graphics g) {
-		g.setColor((screenOn[0] || screenOn[1])? BG_ON: BG_OFF);
+		g.setColor((backend.getScreenOn(0) || backend.getScreenOn(1))?
+								BG_ON: BG_OFF);
 		g.fillRect(0, 0, getWidth(), getHeight());
 
-		if(screenOn[0])
+		if(backend.getScreenOn(0))
 			drawScreen(g, 0);
-		if(screenOn[1])
+		if(backend.getScreenOn(1))
 			drawScreen(g, 1);
 	}
 
 	private void drawScreen(Graphics g, int index) {
-		int screenAddressStart = lowerScreenAddress[index] |
-					(higherScreenAddress[index] << 8);
+		int screenAddressStart = backend.getScreenAddressStart(index);
 		for(int i = 0; i < SCREEN_NUM_BYTES; i++) {
-			int currentByte   = memory[screenAddressStart + i];
+			int currentByte   = backend.getMemory(screenAddressStart
+									+ i);
 			int virtualStartY = (i % SCREEN_HEIGHT_BYTES) * 8;
 			int virtualStartX = i / SCREEN_HEIGHT_BYTES;
 
@@ -78,62 +68,6 @@ class VirtualDisplay extends JComponent implements SerialDisplayInterface {
 						(PX_ENLARGE + PX_BETWEEN);
 				g.fillRect(realX, realY, PX_ENLARGE,
 								PX_ENLARGE);
-			}
-		}
-	}
-
-	@Override
-	public void accept(Boolean isCtrl, Integer data) {
-		if(isCtrl) {
-			switch(lastCtrl = DisplayCtrl.fromCode(data)) {
-			case DISPLAYSOFF:
-				screenOn[0] = false;
-				screenOn[1] = false;
-				break;
-			case DISPLAY1ON:
-				screenOn[0] = true;
-				screenOn[1] = false;
-				break;
-			case DISPLAY2ON:
-				screenOn[0] = false;
-				screenOn[1] = true;
-				break;
-			default: /* pass */
-			}
-		} else {
-			if(lastCtrl == null)
-				throw new RuntimeException("Rouge data: " +
-									data);
-			switch(lastCtrl) {
-			case DISPLAY:
-				if(data != 0x10)
-					throw new RuntimeException(
-						"Invalid parameter " + data);
-				break;
-			case BRIGHT:
-				// TODO z for now discard this
-				// TODO ...
-				break;
-			case LOWERADDR1:  lowerScreenAddress [0] = data; break;
-			case HIGHERADDR1: higherScreenAddress[0] = data; break;
-			case LOWERADDR2:  lowerScreenAddress [1] = data; break;
-			case HIGHERADDR2: higherScreenAddress[1] = data; break;
-			case ADDRL:       lowerRWAddress         = data; break;
-			case ADDRH:
-				higherRWAddress = data;
-				currentAddress = lowerRWAddress |
-						(higherRWAddress << 8);
-				break;
-			case DATAWRITE:
-				if(currentAddress >= memory.length)
-					log.accept(String.format(
-						"[WARN] DATAWRITE out of " +
-						"bounds ignored with " +
-						"address=0x%x, maxExcl=0x%x",
-						currentAddress, memory.length));
-				else
-					memory[currentAddress++] = data;
-				break;
 			}
 		}
 	}
