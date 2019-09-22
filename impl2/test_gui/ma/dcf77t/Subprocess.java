@@ -7,18 +7,37 @@ import java.util.function.Consumer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /** Derived from ma.d5man.lib.export.proc.AbstractConverterProcess */
-class Subprocess implements AutoCloseable {
+class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 
 	private final String executable;
 	private final Consumer<String> log;
+	private final ComProcInQueueLineProcessorSide lineStream;
 
 	private Process        proc;
 	private Writer         stdin;
 	private BufferedReader stdout;
 
-	Subprocess(Path executable, Consumer<String> log) {
+	Subprocess(Path executable, Consumer<String> log,
+				ComProcInQueueLineProcessorSide lineStream) {
 		this.executable = executable.toAbsolutePath().toString();
 		this.log = log;
+		this.lineStream = lineStream;
+	}
+
+	@Override
+	public void run() {
+		String line = null;
+		try {
+			while(!isInterrupted() &&
+					(line = stdout.readLine()) != null) {
+				log.accept(line);
+				lineStream.sendLineToComProc(line);
+			}
+		} catch(IOException ex) {
+			ex.printStackTrace(); // TODO report
+		}
+		if(line == null)
+			log.accept("[WARN] Subporcess EOF.");
 	}
 
 	/** also call this in the very beginning */
@@ -39,17 +58,12 @@ class Subprocess implements AutoCloseable {
 		}
 	}
 
-	void writeLine(String str) throws IOException {
+	@Override
+	public void writeLine(String str) throws IOException {
 		log.accept("> " + str);
 		stdin.write(str);
 		stdin.write('\n');
 		stdin.flush();
-	}
-
-	String readLine() throws IOException {
-		String line = stdout.readLine();
-		log.accept(line == null? "[WARN] Subprocess EOF": line);
-		return line;
 	}
 
 	@Override

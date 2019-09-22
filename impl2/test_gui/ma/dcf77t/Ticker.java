@@ -1,15 +1,18 @@
 package ma.dcf77t;
 
-class Ticker extends Thread {
+class Ticker extends Thread implements ComProcOutRequestDelay {
 
-	private final Signal announceTick;
-	private final Object monSyncTick = new Object();
+	private static final int CURRENT_DELAY_NONE = -1;
+
+	private final ComProcInQueueTickerSide toComProc;
+
 	private boolean isTickingAutomatically = true;
-	private int scaleRepeatMs = 1;
+	private int     currentDelay           = CURRENT_DELAY_NONE;
+	private int     scaleRepeatMs          = 1;
 
-	Ticker(Signal announceTick) {
+	Ticker(ComProcInQueueTickerSide toComProc) {
 		super();
-		this.announceTick = announceTick;
+		this.toComProc = toComProc;
 	}
 
 	@Override
@@ -28,17 +31,20 @@ class Ticker extends Thread {
 				return;
 			}
 
-			if(isTickingAutomatically) {
-				synchronized(monSyncTick) {
-					monSyncTick.notifyAll();
-				}
-				announceTick.signal();
-			}
+			if(isTickingAutomatically)
+				tick();
 		}
 	}
 
-	void tickManually() {
-		announceTick.signal();
+	void tick() {
+		boolean delayCompleted;
+		synchronized(this) {
+			delayCompleted = (currentDelay != CURRENT_DELAY_NONE
+							&& --currentDelay == 0);
+		}
+		if(delayCompleted)
+			toComProc.sendDelayCompletedToComProc();
+		toComProc.sendTickToComProc();
 	}
 
 	void setAutomaticTicking(boolean tick) {
@@ -49,18 +55,13 @@ class Ticker extends Thread {
 		this.scaleRepeatMs = scaleRepeatMs;
 	}
 
-	void delay(int ms) {
-		for(int i = 0; i < ms; i++) {
-			// The timeout is just in case it does not work the
-			// regular way.
-			try {
-				synchronized(monSyncTick) {
-					monSyncTick.wait(scaleRepeatMs + 1);
-				}
-			} catch(InterruptedException ex) {
-				ex.printStackTrace(); // harmless
-				return;
-			}
+	@Override
+	public void accept(Integer ms) {
+		synchronized(this) {
+			if(currentDelay > 0)
+				System.out.println("[WARN] Existing delay " +
+							"cancelled/renewed.");
+			currentDelay = (int)Math.max(ms, currentDelay);
 		}
 	}
 

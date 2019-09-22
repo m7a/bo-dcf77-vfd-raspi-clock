@@ -32,6 +32,7 @@ c_%:
 	cd $* && make CC=$(CC) "CFLAGS=$(CFLAGS)"
 
 clean: cc_ll_test cc_main cc_src cc_ll_hw
+	cd test_gui && ant clean
 
 cc_%:
 	cd $* && make CC=$(CC) "CFLAGS=$(CFLAGS)" clean
