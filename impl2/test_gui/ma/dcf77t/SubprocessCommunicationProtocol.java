@@ -1,17 +1,27 @@
 package ma.dcf77t;
 
 import java.io.IOException;
+import java.util.function.Consumer;
 
 class SubprocessCommunicationProtocol extends Thread {
 
+	// TODO CSTAT PROBLEM: TICKER DELAY() is in progress while ACKs are received but they are not read from the java side because the java side hangs at the delay. Now we should possibly solve this by establishing a callback system between Ticker and subprocess com protocol. Actually this interrelates the two of them so much that it begins to make sense to incorporate them into the same unit? / The circular dependency already hints this. Somehow one would then like to extract the actual functionality to a separate unit s.t. the protocol only does ticking + delay + syncing issues? -- better design needed! -> substat deprecate in favour of a ComProc + new ticker implementation with the defined queues! + add an stdin drainer thread... | we have stdin drainer + ticker now replace this messy subprocess com protocol !
+
 	private final Subprocess proc;
 	private final SerialDisplayInterface disp;
+
+	private Consumer<Integer> tickerDelayFunc;
+	private int wantAck = 0;
 
 	SubprocessCommunicationProtocol(Subprocess proc,
 						SerialDisplayInterface disp) {
 		super("SubprocessCommunicationProtocol");
 		this.proc = proc;
 		this.disp = disp;
+	}
+
+	void setTickerDelayFunc(Consumer<Integer> tickerDelayFunc) {
+		this.tickerDelayFunc = tickerDelayFunc;
 	}
 
 	@Override
@@ -48,10 +58,26 @@ class SubprocessCommunicationProtocol extends Thread {
 		int idx = line.indexOf(',');
 		String key = line.substring(0, idx);
 		String val = line.substring(idx + 1);
+
+		if(wantAck > 0) {
+			if(key.equals("ACK") && val.equals(
+						"interrupt_service_routine")) {
+				synchronized(this) {
+					wantAck--;
+				}
+				return;
+			} else {
+				System.out.println("[WARN] Mismatch: Expected ACK,interrupt_service_routine but got " + line); // TODO PROPERLY REPORT TO USER
+			}
+		}
+
 		switch(key) {
 		case "ll_delay_ms":
-			// TODO USE TICKER
-			System.out.println(line);
+			if(tickerDelayFunc == null)
+				System.out.println(
+					"[WARN] tickerDelayFunc not set.");
+			else
+				tickerDelayFunc.accept(Integer.parseInt(val));
 			break;
 		case "ll_out_display":
 			// send this display request to the
@@ -81,7 +107,18 @@ class SubprocessCommunicationProtocol extends Thread {
 		}
 
 		// in any case: ack the message
-		proc.writeLine("ACK,ll_out_display");
+		synchronized(this) {
+			proc.writeLine("ACK,ll_out_display");
+		}
+	}
+
+	synchronized void handleTickInterrupt() {
+		try {
+			proc.writeLine("interrupt_service_routine,0");
+			wantAck++;
+		} catch(IOException ex) {
+			ex.printStackTrace(); // TODO z Report
+		}
 	}
 
 }
