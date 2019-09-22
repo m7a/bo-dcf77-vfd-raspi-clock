@@ -17,7 +17,7 @@ class TestVirtualDisplay {
 
 	private TestVirtualDisplay() {}
 
-	static void testVirtualDisplay(VirtualDisplay d) {
+	static void testVirtualDisplay(VirtualDisplaySPI d) {
 		for(int[] cmd: INITIALIZATION_SEQUENCE)
 			d.accept(cmd[0] == 1, cmd[1]);
 

@@ -32,10 +32,7 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 		try {
 			while(!isInterrupted() &&
 					(line = stdout.readLine()) != null) {
-				// Reduce clutter by not showing ISR.
-				if(!line.equals("ACK,interrupt_service_" +
-								"routine"))
-					log.accept(String.format("[%8d] %s",
+				log.accept(String.format("[%8d] %s",
 							deltaT(), line));
 				lineStream.sendLineToComProc(line);
 			}
@@ -67,9 +64,7 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 
 	@Override
 	public void writeLine(String str) throws IOException {
-		// reduce log clutter by not sowing ISR
-		if(!str.startsWith("interrupt_service_routine,"))
-			log.accept(String.format("[%8d] > %s", deltaT(), str));
+		log.accept(String.format("[%8d] > %s", deltaT(), str));
 		stdin.write(str);
 		stdin.write('\n');
 		stdin.flush();

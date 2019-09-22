@@ -10,7 +10,8 @@
 #
 # 	make clean
 
-MAIN        = test_display.o
+#MAIN        = test_display.o
+MAIN        = test_input.o
 
 CC_TEST     = gcc
 CC_PROD     = avr-gcc

@@ -6,6 +6,7 @@ import java.io.IOException;
 class ComProc extends Thread {
 
 	private final ComProcInQueueReceiverSide in;
+	private final UserInputStatus            ustat;
 	private final ComProcOutLine             outLine;
 	private final ComProcOutRequestDelay     outRequestDelay;
 	private final SerialDisplayInterface     outSerial;
@@ -15,12 +16,14 @@ class ComProc extends Thread {
 
 	ComProc(
 		ComProcInQueueReceiverSide in,
+		UserInputStatus            ustat,
 		ComProcOutLine             outLine,
 		ComProcOutRequestDelay     outRequestDelay,
 		SerialDisplayInterface     outSerial,
 		Consumer<String>           outLog
 	) {
 		this.in              = in;
+		this.ustat           = ustat;
 		this.outLine         = outLine;
 		this.outRequestDelay = outRequestDelay;
 		this.outSerial       = outSerial;
@@ -56,42 +59,65 @@ class ComProc extends Thread {
 			outLine.writeLine("ACK,ll_delay_ms");
 		} else {
 			assert(msg.type == ComProcInMsgType.LINE);
-			
-			int idx = msg.line.indexOf(',');
-			String key = msg.line.substring(0, idx);
-			String val = msg.line.substring(idx + 1);
 
 			if(wantAck > 0) {
-				if(key.equals("ACK") && val.equals(
+				if(msg.line.equals("ACK," +
 						"interrupt_service_routine")) {
 					wantAck--;
 					return;
 				} else {
-					outLog.accept(
-						"[WARNING ] Mismatch: " +
+					outLog.accept("[WARNING ] Mismatch: " +
 						"Expected ACK,interrupt_" +
 						"service_routine but got " +
-						msg.line
-					);
+						msg.line);
 				}
-			}
+			} 
+			
+			int idx = msg.line.indexOf(',');
+			if(idx == -1)
+				procReadLine(msg.line);
+			else
+				procKV(msg.line.substring(0, idx),
+						msg.line.substring(idx + 1));
+		}
+	}
 
-			switch(key) {
-			case "ll_delay_ms":
-				outRequestDelay.accept(Integer.parseInt(val));
-				break;
-			case "ll_out_display":
-				processDisplay(val);
-				break;
-			case "ERROR":
-				outLog.accept("[ERROR   ] ComProc.procMsg: " +
-									val);
-				break;
-			default:
-				outLog.accept("[WARNING ] ComProc.procMsg: " +
-						"unknown line: " + msg.line);
-				break;
-			}
+	private void procReadLine(String line) throws IOException {
+		switch(line) {	
+		case "ll_input_read_sensor":
+			outLine.writeLine(String.format(
+				"REPL,ll_input_read_sensor,%02x", ustat.light));
+			break;
+		case "ll_input_read_buttons":
+			outLine.writeLine(String.format(
+				"REPL,ll_input_read_buttons,%02x",
+				ustat.buttons));
+			break;
+		case "ll_input_read_mode":
+			outLine.writeLine(String.format(
+				"REPL,ll_input_read_mode,%02x", ustat.wheel));
+			break;
+		default:
+			outLog.accept("[WARNING ] ComProc.procMsg: " +
+						"unknown line: " + line);
+		}
+	}
+
+	private void procKV(String key, String val) throws IOException {
+		switch(key) {
+		case "ll_delay_ms":
+			outRequestDelay.accept(Integer.parseInt(val));
+			break;
+		case "ll_out_display":
+			processDisplay(val);
+			break;
+		case "ERROR":
+			outLog.accept("[ERROR   ] ComProc.procKV: " + val);
+			break;
+		default:
+			outLog.accept("[WARNING ] ComProc.procKV: " +
+					"unknown KV: k=" + key + ",v=" + val);
+			break;
 		}
 	}
 

@@ -1,4 +1,4 @@
-DEPS = test_display.o
+DEPS = test_display.o test_input.o
 
 compile: $(DEPS)
 

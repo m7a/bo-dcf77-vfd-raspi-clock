@@ -6,13 +6,15 @@ import java.io.IOException;
 public class Main {
 
 	public static void main(String[] args) throws IOException {
+		final UserInputStatus ustat = new UserInputStatus();
 		final LogTransferQueue log = new LogTransferQueue();
 		final ComProcInQueue comIn = new ComProcInQueue();
 		final VirtualDisplaySPI disp = new VirtualDisplaySPI(log);
 		final Subprocess proc = new Subprocess(Paths.get("..", "a.out"),
 								log, comIn);
 		final Ticker tick = new Ticker(comIn);
-		final ComProc proto = new ComProc(comIn, proc, tick, disp, log);
+		final ComProc proto = new ComProc(comIn, ustat, proc, tick,
+								disp, log);
 
 		proc.restart(); // start subprocess
 		proc.start();   // start thread
@@ -31,7 +33,7 @@ public class Main {
 				() -> proc.join()
 			);
 			System.exit(0);
-		}, log);
+		}, log, ustat);
 	}
 
 }

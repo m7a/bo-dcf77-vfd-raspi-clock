@@ -1,8 +1,7 @@
 package ma.dcf77t;
 
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.plaf.metal.MetalLookAndFeel;
 import javax.swing.plaf.metal.MetalTheme;
@@ -17,7 +16,7 @@ class AppWnd {
 	private AppWnd() {}
 
 	static void createAndShow(VirtualDisplay disp, final Signal onClose,
-							Supplier<String> log) {
+			Supplier<String> log, final UserInputStatus userIn) {
 		setDesign();
 
 		final JFrame wnd = new JFrame("Ma_Sys.ma DCF-77 VFD Module " +
@@ -55,13 +54,27 @@ class AppWnd {
 		clockFrontend.add(middle);
 
 		Box right = new Box(BoxLayout.Y_AXIS);
-		JSlider light = new JSlider(); // TODO dysfunctional
+		JSlider light = new JSlider(0, 255);
+		light.addChangeListener((__) -> { userIn.light =
+							light.getValue(); });
+		light.setValue(0);
 		right.add(light);
 		JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER));
 		JButton b1 = new JButton("B1"); // TODO dysfunctional
-		buttons.add(b1);
 		JButton b2 = new JButton("B2");
+		JButton both = new JButton("(both)");
+		buttons.add(b1);
 		buttons.add(b2);
+		buttons.add(both);
+		MouseListener listen = new ButtonMouseListener(
+			new Object[] { b1, b2, both },
+			new int[] { 172, 127, 194 },
+			userIn
+		);
+		b1.addMouseListener(listen);
+		b2.addMouseListener(listen);
+		both.addMouseListener(listen);
+
 		right.add(buttons);
 		right.setBorder(new TitledBorder("Light and Buttons"));
 		clockFrontend.add(right);

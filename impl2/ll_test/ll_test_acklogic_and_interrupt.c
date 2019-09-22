@@ -3,7 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Unix dependent for nonblocking IO */
+/*
+ * Unix dependent for nonblocking IO.
+ * As it seems, this does not really change much. Disable if not available.
+ */
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -64,4 +67,33 @@ void ll_test_handle_pending_interrupts()
 		}
 	}
 	fcntl(0, F_SETFL, bakfcntl);
+}
+
+unsigned char ll_test_repl_and_interrupt(char* pattern)
+{
+	unsigned cval = 0;
+	unsigned use_len;
+	char lbuf[256];
+	while(fgets(lbuf, sizeof(lbuf), stdin) != NULL) {
+		use_len = strlen(lbuf) < strlen(pattern)? strlen(lbuf):
+							strlen(pattern);
+		if(memcmp(lbuf, pattern, use_len) == 0) {
+			/* pattern match: afterwards follows the value in hex */
+			if(sscanf(lbuf + use_len, "%02x\n", &cval) != 1) {
+				puts("ERROR,Matching failed.");
+				fflush(stdout);
+			}
+			return cval;
+		} else if(!check_and_proc_isr(lbuf)) {
+			puts("ERROR,Unknown input from GUI.");
+			fflush(stdout);
+			return 0;
+			/* otherwise continue */
+		}
+	}
+
+	/* got NULL */
+	puts("ERROR,Terminated by end of file on input.");
+	fflush(stdout);
+	exit(1);
 }
