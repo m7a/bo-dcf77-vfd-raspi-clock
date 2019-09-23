@@ -16,7 +16,7 @@ class AppWnd {
 	private AppWnd() {}
 
 	static void createAndShow(VirtualDisplay disp, final Signal onClose,
-			Supplier<String> log, final UserInputStatus userIn) {
+			Supplier<String> log, final UserIOStatus userIn) {
 		setDesign();
 
 		final JFrame wnd = new JFrame("Ma_Sys.ma DCF-77 VFD Module " +
@@ -38,18 +38,20 @@ class AppWnd {
 
 		Box leftmost = new Box(BoxLayout.Y_AXIS);
 		JPanel btnRst = new JPanel(new FlowLayout(FlowLayout.CENTER));
-		JButton reset = new JButton("Reset"); // TODO dysfunctional
+		JButton reset = new JButton("Reset");
+		reset.setEnabled(false); // TODO z dysfunctional
 		btnRst.add(reset);
+		btnRst.setBorder(new TitledBorder("Power"));
 		leftmost.add(btnRst);
 		JPanel buzpan = new JPanel(new FlowLayout(FlowLayout.CENTER));
-		JLabel buzzer = new JLabel("Buzzer: ?"); // TODO dysfunctional
+		final JLabel buzzer = new JLabel("?");
 		buzpan.add(buzzer);
+		buzpan.setBorder(new TitledBorder("Buzzer"));
 		leftmost.add(buzpan);
-		leftmost.setBorder(new TitledBorder("Power+Buzzer"));
 		clockFrontend.add(leftmost);
 
 		JPanel middle = new JPanel(new BorderLayout());
-		middle.add(BorderLayout.CENTER, RotationButton.create()); // TODO dysfunctional
+		middle.add(BorderLayout.CENTER, RotationButton.create(userIn));
 		middle.setBorder(new TitledBorder("Mode Selection"));
 		clockFrontend.add(middle);
 
@@ -60,7 +62,7 @@ class AppWnd {
 		light.setValue(0);
 		right.add(light);
 		JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER));
-		JButton b1 = new JButton("B1"); // TODO dysfunctional
+		JButton b1 = new JButton("B1");
 		JButton b2 = new JButton("B2");
 		JButton both = new JButton("(both)");
 		buttons.add(b1);
@@ -87,11 +89,12 @@ class AppWnd {
 
 		Box analysisUnit = new Box(BoxLayout.Y_AXIS);
 
-		final JTextArea logArea = new JTextArea();
-		logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-		logArea.setEditable(false);
+		final LogListModel logListData = new LogListModel();
+		final JList<String> logList = new JList<>(logListData);
+		logList.setCellRenderer(new LogListRenderer());
+		logList.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
 		Box sub = new Box(BoxLayout.Y_AXIS);
-		sub.add(new JScrollPane(logArea));
+		sub.add(new JScrollPane(logList));
 		sub.setBorder(new TitledBorder("Log"));
 		analysisUnit.add(sub);
 
@@ -102,7 +105,9 @@ class AppWnd {
 		final Timer timer = new Timer(REPAINT_INTERVAL_MS, __ -> {
 			String newLogLine;
 			while((newLogLine = log.get()) != null)
-				logArea.append(newLogLine + "\n");
+				logListData.addLine(newLogLine);
+			
+			buzzer.setText(userIn.buzzer? "BUZZ!": "no buzz");
 			disp.repaint();
 		});
 

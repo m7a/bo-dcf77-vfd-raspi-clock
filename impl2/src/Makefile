@@ -1,4 +1,4 @@
-DEPS = display.o interrupt.o
+DEPS = display.o interrupt.o dcf77_bitlayer.o
 
 compile: $(DEPS)
 

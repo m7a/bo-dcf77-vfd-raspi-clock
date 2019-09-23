@@ -15,8 +15,9 @@ class ComProcInQueue implements ComProcInQueueReceiverSide,
 	}
 
 	@Override
-	public void sendTickToComProc() {
-		q.add(ComProcInMsg.MSG_TICK);
+	public void sendTickToComProc(boolean isOneTick) {
+		q.add(isOneTick? ComProcInMsg.MSG_TICK_1:
+						ComProcInMsg.MSG_TICK_0);
 	}
 
 	@Override

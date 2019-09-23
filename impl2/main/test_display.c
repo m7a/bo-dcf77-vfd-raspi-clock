@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "ll_hwinit_display.h"
+#include "ll_out_display.h"
 #include "display_shared.h"
 #include "display.h"
 #include "ll_delay.h"
@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 
 	strcpy(data.entry_text, "12:34:56""12.34.5678""AL09:55");
 
-	ll_hwinit_display();
+	ll_out_display_init();
 	display_init_ctx(&ctx_disp);
 	display_update(&ctx_disp, &data);
 

@@ -6,10 +6,10 @@ class ButtonMouseListener extends MouseAdapter {
 
 	private final Object[] origins;
 	private final int[] assignedCodes;
-	private final UserInputStatus userIn;
+	private final UserIOStatus userIn;
 
-	ButtonMouseListener(Object[] origins,
-				int[] assignedCodes, UserInputStatus userIn) {
+	ButtonMouseListener(Object[] origins, int[] assignedCodes,
+							UserIOStatus userIn) {
 		this.origins       = origins;
 		this.assignedCodes = assignedCodes;
 		this.userIn        = userIn;

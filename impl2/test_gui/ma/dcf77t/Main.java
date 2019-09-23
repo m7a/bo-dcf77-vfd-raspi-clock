@@ -6,7 +6,7 @@ import java.io.IOException;
 public class Main {
 
 	public static void main(String[] args) throws IOException {
-		final UserInputStatus ustat = new UserInputStatus();
+		final UserIOStatus ustat = new UserIOStatus();
 		final LogTransferQueue log = new LogTransferQueue();
 		final ComProcInQueue comIn = new ComProcInQueue();
 		final VirtualDisplaySPI disp = new VirtualDisplaySPI(log);

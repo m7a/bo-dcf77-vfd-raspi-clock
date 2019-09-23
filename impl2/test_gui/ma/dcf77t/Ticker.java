@@ -1,26 +1,43 @@
 package ma.dcf77t;
 
+import java.io.IOException;
+
 class Ticker extends Thread implements ComProcOutRequestDelay {
 
-	private static final int MS_PER_TICK = 8;
-
+	        static final int MS_PER_TICK        = 8;
 	private static final int CURRENT_DELAY_NONE = 0;
 
 	private final ComProcInQueueTickerSide toComProc;
+	private final DCF77Sim                 dcf77;
 
 	private boolean isTickingAutomatically = true;
 	private int     currentDelay           = CURRENT_DELAY_NONE;
-	private int     scaleRepeatMs          = 1;
 
-	Ticker(ComProcInQueueTickerSide toComProc) {
+	/**
+	 * Simulation Performance Considerations
+	 * Without great issues, this simualtion can go up to 8x as fast as
+	 * normal with 1ms sleep instead of 8ms between interupts. Afterwards,
+	 * the interrupts become too frequent for the underlying program to
+	 * actually progress and the system halts. This problem can (only?)
+	 * be solved by limiting the occurrence of interrupts to sleeps which
+	 * would then mean: A sleep incurs a certain number of interrupts
+	 * dependent on its time. The system would then be fully snyhcornous
+	 * s.t. the program could progress independent of the simulation
+	 * speed. For now, we are contempt with 8x speed achievable by
+	 * specifying a scale of 0.125f here.
+	 */
+	private float scaleRepeatMs = 1f;
+
+	Ticker(ComProcInQueueTickerSide toComProc) throws IOException {
 		super("Ticker");
 		this.toComProc = toComProc;
+		this.dcf77     = new DCF77Sim();
 	}
 
 	@Override
 	public void run() {
 		long nextTick = System.currentTimeMillis() +
-						scaleRepeatMs * MS_PER_TICK;
+				(int)Math.round(scaleRepeatMs * MS_PER_TICK);
 		while(!isInterrupted()) {
 			long dly = nextTick - System.currentTimeMillis();
 			try {
@@ -35,7 +52,7 @@ class Ticker extends Thread implements ComProcOutRequestDelay {
 			}
 
 			nextTick = System.currentTimeMillis() +
-						scaleRepeatMs * MS_PER_TICK;
+				(int)Math.round(scaleRepeatMs * MS_PER_TICK);
 
 			if(isTickingAutomatically)
 				tick();
@@ -55,14 +72,15 @@ class Ticker extends Thread implements ComProcOutRequestDelay {
 		}
 		if(delayCompleted)
 			toComProc.sendDelayCompletedToComProc();
-		toComProc.sendTickToComProc();
+
+		toComProc.sendTickToComProc(dcf77.tick());
 	}
 
 	void setAutomaticTicking(boolean tick) {
 		this.isTickingAutomatically = tick;
 	}
 
-	void setScale(int scaleRepeatMs) {
+	void setScale(float scaleRepeatMs) {
 		this.scaleRepeatMs = scaleRepeatMs;
 	}
 

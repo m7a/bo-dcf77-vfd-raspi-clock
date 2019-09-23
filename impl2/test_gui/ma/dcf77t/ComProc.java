@@ -6,7 +6,7 @@ import java.io.IOException;
 class ComProc extends Thread {
 
 	private final ComProcInQueueReceiverSide in;
-	private final UserInputStatus            ustat;
+	private final UserIOStatus               ustat;
 	private final ComProcOutLine             outLine;
 	private final ComProcOutRequestDelay     outRequestDelay;
 	private final SerialDisplayInterface     outSerial;
@@ -16,7 +16,7 @@ class ComProc extends Thread {
 
 	ComProc(
 		ComProcInQueueReceiverSide in,
-		UserInputStatus            ustat,
+		UserIOStatus               ustat,
 		ComProcOutLine             outLine,
 		ComProcOutRequestDelay     outRequestDelay,
 		SerialDisplayInterface     outSerial,
@@ -51,9 +51,11 @@ class ComProc extends Thread {
 	}
 
 	private void procMsg(ComProcInMsg msg) throws IOException {
-		if(msg == ComProcInMsg.MSG_TICK) {
-			// TODO ATM IT IS ALWYS ZERO! Need to poll a DCF77 simulator for this!
+		if(msg == ComProcInMsg.MSG_TICK_0) {
 			outLine.writeLine("interrupt_service_routine,0");
+			wantAck++;
+		} else if(msg == ComProcInMsg.MSG_TICK_1) {
+			outLine.writeLine("interrupt_service_routine,1");
 			wantAck++;
 		} else if(msg == ComProcInMsg.MSG_DELAY_COMPLETED) {
 			outLine.writeLine("ACK,ll_delay_ms");
@@ -110,6 +112,10 @@ class ComProc extends Thread {
 			break;
 		case "ll_out_display":
 			processDisplay(val);
+			break;
+		case "ll_out_buzzer":
+			ustat.buzzer = val.equals("1");
+			outLine.writeLine("ACK,ll_out_buzzer");
 			break;
 		case "ERROR":
 			outLog.accept("[ERROR   ] ComProc.procKV: " + val);

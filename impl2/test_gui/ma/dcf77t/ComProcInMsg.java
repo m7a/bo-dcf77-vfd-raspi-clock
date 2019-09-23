@@ -2,8 +2,11 @@ package ma.dcf77t;
 
 class ComProcInMsg {
 
-	static final ComProcInMsg MSG_TICK = new ComProcInMsg(
-					ComProcInMsgType.TICK, null);
+	static final ComProcInMsg MSG_TICK_0 = new ComProcInMsg(
+					ComProcInMsgType.TICK, "0");
+
+	static final ComProcInMsg MSG_TICK_1 = new ComProcInMsg(
+					ComProcInMsgType.TICK, "1");
 
 	static final ComProcInMsg MSG_DELAY_COMPLETED = new ComProcInMsg(
 					ComProcInMsgType.DELAY_COMPLETED, null);

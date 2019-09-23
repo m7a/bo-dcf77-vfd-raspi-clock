@@ -1,8 +1,12 @@
 #include <stdio.h>
 
 #include "ll_test_acklogic_and_interrupt.h"
-#include "ll_display.h"
 #include "ll_out_display.h"
+
+void ll_out_display_init()
+{
+	/* nop */
+}
 
 void ll_out_display(char is_ctrl, unsigned char value)
 {

@@ -10,7 +10,9 @@
 <project default="compile" xmlns:ma="http://.../">
 	<target name="compile">
 		<!--<echo>javac = ${java.version}</echo>-->
-		<javac debug="true" includeantruntime="false" srcdir="."/>
+		<javac debug="true" includeantruntime="false" srcdir=".">
+			<compilerarg value="-Xlint:unchecked"/>
+		</javac>
 	</target>
 	<target name="run" depends="compile">
 		<java fork="true" classname="ma.dcf77t.Main"/>

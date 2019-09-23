@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <string.h>
 #include <stddef.h>
 
 #include "ll_interrupt.h"
