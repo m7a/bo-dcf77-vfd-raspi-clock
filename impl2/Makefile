@@ -11,8 +11,9 @@
 # 	make clean
 
 #MAIN        = test_display.o
-MAIN        = test_input.o
+#MAIN        = test_input.o
 #MAIN        = test_alarm.o
+MAIN        = main.o
 
 CC_TEST     = gcc
 CC_PROD     = avr-gcc

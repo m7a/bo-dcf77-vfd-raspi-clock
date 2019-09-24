@@ -1,6 +1,7 @@
 #include "ll_out_display.h"
 #include "ll_out_buzzer.h"
 #include "ll_delay.h"
+#include "display_shared.h"
 #include "display.h"
 
 /* periodic beeping buzzer test */
