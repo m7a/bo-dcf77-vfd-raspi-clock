@@ -13,4 +13,4 @@ clean:
 	rm $(DEPS) > /dev/null 2>&1 || true
 
 dist-clean: clean
-	rm test_auto_xeliminate > /dev/null 2>&1 || true
+	rm test_auto_xeliminate test_auto_secondlayer > /dev/null 2>&1 || true

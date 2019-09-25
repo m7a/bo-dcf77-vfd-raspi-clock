@@ -4,30 +4,47 @@
  * Input/Output is performed through variables in struct dcf77_bitlayer
  */
 
+/*
+ * The choice of values is as follows:
+ * first bit     : 1 = next bit is actual reading, 0 = next bit is status
+ * second bit/lsb: 0/1 = actual reading,           0 = no signal found,
+ *                                                 1 = no update/epislon
+ */
 enum dcf77_bitlayer_reading {
 
 	/*
-	 * corresponds to a "0" received from the receiver module
-	 * ("1" for _1 respectively)
-	 */
-	DCF77_LOW_LEVEL_0 = 0,
-
-	DCF77_LOW_LEVEL_1 = 1,
-
-	/*
+	 * binary 01
+	 *
 	 * _proc continued processing but a second has not passed yet
 	 * (no update in the second counter necessary)
+	 *
+	 * In a DCF77 Secondlayer Context this means EPSILON!
 	 */
-	DCF77_LOW_LEVEL_NO_UPDATE = 2,
+	DCF77_BIT_NO_UPDATE = 0,
 
 	/*
+	 * binary 00
+	 *
 	 * _proc detected that a second has passed but there was no signal
 	 * detected from the receiver. This can mean two things:
 	 * (1) some sort of disruption caused no signal to be decoded by the
 	 *     receiver / receiver is not connected etc.
 	 * (2) end of minute marker was received
 	 */
-	DCF77_LOW_LEVEL_NO_SIGNAL = 3,
+	DCF77_BIT_NO_SIGNAL = 1,
+
+	/*
+	 * binary 10
+	 *
+	 * corresponds to a "0" received from the receiver module
+	 * ("1" for _1 respectively)
+	 */
+	DCF77_BIT_0 = 2,
+
+	/*
+	 * binary 11
+	 */
+	DCF77_BIT_1 = 3,
 
 };
 

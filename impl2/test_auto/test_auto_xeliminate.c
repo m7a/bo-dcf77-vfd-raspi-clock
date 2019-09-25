@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "dcf77_bitlayer.h"
 #include "dcf77_proc_xeliminate.h"
 #include "xeliminate_testcases.h"
 
@@ -32,10 +33,10 @@ static void run_xeliminate_testcases()
 			xeliminate_testcases[curtest].line_len[i]; j++) {
 				switch(xeliminate_testcases[curtest].
 								data[i][j]) {
-				case 0:  bitval = 2; break;
-				case 1:  bitval = 3; break;
-				case 2:  bitval = 0; break;
-				case 3:  bitval = 1; break;
+				case 0:  bitval = DCF77_BIT_0;         break;
+				case 1:  bitval = DCF77_BIT_1;         break;
+				case 2:  bitval = DCF77_BIT_NO_UPDATE; break;
+				case 3:  bitval = DCF77_BIT_NO_SIGNAL; break;
 				default: puts("<<<ERROR1>>>"); exit(64);
 				}
 				telegram[i][j / 4] |= bitval << ((j % 4) * 2);

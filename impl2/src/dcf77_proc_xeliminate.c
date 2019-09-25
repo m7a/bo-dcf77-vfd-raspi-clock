@@ -1,3 +1,4 @@
+#include "dcf77_bitlayer.h"
 #include "dcf77_proc_xeliminate.h"
 
 static char xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
@@ -28,13 +29,12 @@ char dcf77_proc_xeliminate(
 	}
 
 	etmp = read_entry(*in_out_telegram_2, 0);
-	if(etmp == DCF77_SECONDLAYER_VAL_1) {
+	if(etmp == DCF77_BIT_1) {
 		/* puts("<<<ERROR3>>>"); */
 		return 0; /* constant 0 violated */
-	} else if(etmp == DCF77_SECONDLAYER_VAL_X) {
+	} else if(etmp == DCF77_BIT_NO_SIGNAL) {
 		/* correct to 0 */
-		*in_out_telegram_2 = (*in_out_telegram_2 & ~3) |
-							DCF77_SECONDLAYER_VAL_0;
+		*in_out_telegram_2 = (*in_out_telegram_2 & ~3) | DCF77_BIT_0;
 	}
 
 	/* 16--20: entries have to match */
@@ -54,15 +54,13 @@ char dcf77_proc_xeliminate(
 	etmp  = read_entry(in_out_telegram_2[4], 1);
 	etmp2 = read_entry(in_out_telegram_2[4], 2);
 	/* assertion violated if 00 or 11 found */
-	if((etmp == DCF77_SECONDLAYER_VAL_0 &&
-				etmp2 == DCF77_SECONDLAYER_VAL_0) ||
-			(etmp == DCF77_SECONDLAYER_VAL_1 &&
-				etmp2 == DCF77_SECONDLAYER_VAL_1)) {
+	if((etmp == DCF77_BIT_0 && etmp2 == DCF77_BIT_0) ||
+				(etmp == DCF77_BIT_1 && etmp2 == DCF77_BIT_1)) {
 		/* printf("<<<ERROR5,etmp1=%u,etmp2=%u>>>\n", etmp, etmp2); */
 		return 0;
 	}
-	if(etmp2 == DCF77_SECONDLAYER_VAL_X && etmp != DCF77_SECONDLAYER_VAL_X
-				&& etmp != DCF77_SECONDLAYER_VAL_EPSILON) {
+	if(etmp2 == DCF77_BIT_NO_SIGNAL && etmp != DCF77_BIT_NO_SIGNAL
+					&& etmp != DCF77_BIT_NO_UPDATE) {
 		/*
 		 * use 17 to infer value of 18
 		 *
@@ -71,23 +69,22 @@ char dcf77_proc_xeliminate(
 		 */
 		in_out_telegram_2[4] =
 			(in_out_telegram_2[4] & 0xcf) | ((etmp ^ 1) << 4);
-	} else if(etmp == DCF77_SECONDLAYER_VAL_X &&
-				etmp2 != DCF77_SECONDLAYER_VAL_X &&
-				etmp2 != DCF77_SECONDLAYER_VAL_EPSILON) {
+	} else if(etmp == DCF77_BIT_NO_SIGNAL && etmp2 != DCF77_BIT_NO_SIGNAL &&
+						etmp2 != DCF77_BIT_NO_UPDATE) {
 		/* use 18 to infer value of 17 */
-		in_out_telegram_2[4] =
-			(in_out_telegram_2[4] & 0xf3) | ((etmp2 ^ 1) << 2);
+		in_out_telegram_2[4] = (in_out_telegram_2[4] & 0xf3) |
+							((etmp2 ^ 1) << 2);
 	}
 
 	/* 20:     entry has to match and be constant 1 */
 	etmp = read_entry(in_out_telegram_2[5], 0);
-	if(etmp == DCF77_SECONDLAYER_VAL_0) {
+	if(etmp == DCF77_BIT_0) {
 		/* puts("<<<ERROR6>>>"); */
 		return 0; /* constant 1 violated */
-	} else if(etmp == DCF77_SECONDLAYER_VAL_X) {
+	} else if(etmp == DCF77_BIT_NO_SIGNAL) {
 		/* unset => correct to 1 */
 		in_out_telegram_2[5] = (in_out_telegram_2[5] & ~3) |
-							DCF77_SECONDLAYER_VAL_1;
+								DCF77_BIT_1;
 	}
 
 	/* 25--58: entries have to match */
@@ -108,8 +105,8 @@ char dcf77_proc_xeliminate(
 	if(telegram_1_len == 60 && telegram_2_len == 60) {
 		/* needs to be X -- regular mintues */
 		return (read_entry(in_telegram_1[14], 3) ==
-			DCF77_SECONDLAYER_VAL_X && read_entry(
-			in_out_telegram_2[14], 3) == DCF77_SECONDLAYER_VAL_X);
+			DCF77_BIT_NO_SIGNAL && read_entry(
+			in_out_telegram_2[14], 3) == DCF77_BIT_NO_SIGNAL);
 	} else if((telegram_1_len == 61 && telegram_2_len == 60) ||
 			(telegram_1_len == 60 && telegram_2_len == 61)) {
 		/* Check the larger one */
@@ -130,14 +127,11 @@ char dcf77_proc_xeliminate(
 		 * to write to telegram_1 which is an in-variable
 		 * anyways).
 		 */
-		return (read_entry(telleap[14],    3) ==
-					DCF77_SECONDLAYER_VAL_X  ||
-			read_entry(telleap[14],    3) ==
-					DCF77_SECONDLAYER_VAL_0) && /* marker */
-			read_entry(telleap[15],    0) ==
-					DCF77_SECONDLAYER_VAL_X  &&
-			read_entry(telregular[14], 3) ==
-					DCF77_SECONDLAYER_VAL_X;
+		return (read_entry(telleap[14],    3) == DCF77_BIT_NO_SIGNAL ||
+			read_entry(telleap[14],    3) == DCF77_BIT_0)        &&
+								/* marker */
+			read_entry(telleap[15],    0) == DCF77_BIT_NO_SIGNAL &&
+			read_entry(telregular[14], 3) == DCF77_BIT_NO_SIGNAL;
 	} else {
 		/* printf("<<<ERROR8>>>\n"); */
 		/* not a minute's telegram -> invalid */
@@ -151,12 +145,11 @@ static char xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
 	unsigned char val1 = read_entry(in_1,      entry);
 	unsigned char val2 = read_entry(*in_out_2, entry);
 
-	if(val1 == DCF77_SECONDLAYER_VAL_X ||
-			val1 == DCF77_SECONDLAYER_VAL_EPSILON || val1 == val2) {
+	if(val1 == DCF77_BIT_NO_SIGNAL || val1 == DCF77_BIT_NO_UPDATE ||
+								val1 == val2) {
 		/* no update */
 		return 1; /* OK */
-	} else if(val2 == DCF77_SECONDLAYER_VAL_X ||
-					val2 == DCF77_SECONDLAYER_VAL_EPSILON) {
+	} else if(val2 == DCF77_BIT_NO_SIGNAL || val2 == DCF77_BIT_NO_UPDATE) {
 		/* takes val 1 */
 		*in_out_2 = (*in_out_2 & ~(3 << (entry * 2))) |
 							(val1 << (entry * 2));
