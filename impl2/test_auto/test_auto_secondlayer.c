@@ -14,10 +14,12 @@ int main(int argc, char** argv)
 /* ---------------------------------------------------[ Logic Declaration ]-- */
 
 /* interface */
-#define DCF77_HIGH_LEVEL_MEM      144 /* ceil(61*2/8) * 9 */
-#define DCF77_HIGH_LEVEL_LINES    9
-#define DCF77_HIGH_LEVEL_TIME_LEN 8
-#define DCF77_HIGH_LEVEL_DATE_LEN 10
+#define DCF77_HIGH_LEVEL_LINES       9
+#define DCF77_HIGH_LEVEL_TIME_LEN    8
+#define DCF77_HIGH_LEVEL_DATE_LEN   10
+#define DCF77_HIGH_LEVEL_LINE_BYTES 16
+#define DCF77_HIGH_LEVEL_MEM        (DCF77_HIGH_LEVEL_LINE_BYTES * \
+							DCF77_HIGH_LEVEL_LINES)
 
 enum dcf77_high_level_input_mode {
 	/* Init mode. Push data backwards */
@@ -43,16 +45,33 @@ struct dcf77_high_level {
 	unsigned char private_line_current;
 	unsigned char private_line_cursor;
 	unsigned short private_leap_second_expected;
+
 	/* input */
 	enum dcf77_bitlayer_reading in_val;
-	/* output */
-	/* users should reset out_has_ values after processing! */
-	/* TODO z char out_has_new_second; has new second is actually implicit: if we have a new measurement, we also have a new second! */
-	char out_has_new_telegram;
-	unsigned char out_telegram_mismatch_len; /* in bits */
-	unsigned char out_telegram_mismatch[16];
-	unsigned char out_telegram_current_len; /* in bits */
-	unsigned char out_telegram_current[16];
+
+	/*
+	 * output
+	 *
+	 * Logic is a s follows:
+	 * if only out_telegram_1_len is > 0, then process that as truth
+	 * if both out_telegram_1_len and telegram_2_len are > 0 then
+	 * 	process telegram_2 as truth and telegram_1 is from the
+	 * 	previous 10min interval.
+	 * if both are <0, then no new telegram data exists.
+	 *
+	 * implicit information
+	 *
+	 * has new second <=>
+	 * 	has new measurement
+	 * 	(lower layer information may bypass second layer here)
+	 * has new telegram <=> out_telegram_1_len != 0
+	 *
+	 * users should reset out_telegram_len values after processing!
+	 */
+	unsigned char out_telegram_1_len; /* in bits */
+	unsigned char out_telegram_2_len; /* in bits */
+	unsigned char out_telegram_1[DCF77_HIGH_LEVEL_LINE_BYTES];
+	unsigned char out_telegram_2[DCF77_HIGH_LEVEL_LINE_BYTES];
 };
 
 void dcf77_high_level_init(struct dcf77_high_level* ctx);
@@ -60,16 +79,18 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx);
 
 /* ------------------------------------------------[ Logic Implementation ]-- */
 static void shift_existing_bits_to_the_left(struct dcf77_high_level* ctx);
+static void process_telegrams(struct dcf77_high_level* ctx);
+static inline unsigned char nextl(unsigned char inl);
 
 void dcf77_high_level_init(struct dcf77_high_level* ctx)
 {
 	/* this is actually the same as a good-old reset function */
-	ctx->private_inmode          = IN_BACKWARD;
-	ctx->private_line_lengths[0] = 0;
-	ctx->private_line_current    = 0;
-	ctx->private_line_cursor     = 59;
+	ctx->private_inmode               = IN_BACKWARD;
+	ctx->private_line_current         = 0;
+	ctx->private_line_cursor          = 59;
 	ctx->private_leap_second_expected = 0; /* no leap second expected */
-	ctx->out_has_new_telegram    = 0;
+	/* initialize with 0 */
+	memset(ctx->private_line_lengths,  0, DCF77_HIGH_LEVEL_LINES);
 	/* initialize with epsilon */
 	memset(ctx->private_telegram_data, 0, DCF77_HIGH_LEVEL_MEM);
 }
@@ -101,6 +122,11 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 			ctx->private_inmode          = IN_FORWARD;
 			ctx->private_line_current    = 1;
 			ctx->private_line_cursor     = 0;
+			/*
+			 * we set the length to 60 because now the epsilons
+			 * become part of the telegram.
+			 */
+			ctx->private_line_lengths[0] = 60;
 			ctx->private_line_lengths[1] = 0;
 		} else if(ctx->private_line_lengths[0] == 60) {
 			/*
@@ -136,7 +162,7 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 				 * no signal in any case means this is our
 				 * end-of-minute marker
 				 */
-				/* TODO N_IMPL invoke process_telegrams() and advance to next "line" */
+				process_telegrams(ctx);
 			} else if(ctx->in_val == DCF77_BIT_0 &&
 					ctx->private_leap_second_expected > 0) {
 				/*
@@ -154,7 +180,7 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 				 * We need to reorganize the datastructure
 				 * to align to the "reality".
 				 */
-				/* TODO N_IMPL / invoke recompute_eom(), afterwards the line will likely not be 100% full, but cursor reorganization is handled by compute_eom... */
+				/* TODO N_IMPL / invoke recompute_eom(), afterwards the line will likely not be 100% full, but cursor reorganization is handled by compute_eom... / SUBSTAT: IT MIGHT MAKE SENSE TO IMPLEMENT TESTS WHICH DO NOT NEED THE REOGRANIZATION BY NOW AND THOROUGHLY TEST THAT THE EXISTING THINGS BEHAVE AS EXPECTED! */
 			}
 		} else {
 			/*
@@ -190,4 +216,82 @@ static void shift_existing_bits_to_the_left(struct dcf77_high_level* ctx)
 		 */
 		ctx->private_telegram_data[current_byte] <<= 2;
 	}
+}
+
+static void process_telegrams(struct dcf77_high_level* ctx)
+{
+	unsigned char lastlen = 60;
+	unsigned char line;
+	char mism;
+
+	/* Input situation: cursor is at the end of the current minute. */
+
+	/* first clear buffers to epsilon */
+	memset(ctx->out_telegram_1, 0, DCF77_HIGH_LEVEL_LINE_BYTES);
+	memset(ctx->out_telegram_2, 0, DCF77_HIGH_LEVEL_LINE_BYTES);
+
+	/* merge till mismatch */
+	for(mism = 0, line = nextl(ctx->private_line_current + 1);
+				line != ctx->private_line_current && !mism;
+				line = nextl(line)) {
+		/* ignore empty lines */
+		if(ctx->private_line_lengths[line] == 0)
+			continue;
+
+		mism = dcf77_proc_xeliminate(ctx->private_line_lengths[line],
+					lastlen, ctx->private_telegram_data +
+					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
+					ctx->out_telegram_1);
+		lastlen = ctx->private_line_lengths[line];
+	}
+
+	if(mism) {
+		/* repeat and write to actual output */
+		ctx->out_telegram_1_len = lastlen;
+
+		mism = 0;
+		for(; line != ctx->private_line_current && !mism;
+							line = nextl(line)) {
+			/* ignore empty lines */
+			if(ctx->private_line_lengths[line] == 0)
+				continue;
+
+			mism = dcf77_proc_xeliminate(
+					ctx->private_line_lengths[line],
+					lastlen, ctx->private_telegram_data +
+					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
+					ctx->out_telegram_2);
+			lastlen = ctx->private_line_lengths[line];
+		}
+
+		if(mism) {
+			/*
+			 * we got another mismatch. this means the data is
+			 * not consistent.
+			 */
+			ctx->out_telegram_1_len = 0;
+			ctx->out_telegram_2_len = 0;
+			/* TODO CALL recompute_eom(), then re-invoke as described on paper. Remember that this has to advance line... */
+		} else {
+			/*
+			 * no further mismatch. Data in the buffer is fully
+			 * consistent. Can output this as truth
+			 */
+			ctx->out_telegram_2_len = lastlen;
+			ctx->private_line_current =
+					nextl(ctx->private_line_current);
+			/* return */
+		}
+	} else {
+		/* that was already the actual output */
+		ctx->out_telegram_1_len   = lastlen;
+		ctx->out_telegram_2_len   = 0;
+		ctx->private_line_current = nextl(ctx->private_line_current);
+		/* return */
+	}
+}
+
+static inline unsigned char nextl(unsigned char inl)
+{
+	return (inl + 1) % DCF77_HIGH_LEVEL_LINES;
 }
