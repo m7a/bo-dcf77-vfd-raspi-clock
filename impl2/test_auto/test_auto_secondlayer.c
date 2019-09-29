@@ -4,16 +4,13 @@
 
 #include "dcf77_bitlayer.h"
 #include "dcf77_proc_xeliminate.h"
+#include "inc_sat.h"
 #include "xeliminate_testcases.h"
 
-int main(int argc, char** argv)
-{
-	return EXIT_SUCCESS;
-}
+/* TODO CSTAT SUBSTAT BETRACHTE LETZES BILD AUS TEST: FALSCH GESCHRIEBEN UND FALSCH ELIMINIERT? */
 
-/* ---------------------------------------------------[ Logic Declaration ]-- */
+/* ---------------------------------------[ Logic Declaration / Interface ]-- */
 
-/* interface */
 #define DCF77_HIGH_LEVEL_LINES       9
 #define DCF77_HIGH_LEVEL_TIME_LEN    8
 #define DCF77_HIGH_LEVEL_DATE_LEN   10
@@ -46,6 +43,8 @@ struct dcf77_high_level {
 	unsigned char private_line_cursor;
 	unsigned short private_leap_second_expected;
 
+	unsigned char fault_reset; /* Number of resets performed */
+
 	/* input */
 	enum dcf77_bitlayer_reading in_val;
 
@@ -77,22 +76,139 @@ struct dcf77_high_level {
 void dcf77_high_level_init(struct dcf77_high_level* ctx);
 void dcf77_high_level_process(struct dcf77_high_level* ctx);
 
+/* -------------------------------------------------[ Test Implementation ]-- */
+
+static void printtel(unsigned char* data, unsigned char bitlen);
+static void printtel_sub(unsigned char* data);
+static void dumpmem(struct dcf77_high_level* ctx);
+
+int main(int argc, char** argv)
+{
+	struct dcf77_high_level uut;
+
+	unsigned char curtest;
+	unsigned char i;
+	unsigned char j;
+	unsigned char bitval;
+	
+	for(curtest = 0; curtest <
+			(sizeof(xeliminate_testcases) /
+			sizeof(struct xeliminate_testcase)); curtest++) {
+
+		puts("======================================================="
+						"=========================");
+		printf("Test case %u: %s\n", curtest,
+				xeliminate_testcases[curtest].description);
+		/*
+		 * we initialize everything to 0 to avoid data from the previous
+		 * tests to be present. disable this once the test runs
+		 * automatically TODO z
+		 */
+		memset(&uut, 0, sizeof(struct dcf77_high_level));
+		dcf77_high_level_init(&uut);
+
+		for(i = 0; i < xeliminate_testcases[curtest].num_lines; i++) {
+			printf("  Line %u ------------------------------------"
+				"-----------------------------------\n", i);
+			for(j = 0; j <
+			xeliminate_testcases[curtest].line_len[i]; j++) {
+				switch(xeliminate_testcases[curtest].
+								data[i][j]) {
+				case 0:  bitval = DCF77_BIT_0;         break;
+				case 1:  bitval = DCF77_BIT_1;         break;
+				case 2:  bitval = DCF77_BIT_NO_UPDATE; break;
+				case 3:  bitval = DCF77_BIT_NO_SIGNAL; break;
+				default: puts("    *** ERROR1 ***"); exit(64);
+				}
+
+				printf("    > %d (%d)\n", bitval,
+						xeliminate_testcases[curtest].
+						data[i][j]);
+				uut.in_val = bitval;
+				dcf77_high_level_process(&uut);
+				dumpmem(&uut);
+				if(uut.out_telegram_1_len != 0) {
+					printf("    out1len=%u out2len=%u\n",
+							uut.out_telegram_1_len,
+							uut.out_telegram_2_len);
+					printtel(uut.out_telegram_1,
+							uut.out_telegram_1_len);
+					printtel(uut.out_telegram_2,
+							uut.out_telegram_2_len);
+					uut.out_telegram_1_len = 0;
+					uut.out_telegram_2_len = 0;
+				}
+			}
+		}
+		break; /* TODO CSTAT DEBUG ONLY. AS OF NOW IT FAILS CATASTROPHICALLY WITH THE FIRST TEST ALREADY! */
+	}
+}
+
+static void printtel(unsigned char* data, unsigned char bitlen)
+{
+	printf("    tellen=%2u val=", bitlen);
+	printtel_sub(data);
+}
+
+static void printtel_sub(unsigned char* data)
+{
+	unsigned char j;
+	for(j = 0; j < 15; j++)
+		printf("%02x,", data[j]);
+	putchar('\n');
+}
+
+static void dumpmem(struct dcf77_high_level* ctx)
+{
+	unsigned char i;
+	printf("    [DEBUG]         ");
+	for(i = 0; i < DCF77_HIGH_LEVEL_LINE_BYTES; i++) {
+		if((ctx->private_line_cursor/4) == i) {
+			if(ctx->private_line_cursor % 4 >= 2)
+				printf("*  ");
+			else
+				printf(" * ");
+		} else {
+			printf("   ");
+		}
+	}
+	putchar('\n');
+	for(i = 0; i < DCF77_HIGH_LEVEL_LINES; i++) {
+		printf("    [DEBUG] %s meml%d=", i == ctx->private_line_current?
+								"*": " ", i);
+		printtel_sub(ctx->private_telegram_data +
+					(i * DCF77_HIGH_LEVEL_LINE_BYTES));
+	}
+}
+
 /* ------------------------------------------------[ Logic Implementation ]-- */
+static void reset(struct dcf77_high_level* ctx);
 static void shift_existing_bits_to_the_left(struct dcf77_high_level* ctx);
 static void process_telegrams(struct dcf77_high_level* ctx);
 static inline unsigned char nextl(unsigned char inl);
+static void recompute_eom(struct dcf77_high_level* ctx);
 
 void dcf77_high_level_init(struct dcf77_high_level* ctx)
 {
-	/* this is actually the same as a good-old reset function */
+	reset(ctx);
+	ctx->fault_reset = 0; /* reset number of resets "the first is free" */
+}
+
+static void reset(struct dcf77_high_level* ctx)
+{
 	ctx->private_inmode               = IN_BACKWARD;
 	ctx->private_line_current         = 0;
 	ctx->private_line_cursor          = 59;
 	ctx->private_leap_second_expected = 0; /* no leap second expected */
+	/* denote number of resets */
+	INC_SATURATED(ctx->fault_reset);
 	/* initialize with 0 */
 	memset(ctx->private_line_lengths,  0, DCF77_HIGH_LEVEL_LINES);
 	/* initialize with epsilon */
 	memset(ctx->private_telegram_data, 0, DCF77_HIGH_LEVEL_MEM);
+
+	ctx->out_telegram_1_len = 0;
+	ctx->out_telegram_2_len = 0;
 }
 
 void dcf77_high_level_process(struct dcf77_high_level* ctx)
@@ -102,8 +218,10 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 		return;
 
 	/* write new input */
-	ctx->private_telegram_data[ctx->private_line_cursor / 4] |= 
-			(ctx->in_val << ((ctx->private_line_cursor % 4) * 2));
+	ctx->private_telegram_data[
+			ctx->private_line_current * DCF77_HIGH_LEVEL_LINE_BYTES
+			+ ctx->private_line_cursor / 4] |= 
+		(ctx->in_val << ((ctx->private_line_cursor % 4) * 2));
 	ctx->private_line_lengths[ctx->private_line_current]++;
 
 	/* decrease leap second expectation */
@@ -127,7 +245,6 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 			 * become part of the telegram.
 			 */
 			ctx->private_line_lengths[0] = 60;
-			ctx->private_line_lengths[1] = 0;
 		} else if(ctx->private_line_lengths[0] == 60) {
 			/*
 			 * we processed 59 bits before, this is the 60. without
@@ -137,10 +254,8 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 			 * beginning of a minute with a leap second. The chances
 			 * for this are quite low, so we can well say it is
 			 * most likely a fault!
-			 *
-			 * TODO z NOTEWORTHY FAULT
 			 */
-			dcf77_high_level_init(ctx);
+			reset(ctx);
 		} else {
 			/*
 			 * Now that we have added our input, move bits and
@@ -180,6 +295,7 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 				 * We need to reorganize the datastructure
 				 * to align to the "reality".
 				 */
+				recompute_eom(ctx);
 				/* TODO N_IMPL / invoke recompute_eom(), afterwards the line will likely not be 100% full, but cursor reorganization is handled by compute_eom... / SUBSTAT: IT MIGHT MAKE SENSE TO IMPLEMENT TESTS WHICH DO NOT NEED THE REOGRANIZATION BY NOW AND THOROUGHLY TEST THAT THE EXISTING THINGS BEHAVE AS EXPECTED! */
 			}
 		} else {
@@ -222,57 +338,57 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 {
 	unsigned char lastlen = 60;
 	unsigned char line;
-	char mism;
+	char match;
 
 	/* Input situation: cursor is at the end of the current minute. */
 
-	/* first clear buffers to epsilon */
-	memset(ctx->out_telegram_1, 0, DCF77_HIGH_LEVEL_LINE_BYTES);
-	memset(ctx->out_telegram_2, 0, DCF77_HIGH_LEVEL_LINE_BYTES);
+	/* first clear buffers to no signal */
+	memset(ctx->out_telegram_1, 0x55, DCF77_HIGH_LEVEL_LINE_BYTES);
+	memset(ctx->out_telegram_2, 0x55, DCF77_HIGH_LEVEL_LINE_BYTES);
 
 	/* merge till mismatch */
-	for(mism = 0, line = nextl(ctx->private_line_current + 1);
-				line != ctx->private_line_current && !mism;
+	for(match = 1, line = nextl(ctx->private_line_current + 1);
+				line != ctx->private_line_current && match;
 				line = nextl(line)) {
 		/* ignore empty lines */
 		if(ctx->private_line_lengths[line] == 0)
 			continue;
 
-		mism = dcf77_proc_xeliminate(ctx->private_line_lengths[line],
+		match = dcf77_proc_xeliminate(ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
 					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
 					ctx->out_telegram_1);
+		printf("    [DEBUG] xeliminate1=%d\n", match);
 		lastlen = ctx->private_line_lengths[line];
 	}
 
-	if(mism) {
+	if(match) {
+		/* that was already the actual output */
+		ctx->out_telegram_1_len   = lastlen;
+		ctx->out_telegram_2_len   = 0;
+		ctx->private_line_current = nextl(ctx->private_line_current);
+		/* return */
+	} else {
 		/* repeat and write to actual output */
 		ctx->out_telegram_1_len = lastlen;
 
-		mism = 0;
-		for(; line != ctx->private_line_current && !mism;
+		match = 1;
+		for(; line != ctx->private_line_current && match;
 							line = nextl(line)) {
 			/* ignore empty lines */
 			if(ctx->private_line_lengths[line] == 0)
 				continue;
 
-			mism = dcf77_proc_xeliminate(
+			match = dcf77_proc_xeliminate(
 					ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
 					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
 					ctx->out_telegram_2);
+			printf("    [DEBUG] xeliminate2=%d\n", match);
 			lastlen = ctx->private_line_lengths[line];
 		}
 
-		if(mism) {
-			/*
-			 * we got another mismatch. this means the data is
-			 * not consistent.
-			 */
-			ctx->out_telegram_1_len = 0;
-			ctx->out_telegram_2_len = 0;
-			/* TODO CALL recompute_eom(), then re-invoke as described on paper. Remember that this has to advance line... */
-		} else {
+		if(match) {
 			/*
 			 * no further mismatch. Data in the buffer is fully
 			 * consistent. Can output this as truth
@@ -281,17 +397,26 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 			ctx->private_line_current =
 					nextl(ctx->private_line_current);
 			/* return */
+		} else {
+			/*
+			 * we got another mismatch. this means the data is
+			 * not consistent.
+			 */
+			ctx->out_telegram_1_len = 0;
+			ctx->out_telegram_2_len = 0;
+			recompute_eom(ctx);
+			/* TODO CALL recompute_eom(), then re-invoke as described on paper. Remember that this has to advance line... */
 		}
-	} else {
-		/* that was already the actual output */
-		ctx->out_telegram_1_len   = lastlen;
-		ctx->out_telegram_2_len   = 0;
-		ctx->private_line_current = nextl(ctx->private_line_current);
-		/* return */
 	}
 }
 
 static inline unsigned char nextl(unsigned char inl)
 {
 	return (inl + 1) % DCF77_HIGH_LEVEL_LINES;
+}
+
+static void recompute_eom(struct dcf77_high_level* ctx)
+{
+	/* TODO N_IMPL */
+	puts("ERROR,recompute_eom not implemented!");
 }

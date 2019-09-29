@@ -13,7 +13,7 @@
 enum dcf77_bitlayer_reading {
 
 	/*
-	 * binary 01
+	 * binary 00
 	 *
 	 * _proc continued processing but a second has not passed yet
 	 * (no update in the second counter necessary)
@@ -23,7 +23,7 @@ enum dcf77_bitlayer_reading {
 	DCF77_BIT_NO_UPDATE = 0,
 
 	/*
-	 * binary 00
+	 * binary 01
 	 *
 	 * _proc detected that a second has passed but there was no signal
 	 * detected from the receiver. This can mean two things:
