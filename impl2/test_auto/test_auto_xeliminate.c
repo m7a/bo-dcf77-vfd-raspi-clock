@@ -49,7 +49,8 @@ static void run_xeliminate_testcases()
 			*/
 		}
 		rv = 1;
-		for(i = 1; rv == 1 && i < xeliminate_testcases[curtest].num_lines; i++)
+		for(i = 1; rv == 1 && i < xeliminate_testcases[curtest].
+								num_lines; i++)
 			rv = dcf77_proc_xeliminate(
 				xeliminate_testcases[curtest].line_len[i - 1],
 				xeliminate_testcases[curtest].line_len[i],
@@ -58,11 +59,14 @@ static void run_xeliminate_testcases()
 			);
 
 		if(rv == xeliminate_testcases[curtest].recovery_ok) {
-			if(rv == 1 && memcmp(telegram[xeliminate_testcases[curtest].num_lines - 1],
-					xeliminate_testcases[curtest].recovers_to, 15) != 0) {
+			if(rv == 1 && memcmp(telegram[
+			xeliminate_testcases[curtest].num_lines - 1],
+			xeliminate_testcases[curtest].recovers_to, 15) != 0) {
 				/* fail */
-				printf("[FAIL] Test %d: %s -- telegram mismatch\n",
-					curtest, xeliminate_testcases[curtest].description);
+				printf("[FAIL] Test %d: %s -- "
+					"telegram mismatch\n",
+					curtest, xeliminate_testcases[curtest].
+								description);
 				printf("       Expected  ");
 				for(j = 0; j < 15; j++)
 					printf(
@@ -81,13 +85,14 @@ static void run_xeliminate_testcases()
 			} else {
 				/* pass */
 				printf("[ OK ] Test %d: %s\n", curtest,
-					xeliminate_testcases[curtest].description);
+					xeliminate_testcases[curtest].
+					description);
 			}
 		} else {
 			/* fail */
-			printf("[FAIL] Test %d: %s -- unexpected rv idx=%d\n", curtest,
-					xeliminate_testcases[curtest].description, i);
+			printf("[FAIL] Test %d: %s -- unexpected rv idx=%d\n",
+				curtest,
+				xeliminate_testcases[curtest].description, i);
 		}
-		
 	}
 }

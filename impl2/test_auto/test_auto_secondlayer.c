@@ -82,9 +82,22 @@ static void printtel(unsigned char* data, unsigned char bitlen);
 static void printtel_sub(unsigned char* data);
 static void dumpmem(struct dcf77_high_level* ctx);
 
+static const unsigned char CMPMASK[16] = {
+0x03,0x00,0x00,0x00,0x00,0x03,0x00,0xfc,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+/*
+0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a,
+0x56,0x55,0x55,0x55,0x55,0x57,0x55,0xfd,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a,
+0101 1101 1010 1110 0100 1100 1010 1111 0100 1100 1001 1001 0010 0110 0013 2
+0333 3333 3333 3333 3333 1333 3333 3111 0100 1100 1001 1001 0010 0110 0013 2
+*/
+};
+
 int main(int argc, char** argv)
 {
 	struct dcf77_high_level uut;
+
+	unsigned char pass;
+	unsigned char cmpbuf[DCF77_HIGH_LEVEL_LINE_BYTES];
 
 	unsigned char curtest;
 	unsigned char i;
@@ -94,6 +107,10 @@ int main(int argc, char** argv)
 	for(curtest = 0; curtest <
 			(sizeof(xeliminate_testcases) /
 			sizeof(struct xeliminate_testcase)); curtest++) {
+
+		/* TODO z for now skip tests which fail recovery */
+		if(xeliminate_testcases[curtest].recovery_ok == 0)
+			continue;
 
 		puts("======================================================="
 						"=========================");
@@ -121,12 +138,15 @@ int main(int argc, char** argv)
 				default: puts("    *** ERROR1 ***"); exit(64);
 				}
 
+				/*
 				printf("    > %d (%d)\n", bitval,
 						xeliminate_testcases[curtest].
 						data[i][j]);
+				*/
 				uut.in_val = bitval;
 				dcf77_high_level_process(&uut);
-				dumpmem(&uut);
+				if(0 == 1) /* currently disabled */
+					dumpmem(&uut);
 				if(uut.out_telegram_1_len != 0) {
 					printf("    out1len=%u out2len=%u\n",
 							uut.out_telegram_1_len,
@@ -137,10 +157,31 @@ int main(int argc, char** argv)
 							uut.out_telegram_2_len);
 					uut.out_telegram_1_len = 0;
 					uut.out_telegram_2_len = 0;
+
+					memcpy(cmpbuf,
+						uut.out_telegram_2_len != 0?
+							uut.out_telegram_2:
+							uut.out_telegram_1,
+						DCF77_HIGH_LEVEL_LINE_BYTES);
 				}
 			}
 		}
-		break; /* TODO CSTAT DEBUG ONLY. AS OF NOW IT FAILS CATASTROPHICALLY WITH THE FIRST TEST ALREADY! */
+		/* now compare */
+		pass = 1;
+		for(i = 0; i < DCF77_HIGH_LEVEL_LINE_BYTES; i++) {
+			if((cmpbuf[i] & CMPMASK[i]) != (xeliminate_testcases[
+					curtest].recovers_to[i] & CMPMASK[i])) {
+				printf("  [FAIL] Mismatch at index %d\n", i);
+				pass = 0;
+				break;
+			}
+		}
+		/*
+		 * Note that this test is not very prcise, but if it fails, it
+		 * is quite likely that there is something amiss.
+		 */
+		if(pass)
+			printf("  [ OK ] Matches wrt. CMPMASK\n");
 	}
 }
 
@@ -314,23 +355,25 @@ static void shift_existing_bits_to_the_left(struct dcf77_high_level* ctx)
 {
 	unsigned char current_byte;
 
-	/* TODO z not sure if this -1 makes sense here */
+	/* TODO z not sure if this -1 makes sense here / BAK for(current_byte = 15 - (ctx->private_line_lengths[0] / 4) - (ctx->private_line_lengths[0] % 4 != 0); */
 	for(current_byte = (60 - ctx->private_line_lengths[0] - 1) / 4;
-					current_byte < 16; current_byte++) {
+				current_byte < DCF77_HIGH_LEVEL_LINE_BYTES;
+				current_byte++) {
 		/*
-		 * split off the first two bits (which get shifted out)
-		 * and put them in the previous byte if there is a previous
-		 * byte (otherwise discard them silently).
+		 * split off the first two bits (lowermost idx,
+		 * which get shifted out) and put them in the previous byte
+		 * (highermost idx) if there is a previous byte
+		 * (otherwise discard them silently).
 		 */
 		if(current_byte > 0)
 			ctx->private_telegram_data[current_byte - 1] |= (
-				(ctx->private_telegram_data[current_byte] &
-				0xc0) >> 6);
+				(ctx->private_telegram_data[current_byte] & 3)
+				<< 6);
 		/*
-		 * shift current byte two leftwards, making space for one
-		 * datapoint
+		 * shift current byte two rightwards, making space for one
+		 * datapoint (at the "highest" index)
 		 */
-		ctx->private_telegram_data[current_byte] <<= 2;
+		ctx->private_telegram_data[current_byte] >>= 2;
 	}
 }
 
@@ -366,6 +409,7 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 		/* that was already the actual output */
 		ctx->out_telegram_1_len   = lastlen;
 		ctx->out_telegram_2_len   = 0;
+		ctx->private_line_cursor  = 0;
 		ctx->private_line_current = nextl(ctx->private_line_current);
 		/* return */
 	} else {
@@ -393,7 +437,8 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 			 * no further mismatch. Data in the buffer is fully
 			 * consistent. Can output this as truth
 			 */
-			ctx->out_telegram_2_len = lastlen;
+			ctx->out_telegram_2_len   = lastlen;
+			ctx->private_line_cursor  = 0;
 			ctx->private_line_current =
 					nextl(ctx->private_line_current);
 			/* return */
