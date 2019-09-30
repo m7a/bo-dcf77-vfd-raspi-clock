@@ -7,6 +7,8 @@
 #include "inc_sat.h"
 #include "xeliminate_testcases.h"
 
+/* TODO z once we have reorganization: do a test with a leap second (like test case 9) but "miss" the leap second in the sense that just a 3/NO_SIGNAL is output for the 0-marker in the leap second. It will be interesting to see how long it takes to recover from that! */
+
 /* ---------------------------------------[ Logic Declaration / Interface ]-- */
 
 #define DCF77_HIGH_LEVEL_LINES       9
@@ -62,6 +64,10 @@ struct dcf77_high_level {
 	 * 	has new measurement
 	 * 	(lower layer information may bypass second layer here)
 	 * has new telegram <=> out_telegram_1_len != 0
+	 *
+	 * For leap seconds, a regular telegram + length = 61 will be
+	 * returned. This is as of now considered perfectly OK and stems
+	 * from the xelimination not doing any elimination wrt. leapsec data.
 	 *
 	 * users should reset out_telegram_len values after processing!
 	 */
@@ -124,7 +130,7 @@ int main(int argc, char** argv)
 		dcf77_high_level_init(&uut);
 
 		for(i = 0; i < xeliminate_testcases[curtest].num_lines; i++) {
-			printf("  Line %u ------------------------------------"
+			printf("  Line %2u -----------------------------------"
 				"-----------------------------------\n", i);
 			for(j = 0; j <
 			xeliminate_testcases[curtest].line_len[i]; j++) {
@@ -154,14 +160,15 @@ int main(int argc, char** argv)
 							uut.out_telegram_1_len);
 					printtel(uut.out_telegram_2,
 							uut.out_telegram_2_len);
-					uut.out_telegram_1_len = 0;
-					uut.out_telegram_2_len = 0;
 
 					memcpy(cmpbuf,
 						uut.out_telegram_2_len != 0?
 							uut.out_telegram_2:
 							uut.out_telegram_1,
 						DCF77_HIGH_LEVEL_LINE_BYTES);
+
+					uut.out_telegram_1_len = 0;
+					uut.out_telegram_2_len = 0;
 				}
 			}
 		}
@@ -171,6 +178,7 @@ int main(int argc, char** argv)
 			if((cmpbuf[i] & CMPMASK[i]) != (xeliminate_testcases[
 					curtest].recovers_to[i] & CMPMASK[i])) {
 				printf("  [FAIL] Mismatch at index %d\n", i);
+				printtel(cmpbuf, 60);
 				pass = 0;
 				break;
 			}
@@ -219,6 +227,8 @@ static void dumpmem(struct dcf77_high_level* ctx)
 		printtel_sub(ctx->private_telegram_data +
 					(i * DCF77_HIGH_LEVEL_LINE_BYTES));
 	}
+	printf("    [DEBUG] line_current=%u, cursor=%u\n",
+			ctx->private_line_current, ctx->private_line_cursor);
 }
 
 /* ------------------------------------------------[ Logic Implementation ]-- */
@@ -226,8 +236,15 @@ static void reset(struct dcf77_high_level* ctx);
 static void shift_existing_bits_to_the_left(struct dcf77_high_level* ctx);
 static void process_telegrams(struct dcf77_high_level* ctx);
 static inline unsigned char nextl(unsigned char inl);
+static inline unsigned char prevl(unsigned char inl);
 static void recompute_eom(struct dcf77_high_level* ctx);
 static void advance_to_next_line(struct dcf77_high_level* ctx);
+static void postprocess(struct dcf77_high_level* ctx,
+		unsigned char* in_out_telegram, unsigned char* in_telegram);
+static void add_missing_bits(unsigned char* in_out_telegram,
+						unsigned char* in_telegram);
+static void check_for_leapsec_announce(struct dcf77_high_level* ctx,
+						unsigned char* telegram);
 
 void dcf77_high_level_init(struct dcf77_high_level* ctx)
 {
@@ -337,7 +354,26 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 				 * to align to the "reality".
 				 */
 				recompute_eom(ctx);
-				/* TODO N_IMPL / invoke recompute_eom(), afterwards the line will likely not be 100% full, but cursor reorganization is handled by compute_eom... / SUBSTAT: IT MIGHT MAKE SENSE TO IMPLEMENT TESTS WHICH DO NOT NEED THE REOGRANIZATION BY NOW AND THOROUGHLY TEST THAT THE EXISTING THINGS BEHAVE AS EXPECTED! */
+				/* TODO ASTAT N_IMPL / invoke recompute_eom(), afterwards the line will likely not be 100% full, but cursor reorganization is handled by compute_eom... / SUBSTAT: IT MIGHT MAKE SENSE TO IMPLEMENT TESTS WHICH DO NOT NEED THE REOGRANIZATION BY NOW AND THOROUGHLY TEST THAT THE EXISTING THINGS BEHAVE AS EXPECTED! */
+			}
+		} else if(ctx->private_line_cursor == 60) {
+			/*
+			 * this is only allowed in the case of leap seconds.
+			 * (no separate check here, but one could assert that
+			 * the leap sec counter is > 0)
+			 */
+			if(ctx->in_val == DCF77_BIT_NO_SIGNAL) {
+				/* ok, process this longer telegram */
+				process_telegrams(ctx);
+			} else {
+				/*
+				 * would have expected an end-of-minute marker.
+				 * We have a mismatch although a leap-second
+				 * was announced for around this time.
+				 *
+				 * TODO Z RECOVER FROM THIS CASE BY DOING TWO STEPS: (1) move current bit to next line, then shift previous line one rightwards (this would actually need to go through the whole memory and fill the first space with a `2`/epsilon)? -- the problem here is: that is quite complicated. It would seem that it might be possible to integrate this functionality into the reorganization function, in any case it is not trivial and might be enough complexity to warrant a reset for this rare case of an announced leap second and async...
+				 */
+				printf("[DEBUG] COMPLEX REORGANIZATION REQUIRED\n");
 			}
 		} else {
 			/*
@@ -398,19 +434,27 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 		if(ctx->private_line_lengths[line] == 0)
 			continue;
 
+		/*
 		printf("    [DEBUG] xeliminate1(\n");
 		printf("    [DEBUG]   ");
 		printtel_sub(ctx->private_telegram_data + 
 					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
-		printf("    [DEUBG]   ");
+		printf("    [DEBUG]   ");
 		printtel_sub(ctx->out_telegram_1);
+		*/
 		match = dcf77_proc_xeliminate(ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
 					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
 					ctx->out_telegram_1);
+		/*
 		printf("    [DEBUG] )=%d\n", match);
+		*/
 		lastlen = ctx->private_line_lengths[line];
 	}
+
+	postprocess(ctx, ctx->out_telegram_1,
+					ctx->private_telegram_data +
+					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
 
 	if(match) {
 		/* that was already the actual output */
@@ -420,33 +464,38 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 		/* return */
 	} else {
 		/* repeat and write to actual output */
-		ctx->out_telegram_1_len = lastlen;
+
+		/* this is the line that failed and which we reprocess */
+		line = prevl(line);
+		/* this is the length of the line before the line that failed */
+		ctx->out_telegram_1_len =
+					ctx->private_line_lengths[prevl(line)];
 
 		match = 1;
-		/*
-		 * line = ... the telegram that failed before needs to be
-		 * re-processed
-		 */
-		for(line = ((line == 0)? (DCF77_HIGH_LEVEL_LINES - 1):
-								(line - 1));
-				line != ctx->private_line_current && match;
+		/* we eliminate to generic thus set length to 60 */
+		lastlen = 60;
+		for(; line != ctx->private_line_current && match;
 				line = nextl(line)) {
 			/* ignore empty lines (relevant in the beginning) */
 			if(ctx->private_line_lengths[line] == 0)
 				continue;
 
+			/*
+			printf("    [DEBUG] xeliminate2(\n");
+			printf("    [DEBUG]   ");
+			printtel_sub(ctx->private_telegram_data + 
+					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
+			printf("    [DEBUG]   ");
+			printtel_sub(ctx->out_telegram_2);
+			*/
 			match = dcf77_proc_xeliminate(
 					ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
 					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
 					ctx->out_telegram_2);
-			printf("    [DEBUG] xeliminate2(\n");
-			printf("    [DEBUG]   ");
-			printtel_sub(ctx->private_telegram_data + 
-					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
-			printf("    [DEUBG]   ");
-			printtel_sub(ctx->out_telegram_2);
+			/*
 			printf("    [DEBUG] )=%d\n", match);
+			*/
 			lastlen = ctx->private_line_lengths[line];
 		}
 
@@ -456,6 +505,9 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 			 * consistent. Can output this as truth
 			 */
 			ctx->out_telegram_2_len = lastlen;
+			postprocess(ctx, ctx->out_telegram_2,
+					ctx->private_telegram_data +
+					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
 			advance_to_next_line(ctx);
 			/* return */
 		} else {
@@ -487,8 +539,60 @@ static inline unsigned char nextl(unsigned char inl)
 	return (inl + 1) % DCF77_HIGH_LEVEL_LINES;
 }
 
+static inline unsigned char prevl(unsigned char inl)
+{
+	return ((inl == 0)? (DCF77_HIGH_LEVEL_LINES - 1): (inl - 1));
+}
+
 static void recompute_eom(struct dcf77_high_level* ctx)
 {
-	/* TODO N_IMPL */
+	/* TODO ASTAT N_IMPL */
 	puts("ERROR,recompute_eom not implemented!");
+}
+
+static void postprocess(struct dcf77_high_level* ctx,
+		unsigned char* in_out_telegram, unsigned char* in_telegram)
+{
+	add_missing_bits(in_out_telegram, in_telegram);
+	check_for_leapsec_announce(ctx, in_out_telegram);
+}
+
+/*
+ * this is not a "proper" X-elimination but copies minute value bits and
+ * leap second announce bits from the last telegram processed prior to
+ * outputting something. It allows the higher layers to receive and process
+ * these bits although they are not used in the normal xelimination.
+ */
+static void add_missing_bits(unsigned char* in_out_telegram,
+						unsigned char* in_telegram)
+{
+	unsigned char i;
+	dcf77_proc_xeliminate_entry(in_telegram[19 / 4],
+					in_out_telegram + (19 / 4), 19 % 4);
+	for(i = 21; i <= 24; i++)
+		dcf77_proc_xeliminate_entry(in_telegram[i / 4],
+					in_out_telegram + (i / 4), i % 4);
+}
+
+static void check_for_leapsec_announce(struct dcf77_high_level* ctx,
+							unsigned char* telegram)
+{
+	/*
+	 * leapsec bit idx = 19. 19/4 = 4, 19%4 = 3 (slot idx 3 [0..3])
+	 * to read third slot we use uppermost two bits: 0xc0 = 1100 0000
+	 * then these need to match "bit 1" which is 11 thus byte&0xc0 = 0xc0
+	 * indicates leap second marker activated!
+	 */
+
+	/* find leap sec marker && only set if no counter in place yet */
+	if((telegram[4] & 0xc0) == 0xc0 &&
+				ctx->private_leap_second_expected == 0) {
+		/*
+		 * leap sec lies at most one hour in the future. we allow +10
+		 * minutes s.t. existing telegrams (w/ leap sec) do not
+		 * become invalid until the whole telegram from the leap
+		 * second has passed out of memory.
+		 */
+		ctx->private_leap_second_expected = 70 * 60;
+	}
 }

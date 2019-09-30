@@ -8,8 +8,6 @@
 #	define DEBUGPRINTF(X, ...) {}
 #endif
 
-static char xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
-							unsigned char entry);
 static unsigned char read_entry(unsigned char in, unsigned char entry);
 
 /*
@@ -29,7 +27,7 @@ char dcf77_proc_xeliminate(
 	unsigned char* telregular;
 
 	/* 0:    entry has to match and be constant 0 */
-	if(!xeliminate_entry(*in_telegram_1, in_out_telegram_2, 0)) {
+	if(!dcf77_proc_xeliminate_entry(*in_telegram_1, in_out_telegram_2, 0)) {
 		DEBUGPRINTF("<<<ERROR2,%02x,%02x>>>\n", *in_telegram_1,
 							*in_out_telegram_2);
 		return 0;
@@ -48,9 +46,9 @@ char dcf77_proc_xeliminate(
 	for(i = 16; i <= 20; i++) {
 		/*
 		 * i != 19: skip leap second marker. for now it is not used for
-		 *          correction...
+		 *          xelimination
 		 */
-		if(i != 19 && !xeliminate_entry(in_telegram_1[i / 4],
+		if(i != 19 && !dcf77_proc_xeliminate_entry(in_telegram_1[i / 4],
 					in_out_telegram_2 + (i / 4), i % 4)) {
 			DEBUGPRINTF("<<<ERROR4,%d>>>\n", i);
 			return 0;
@@ -100,7 +98,7 @@ char dcf77_proc_xeliminate(
 		 * i != 28: except for minute parity bit (28) which may change
 		 *          depending on minute unit value
 		 */
-		if(i != 28 && !xeliminate_entry(in_telegram_1[i / 4],
+		if(i != 28 && !dcf77_proc_xeliminate_entry(in_telegram_1[i / 4],
 					in_out_telegram_2 + (i / 4), i % 4)) {
 			DEBUGPRINTF("<<<ERROR7,i=%u>>>\n", i);
 			return 0;
@@ -133,6 +131,11 @@ char dcf77_proc_xeliminate(
 		 * correct data in the telegram (does not make sense
 		 * to write to telegram_1 which is an in-variable
 		 * anyways).
+		 *
+		 * To be explicit: Higher layers may receive telegrams of
+		 * length 61 which do not contain data as if they were
+		 * leap seconds. They still need to be treated as such.
+		 * The reason is just that this data is not "corrected".
 		 */
 		return (read_entry(telleap[14],    3) == DCF77_BIT_NO_SIGNAL ||
 			read_entry(telleap[14],    3) == DCF77_BIT_0)        &&
@@ -146,7 +149,7 @@ char dcf77_proc_xeliminate(
 	}
 } 
 
-static char xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
+char dcf77_proc_xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
 							unsigned char entry)
 {
 	unsigned char val1 = read_entry(in_1,      entry);
