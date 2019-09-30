@@ -7,8 +7,6 @@
 #include "inc_sat.h"
 #include "xeliminate_testcases.h"
 
-/* TODO CSTAT SUBSTAT BETRACHTE LETZES BILD AUS TEST: FALSCH GESCHRIEBEN UND FALSCH ELIMINIERT? */
-
 /* ---------------------------------------[ Logic Declaration / Interface ]-- */
 
 #define DCF77_HIGH_LEVEL_LINES       9
@@ -108,8 +106,9 @@ int main(int argc, char** argv)
 			(sizeof(xeliminate_testcases) /
 			sizeof(struct xeliminate_testcase)); curtest++) {
 
-		/* TODO z for now skip tests which fail recovery */
-		if(xeliminate_testcases[curtest].recovery_ok == 0)
+		/* for now skip tests which fail recovery */
+		if(!xeliminate_testcases[curtest].secondlayer_required &&
+				xeliminate_testcases[curtest].recovery_ok == 0)
 			continue;
 
 		puts("======================================================="
@@ -228,6 +227,7 @@ static void shift_existing_bits_to_the_left(struct dcf77_high_level* ctx);
 static void process_telegrams(struct dcf77_high_level* ctx);
 static inline unsigned char nextl(unsigned char inl);
 static void recompute_eom(struct dcf77_high_level* ctx);
+static void advance_to_next_line(struct dcf77_high_level* ctx);
 
 void dcf77_high_level_init(struct dcf77_high_level* ctx)
 {
@@ -390,6 +390,7 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 	memset(ctx->out_telegram_2, 0x55, DCF77_HIGH_LEVEL_LINE_BYTES);
 
 	/* merge till mismatch */
+	/* TODO z printf("    [DEBUG] FROM %u to %u\n", nextl(ctx->private_line_current + 1), ctx->private_line_current); */
 	for(match = 1, line = nextl(ctx->private_line_current + 1);
 				line != ctx->private_line_current && match;
 				line = nextl(line)) {
@@ -397,29 +398,40 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 		if(ctx->private_line_lengths[line] == 0)
 			continue;
 
+		printf("    [DEBUG] xeliminate1(\n");
+		printf("    [DEBUG]   ");
+		printtel_sub(ctx->private_telegram_data + 
+					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
+		printf("    [DEUBG]   ");
+		printtel_sub(ctx->out_telegram_1);
 		match = dcf77_proc_xeliminate(ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
 					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
 					ctx->out_telegram_1);
-		printf("    [DEBUG] xeliminate1=%d\n", match);
+		printf("    [DEBUG] )=%d\n", match);
 		lastlen = ctx->private_line_lengths[line];
 	}
 
 	if(match) {
 		/* that was already the actual output */
-		ctx->out_telegram_1_len   = lastlen;
-		ctx->out_telegram_2_len   = 0;
-		ctx->private_line_cursor  = 0;
-		ctx->private_line_current = nextl(ctx->private_line_current);
+		ctx->out_telegram_1_len = lastlen;
+		ctx->out_telegram_2_len = 0;
+		advance_to_next_line(ctx);
 		/* return */
 	} else {
 		/* repeat and write to actual output */
 		ctx->out_telegram_1_len = lastlen;
 
 		match = 1;
-		for(; line != ctx->private_line_current && match;
-							line = nextl(line)) {
-			/* ignore empty lines */
+		/*
+		 * line = ... the telegram that failed before needs to be
+		 * re-processed
+		 */
+		for(line = ((line == 0)? (DCF77_HIGH_LEVEL_LINES - 1):
+								(line - 1));
+				line != ctx->private_line_current && match;
+				line = nextl(line)) {
+			/* ignore empty lines (relevant in the beginning) */
 			if(ctx->private_line_lengths[line] == 0)
 				continue;
 
@@ -428,7 +440,13 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 					lastlen, ctx->private_telegram_data +
 					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
 					ctx->out_telegram_2);
-			printf("    [DEBUG] xeliminate2=%d\n", match);
+			printf("    [DEBUG] xeliminate2(\n");
+			printf("    [DEBUG]   ");
+			printtel_sub(ctx->private_telegram_data + 
+					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
+			printf("    [DEUBG]   ");
+			printtel_sub(ctx->out_telegram_2);
+			printf("    [DEBUG] )=%d\n", match);
 			lastlen = ctx->private_line_lengths[line];
 		}
 
@@ -437,10 +455,8 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 			 * no further mismatch. Data in the buffer is fully
 			 * consistent. Can output this as truth
 			 */
-			ctx->out_telegram_2_len   = lastlen;
-			ctx->private_line_cursor  = 0;
-			ctx->private_line_current =
-					nextl(ctx->private_line_current);
+			ctx->out_telegram_2_len = lastlen;
+			advance_to_next_line(ctx);
 			/* return */
 		} else {
 			/*
@@ -453,6 +469,17 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 			/* TODO CALL recompute_eom(), then re-invoke as described on paper. Remember that this has to advance line... */
 		}
 	}
+}
+
+/* includes clearing the next line's contents */
+static void advance_to_next_line(struct dcf77_high_level* ctx)
+{
+	ctx->private_line_cursor = 0;
+	ctx->private_line_current = nextl(ctx->private_line_current);
+	ctx->private_line_lengths[ctx->private_line_current] = 0;
+	memset(ctx->private_telegram_data +
+		(ctx->private_line_current * DCF77_HIGH_LEVEL_LINE_BYTES),
+		0, DCF77_HIGH_LEVEL_LINE_BYTES);
 }
 
 static inline unsigned char nextl(unsigned char inl)

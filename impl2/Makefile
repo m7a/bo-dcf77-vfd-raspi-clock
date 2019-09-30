@@ -17,11 +17,16 @@ MAIN        = main.o
 
 CC_TEST     = gcc
 CC_PROD     = avr-gcc
+CFLAGS_DEBG = -Wall -I../interface -O0 -DDEBUG
 CFLAGS_TEST = -Wall -I../interface -O2
 CFLAGS_PROD = -Wall -I../interface -O2 -DF_CPU=16000000UL -mmcu=atmega328p
 
 compile-test:
 	make "CC=$(CC_TEST)" "CFLAGS=$(CFLAGS_TEST)" \
+				"INNERDEP=c_ll_test c_test_auto" compile-inner
+
+compile-debug:
+	make "CC=$(CC_TEST)" "CFLAGS=$(CFLAGS_DEBG)" \
 				"INNERDEP=c_ll_test c_test_auto" compile-inner
 
 compile-prod:

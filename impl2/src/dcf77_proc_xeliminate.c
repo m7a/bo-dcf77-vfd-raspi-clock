@@ -1,6 +1,13 @@
 #include "dcf77_bitlayer.h"
 #include "dcf77_proc_xeliminate.h"
 
+#ifdef DEBUG
+#	include <stdio.h>
+#	define DEBUGPRINTF printf
+#else
+#	define DEBUGPRINTF(X, ...) {}
+#endif
+
 static char xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
 							unsigned char entry);
 static unsigned char read_entry(unsigned char in, unsigned char entry);
@@ -23,14 +30,14 @@ char dcf77_proc_xeliminate(
 
 	/* 0:    entry has to match and be constant 0 */
 	if(!xeliminate_entry(*in_telegram_1, in_out_telegram_2, 0)) {
-		/* printf("<<<ERROR2,%02x,%02x>>>\n", *in_telegram_1,
-							*in_out_telegram_2); */
+		DEBUGPRINTF("<<<ERROR2,%02x,%02x>>>\n", *in_telegram_1,
+							*in_out_telegram_2);
 		return 0;
 	}
 
 	etmp = read_entry(*in_out_telegram_2, 0);
 	if(etmp == DCF77_BIT_1) {
-		/* puts("<<<ERROR3>>>"); */
+		DEBUGPRINTF("<<<ERROR3>>>\n");
 		return 0; /* constant 0 violated */
 	} else if(etmp == DCF77_BIT_NO_SIGNAL) {
 		/* correct to 0 */
@@ -45,7 +52,7 @@ char dcf77_proc_xeliminate(
 		 */
 		if(i != 19 && !xeliminate_entry(in_telegram_1[i / 4],
 					in_out_telegram_2 + (i / 4), i % 4)) {
-			/* printf("<<<ERROR4,%d>>>\n", i); */
+			DEBUGPRINTF("<<<ERROR4,%d>>>\n", i);
 			return 0;
 		}
 	}
@@ -56,7 +63,7 @@ char dcf77_proc_xeliminate(
 	/* assertion violated if 00 or 11 found */
 	if((etmp == DCF77_BIT_0 && etmp2 == DCF77_BIT_0) ||
 				(etmp == DCF77_BIT_1 && etmp2 == DCF77_BIT_1)) {
-		/* printf("<<<ERROR5,etmp1=%u,etmp2=%u>>>\n", etmp, etmp2); */
+		DEBUGPRINTF("<<<ERROR5,etmp1=%u,etmp2=%u>>>\n", etmp, etmp2);
 		return 0;
 	}
 	if(etmp2 == DCF77_BIT_NO_SIGNAL && etmp != DCF77_BIT_NO_SIGNAL
@@ -79,7 +86,7 @@ char dcf77_proc_xeliminate(
 	/* 20:     entry has to match and be constant 1 */
 	etmp = read_entry(in_out_telegram_2[5], 0);
 	if(etmp == DCF77_BIT_0) {
-		/* puts("<<<ERROR6>>>"); */
+		DEBUGPRINTF("<<<ERROR6>>>\n");
 		return 0; /* constant 1 violated */
 	} else if(etmp == DCF77_BIT_NO_SIGNAL) {
 		/* unset => correct to 1 */
@@ -95,7 +102,7 @@ char dcf77_proc_xeliminate(
 		 */
 		if(i != 28 && !xeliminate_entry(in_telegram_1[i / 4],
 					in_out_telegram_2 + (i / 4), i % 4)) {
-			/* printf("<<<ERROR7,i=%u>>>\n", i); */
+			DEBUGPRINTF("<<<ERROR7,i=%u>>>\n", i);
 			return 0;
 		}
 	}
@@ -133,7 +140,7 @@ char dcf77_proc_xeliminate(
 			read_entry(telleap[15],    0) == DCF77_BIT_NO_SIGNAL &&
 			read_entry(telregular[14], 3) == DCF77_BIT_NO_SIGNAL;
 	} else {
-		/* printf("<<<ERROR8>>>\n"); */
+		DEBUGPRINTF("<<<ERROR8>>>\n");
 		/* not a minute's telegram -> invalid */
 		return 0;
 	}

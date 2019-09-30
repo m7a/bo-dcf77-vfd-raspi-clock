@@ -1,10 +1,11 @@
 struct xeliminate_testcase {
 	char* description;
 	unsigned char num_lines;
-	unsigned char line_len[9];
-	unsigned char data[9][61];
+	unsigned char line_len[20];
+	unsigned char data[20][61];
 	unsigned char recovery_ok;
 	unsigned char recovers_to[16];
+	unsigned char secondlayer_required;
 };
 
 struct xeliminate_testcase xeliminate_testcases[] = {
@@ -19,6 +20,7 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 			{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
 		},
 		.recovery_ok = 1,
+		.secondlayer_required = 0,
 		.recovers_to = {0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a},
 	},
 	{
@@ -31,6 +33,7 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 			/* 17:30 */
 			{0,1,0,0,0,1,1,1,0,1,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,1,0,0,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,3,3,3,3,3,3,3,3},
 		},
+		.secondlayer_required = 0,
 		.recovery_ok = 0,
 	},
 	{
@@ -69,6 +72,7 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 			/* 17:29 bit 18 defunct */
 			{0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,0,1,3,0,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3},
 		},
+		.secondlayer_required = 0,
 		.recovery_ok = 1,
 		.recovers_to = {0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a},
 	},
@@ -110,6 +114,7 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 			{0,0,1,1,1,0,0,1,0,1,0,1,0,1,0,0,0,1,0,0,1,1,0,0,1,0,0,1,1,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,1,3,},
 		},
 		.recovery_ok = 1,
+		.secondlayer_required = 0,
 		.recovers_to = {0xfa,0xeb,0xee,0xae,0xae,0xaf,0xeb,0xbb,0xba,0xae,0xbe,0xea,0xba,0xbe,0x7a},
 	},
 	{
@@ -136,6 +141,7 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,0,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,},
 		},
 		.recovery_ok = 1,
+		.secondlayer_required = 0,
 		.recovers_to = {0x56,0x55,0x55,0x55,0x6e,0xaf,0xeb,0xb9,0xba,0xae,0xbe,0xea,0xba,0xbe,0x7a},
 	},
 	/* TODO CSTAT THIS TEST CASE FAILS OF SORTS BECAUSE IT INTERMITTENTLY OUTPUTS AN ENTIRELY USELESS TELEGRMA (WITH ONLY 55 and two constants fixed?) -> should find out why this is the case. Note that this test case involves resetting as first minutes w/ leap seconds are simplified over. It might thus be rewarding to create the missing test case which is from like 01:58 to 02:02 and has the leap second in the middle! */
@@ -152,8 +158,42 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 			{0,0,1,0,0,1,1,1,0,0,1,1,1,0,1,0,0,1,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3,},
 		},
 		.recovery_ok = 1,
+		.secondlayer_required = 0,
 		.recovers_to = {0xba,0xfe,0xfa,0xbb,0xae,0xbb,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a},
 	},
-	/* TODO z Test cases for leap seconds (make them appear in the middle of the array once and then be done with it...) */
+	/* TODO CSTAT THIS TEST SEEMS TO GO ACCEPTABLY WELL AT THE BEGINNING BUT DOES NOT OUTPUT NEW TELEGRAMS AFTER THE FIRST NINE ONES HAVE BEEN PROCESSED. IT SEEMS TO BE A RINGBUFFER ISSUE!  SUBSTAT FOR UNKNOWN REASONS WE NOW HAVE TWO XELIMINATE FAILS??? */
+	{
+		.description = "01:44 -> 02:03 w/ leap second",
+		.num_lines = 20,
+		.line_len = { 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 61, 60, 60, 60 },
+		.data = {
+			{0,1,0,0,1,1,0,1,1,0,0,1,0,1,0,0,0,1,0,1,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 1  So, 01.07.12 01:44:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,0,0,0,1,1,0,1,1,0,1,1,0,1,0,0,1,0,1,1,1,0,1,0,0,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 2  So, 01.07.12 01:45:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,0,1,1,0,0,1,0,0,0,1,1,1,0,0,0,1,0,1,1,0,1,1,0,0,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 3  So, 01.07.12 01:46:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,0,1,0,0,0,0,1,0,1,1,0,0,0,0,0,1,0,1,1,1,1,1,0,0,0,1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 4  So, 01.07.12 01:47:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,1,0,1,0,0,0,1,0,1,1,1,1,0,0,0,1,0,1,1,0,0,0,1,0,0,1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 5  So, 01.07.12 01:48:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,1,0,0,1,0,0,0,1,1,1,0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 6  So, 01.07.12 01:49:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,0,1,0,0,0,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0,0,0,0,1,0,1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 7  So, 01.07.12 01:50:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,1,1,0,1,1,1,1,0,1,0,1,1,0,0,0,0,1,0,1,1,1,0,0,0,1,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 8  So, 01.07.12 01:51:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,1,1,0,1,0,0,1,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 9  So, 01.07.12 01:52:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,1,0,1,0,0,0,0,1,0,0,0,1,1,1,0,0,1,0,1,1,1,1,0,0,1,0,1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 10 So, 01.07.12 01:53:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,1,0,1,1,0,1,0,1,1,1,1,0,1,1,0,0,1,0,1,1,0,0,1,0,1,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 11 So, 01.07.12 01:54:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0,0,1,0,1,1,1,0,1,0,1,0,1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 12 So, 01.07.12 01:55:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,1,0,1,0,0,1,1,1,0,0,0,0,1,0,0,1,0,1,1,0,1,1,0,1,0,1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 13 So, 01.07.12 01:56:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,1,1,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,0,1,1,1,1,1,0,1,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 14 So, 01.07.12 01:57:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,0,1,1,1,1,1,0,1,0,0,0,0,1,0,0,1,0,1,1,0,0,0,1,1,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 15 So, 01.07.12 01:58:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,1,1,1,0,1,0,0,0,1,0,1,1,0,1,0,0,1,0,1,1,1,0,0,1,1,0,1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 16 So, 01.07.12 01:59:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,0,0,1,1,0,1,1,1,1,1,1,0,1,0,0,1,0,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,0,3}, /* 17 So, 01.07.12 02:00:00, SZ   Einfügen einer Schaltsekunde angekündigt, weiteren Impuls erhalten (Schaltsekunde) */
+			{0,0,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,0,0,1,1,0,0,0,0,0,0,1,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 18 So, 01.07.12 02:01:00, SZ */
+			{0,0,1,0,0,1,1,1,0,0,1,1,1,0,1,0,0,1,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 19 So, 01.07.12 02:02:00, SZ */
+			{0,1,0,0,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 20 So, 01.07.12 02:03:00, SZ */
+		},
+		.recovery_ok = 1,
+		.secondlayer_required = 1,
+		/* TODO v recovers to */
+	}
 };
 
+/*
+TODO CSTAT NEXT TEST9 LINE16
+*/

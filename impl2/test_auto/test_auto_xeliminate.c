@@ -26,6 +26,10 @@ static void run_xeliminate_testcases()
 			(sizeof(xeliminate_testcases) /
 			sizeof(struct xeliminate_testcase)); curtest++) {
 
+		/* skip tests intended for secondlayer only */
+		if(xeliminate_testcases[curtest].secondlayer_required)
+			continue;
+
 		memset(telegram, 0, sizeof(telegram));
 
 		for(i = 0; i < xeliminate_testcases[curtest].num_lines; i++) {
