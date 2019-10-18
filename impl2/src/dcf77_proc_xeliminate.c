@@ -1,5 +1,9 @@
 #include "dcf77_bitlayer.h"
 #include "dcf77_proc_xeliminate.h"
+/*
+TODO z this new function is available and should possibly be preferred over individual bit fiddling. but the current solution is well-tested and therefore kept until there are bugs to be fixed.
+#include "dcf77_telegram.h"
+*/
 
 #ifdef DEBUG
 #	include <stdio.h>
@@ -8,7 +12,7 @@
 #	define DEBUGPRINTF(X, ...) {}
 #endif
 
-static unsigned char read_entry(unsigned char in, unsigned char entry);
+static inline unsigned char read_entry(unsigned char in, unsigned char entry);
 
 /*
  * reads from 1 and 2 and writes to 2.
@@ -170,7 +174,7 @@ char dcf77_proc_xeliminate_entry(unsigned char in_1, unsigned char* in_out_2,
 	return 0;
 }
 
-static unsigned char read_entry(unsigned char in, unsigned char entry)
+static inline unsigned char read_entry(unsigned char in, unsigned char entry)
 {
 	return (in & (3 << (entry * 2))) >> (entry * 2);
 }

@@ -4,6 +4,7 @@
 
 #include "dcf77_bitlayer.h"
 #include "dcf77_proc_xeliminate.h"
+#include "dcf77_telegram.h"
 #include "inc_sat.h"
 #include "xeliminate_testcases.h"
 
@@ -427,7 +428,7 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 
 	/* merge till mismatch */
 	/* TODO z printf("    [DEBUG] FROM %u to %u\n", nextl(ctx->private_line_current + 1), ctx->private_line_current); */
-	for(match = 1, line = nextl(ctx->private_line_current + 1);
+	for(match = 1, line = nextl(ctx->private_line_current);
 				line != ctx->private_line_current && match;
 				line = nextl(line)) {
 		/* ignore empty lines */
@@ -475,7 +476,7 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 		/* we eliminate to generic thus set length to 60 */
 		lastlen = 60;
 		for(; line != ctx->private_line_current && match;
-				line = nextl(line)) {
+							line = nextl(line)) {
 			/* ignore empty lines (relevant in the beginning) */
 			if(ctx->private_line_lengths[line] == 0)
 				continue;
@@ -546,8 +547,117 @@ static inline unsigned char prevl(unsigned char inl)
 
 static void recompute_eom(struct dcf77_high_level* ctx)
 {
+	/*
+	 * Precondition: Current line is "full", but does not end on eom.
+	 * Case length = 60: regular minute
+	 * Case length = 61: expected a leap second but did not get NO_SIGNAL
+	 *                   marker.
+	 * Needs to
+	 * (1) forward-identify a new eom marker starting from the
+	 * end of the current first entry [which effectively means current+1
+	 * w/ skip empty]
+	 * (2) once identified, move all bits backwards the difference between
+	 * the old eom and the newly identified eom. This way, some bits
+	 * get shifted off at the first entry and thus the amount of data
+	 * lessens. This should re-use existing work on leftward shifting.
+	 * (3) hand back to process_telegrams: this is not as trivial as it
+	 * may sound. the problem is: there is actually no new telegram until
+	 * the new "current" minute has finished. Thus will usually end there
+	 * w/o returning new telegram data [can there be different behaviour in
+	 * the presence of leap seconds?]
+	 */
+
 	/* TODO ASTAT N_IMPL */
 	puts("ERROR,recompute_eom not implemented!");
+	if(0 == 0)
+		return;
+
+	/* -- Step 1: Identify new eom position -- */
+
+	/*
+	 * again two bits per entry:
+	 * 11 = no   mism good
+	 * 10 = one  mism good if leap
+	 * 01 = two+ mism never good
+	 * 00 = (error)   too many decrements = bug = should not happen
+	 */
+	unsigned char current_valid_eom_options[DCF77_HIGH_LEVEL_LINE_BYTES];
+	unsigned char line;
+	unsigned char curbit;
+
+	unsigned char curval;
+	unsigned char curopt;
+
+	/*
+	 * Initially, all positions are potential new eoms...
+	 * This version is not particulary optimized for performance but
+	 * might do just OK.
+	 */
+	memset(current_valid_eom_options, 0xff,
+					sizeof(current_valid_eom_options));
+
+	for(line = nextl(ctx->private_line_current);
+			line != ctx->private_line_current; line = nextl(line)) {
+		/* skip empty lines */
+		if(ctx->private_line_lengths[line] == 0)
+			continue;
+
+		for(curbit = 0; curbit < ctx->private_line_lengths[line];
+								curbit++) {
+			curopt = dcf77_telegram_read_bit(curbit,
+						current_valid_eom_options);
+			if(curopt == 1) /* no chance to use this, skip */
+				continue;
+
+			curval = dcf77_telegram_read_bit(
+				curbit,
+				ctx->private_telegram_data + (line *
+						DCF77_HIGH_LEVEL_LINE_BYTES)
+			);
+			if(curval == DCF77_BIT_1)
+				/* a place with 1 is never accepted */
+				dcf77_telegram_write_bit(curbit,
+					current_valid_eom_options, 1);
+			else if(curval == DCF77_BIT_0)
+				dcf77_telegram_write_bit(curbit,
+					current_valid_eom_options, curopt - 1);
+		}
+	}
+
+	/* -- Step 2: Check new eom position -- */
+	for(curbit = 0; curbit < 60; curbit++) {
+		curval = dcf77_telegram_read_bit(curbit,
+						current_valid_eom_options);
+		if(curval == 3)
+			break; /* there it is */
+	}
+	if(curbit == 60 && ctx->private_leap_second_expected != 0) {
+		for(curbit = 0; curbit < 60; curbit++) {
+			curval = dcf77_telegram_read_bit(curbit,
+						current_valid_eom_options);
+			if(curval == 2)
+				break; /* OK, leap sec, this might be valid */
+		}
+	}
+	if(curbit == 60) {
+		/*
+		 * nothing was found. this should normally be impossible.
+		 * Do we have some bogus reading or attack. Or program
+		 * bug (more likely). In any case, there is nothing but
+		 * a reset to solve this data inconsistency
+		 */
+		reset(ctx);
+		return;
+	}
+
+	/* -- Step 3: Apply new eom position -- */
+
+	/*
+	 * Everyone needs to move curbit steps to the left. This should honor
+	 * the length of lines and consider the case of a reduction of the
+	 * total number of lines.
+	 * TODO CSTAT SUBSTAT IMPLEMENT THIS ROUTINE. THERE IS ALREADY ONE FOR A ONE BIT SHIFT, BUT WE NEED POTENTIALLY MULTIPLE BYTES AND THEN MULTIPLE BITS: MIGHT EVEN SEPARATE AFTER THIS LOGIC, BUT STILL THE SHIFT NEEDS TO CONCERN MULTIPLE BITS!
+	 */
 }
 
 static void postprocess(struct dcf77_high_level* ctx,
