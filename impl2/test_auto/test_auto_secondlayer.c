@@ -660,6 +660,71 @@ static void recompute_eom(struct dcf77_high_level* ctx)
 	 */
 }
 
+static void move_entries_backwards(struct dcf77_high_level* ctx,
+							unsigned char mov)
+{
+	unsigned char mov_bytes   = mov / 4; /* how many bytes move backwards */
+	unsigned char mov_entries = mov % 4; /* how many entries mov backward */
+
+	unsigned char l0; /* line first   inclusive */
+	unsigned char b0; /* byte first   inclusive */
+	unsigned char bl; /* byte last    inclusive  */
+	unsigned char bc; /* byte current */
+
+	unsigned char shf;
+	unsigned char upper_low;
+
+	unsigned char dist = 0; /* distance from first byte processed */
+
+	/*
+	 * start from the first line in buffer.
+	 * This is the first line following from the current which is not
+	 * empty.
+	 */
+	for(l0 = nextl(ctx->private_line_current);
+			ctx->private_line_lengths[l0] == 0 &&
+			l0 != ctx->private_line_current; l0 = nextl(l0));
+	
+	b0 = l0 * DCF77_HIGH_LEVEL_LINE_BYTES;
+	/* -1 for exclusive -> inclusive */
+	bl = ctx->private_line_current * DCF77_HIGH_LEVEL_LINE_BYTES +
+		ctx->private_line_lengths[ctx->private_line_current] - 1;
+
+	/*
+	 * Perform actual move.
+	 *
+	 * The idea is as follows: We split the current byte into two
+	 * parts:
+	 *
+	 * - the "upper_low" part is the logically "higher/later" entries.
+	 *   These will be moved less far (by mov_bytes) and be written
+	 *   to the lower part of the target byte.
+	 *   As for any byte, this step will happen "first", it is safe to
+	 *   overwrite the data here (instead of or-ing), saving an explicit
+	 *   delete step.
+	 * - The "lower up" part is the logically "lower/earlier" entries.
+	 *   These will be moved farther (by mov_bytes - 1) and be written
+	 *   to the upper part of the target byte. As this byte has already
+	 *   been "set" by the previous step in the previous iteration,
+	 *   it is required to use "or" here.
+	 *
+	 * TODO CSTAT ALTHOUGH THE IDEA IS NICE, THERE IS STILL A MAJOR PROBLEM HERE: HOW DO WE COVER LINE LENGHTS HERE. THRE PROBLEM IS THAT LINES ARE NOT "FULL" (60 or 61 instead of the theoretically possible 64 entries). We thus need to move in a way that the "ends" of these bytes are not moved but rather "ignored" of sorts... Normalerweise werden nur die indices 0--14 benötigt (bits 0..59). Wenn ein bit60 vorhanden ist, dann ist es eine Schalteskunde. Man kann sich das in der Theorie so vorstellen, dass einfach nur die Bytes [0..14] bearbeitet werden und dann als "Sondersache" noch der eine Eintrag von der Schaltsekunde mitgenommen wird, falls er existiert. Weiterhin bedeutet das Verarbeiten eines solchen Eintrages generell, dass nachfoglgend eine "Verschiebung in der Verschiebung" vorliegt -- die relative Verschiebung der Einträge wird nämlich um 1 reduziert!
+	 */
+	for(bc = b0; bc != bl; bc = ((bc + 1) % (DCF77_HIGH_LEVEL_LINES *
+						DCF77_HIGH_LEVEL_LINE_BYTES))) {
+		upper_low = ctx->private_telegram_data[bc] >> (2 * mov_entries);
+		shf = 8 - 2 * mov_entries;
+		if(mov_bytes + 1 <= dist)
+			ctx->private_telegram_data[bc - mov_bytes - 1] |=
+				/* lower up */
+				((0xff >> shf) &
+				ctx->private_telegram_data[bc]) << shf;
+		if(mov_bytes <= dist)
+			ctx->private_telegram_data[bc - mov_bytes] = upper_low;
+		dist++;
+	}
+}
+
 static void postprocess(struct dcf77_high_level* ctx,
 		unsigned char* in_out_telegram, unsigned char* in_telegram)
 {
