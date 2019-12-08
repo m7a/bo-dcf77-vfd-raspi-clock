@@ -32,7 +32,7 @@ struct dcf77_high_level {
 	unsigned char private_telegram_data[DCF77_HIGH_LEVEL_MEM];
 	/*
 	 * the start and end are actually fixed because if we were to write
-	 * continuuously in the same manner, then some telegrams would start
+	 * continuously in the same manner, then some telegrams would start
 	 * at offsets inside bytes. As we want to avoid this very much, there
 	 * is instead the necessity to reogranize data in case a new marker
 	 * is intended to be used as "end" marker. The lengths given here
@@ -43,8 +43,6 @@ struct dcf77_high_level {
 	unsigned char private_line_current;
 	unsigned char private_line_cursor;
 	unsigned short private_leap_second_expected;
-
-	unsigned char fault_reset; /* Number of resets performed */
 
 	/* input */
 	enum dcf77_bitlayer_reading in_val;
@@ -76,6 +74,9 @@ struct dcf77_high_level {
 	unsigned char out_telegram_2_len; /* in bits */
 	unsigned char out_telegram_1[DCF77_HIGH_LEVEL_LINE_BYTES];
 	unsigned char out_telegram_2[DCF77_HIGH_LEVEL_LINE_BYTES];
+
+	/* Number of resets performed (read-only output variable) */
+	unsigned char fault_reset;
 };
 
 void dcf77_high_level_init(struct dcf77_high_level* ctx);
@@ -112,6 +113,9 @@ int main(int argc, char** argv)
 	for(curtest = 0; curtest <
 			(sizeof(xeliminate_testcases) /
 			sizeof(struct xeliminate_testcase)); curtest++) {
+
+		if(curtest != 7)
+			continue; /* for now skip all tests except 7 TODO DEBUG ONLY */
 
 		/* for now skip tests which fail recovery */
 		if(!xeliminate_testcases[curtest].secondlayer_required &&
@@ -246,6 +250,8 @@ static void add_missing_bits(unsigned char* in_out_telegram,
 						unsigned char* in_telegram);
 static void check_for_leapsec_announce(struct dcf77_high_level* ctx,
 						unsigned char* telegram);
+static void move_entries_backwards(struct dcf77_high_level* ctx,
+	unsigned char mov, unsigned char in_line_holding_leapsec_marker);
 
 void dcf77_high_level_init(struct dcf77_high_level* ctx)
 {
@@ -354,6 +360,7 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 				 * We need to reorganize the datastructure
 				 * to align to the "reality".
 				 */
+				puts("    recompute_eom because: NO_SIGNAL expected.");
 				recompute_eom(ctx);
 				/* TODO ASTAT N_IMPL / invoke recompute_eom(), afterwards the line will likely not be 100% full, but cursor reorganization is handled by compute_eom... / SUBSTAT: IT MIGHT MAKE SENSE TO IMPLEMENT TESTS WHICH DO NOT NEED THE REOGRANIZATION BY NOW AND THOROUGHLY TEST THAT THE EXISTING THINGS BEHAVE AS EXPECTED! */
 			}
@@ -518,6 +525,7 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 			 */
 			ctx->out_telegram_1_len = 0;
 			ctx->out_telegram_2_len = 0;
+			puts("    recompute_eom because: telegram processing mismatch.");
 			recompute_eom(ctx);
 			/* TODO CALL recompute_eom(), then re-invoke as described on paper. Remember that this has to advance line... */
 		}
@@ -564,13 +572,11 @@ static void recompute_eom(struct dcf77_high_level* ctx)
 	 * may sound. the problem is: there is actually no new telegram until
 	 * the new "current" minute has finished. Thus will usually end there
 	 * w/o returning new telegram data [can there be different behaviour in
-	 * the presence of leap seconds?]
+	 * the presence of leap seconds? Not so eays to answer...]
 	 */
 
-	/* TODO ASTAT N_IMPL */
-	puts("ERROR,recompute_eom not implemented!");
-	if(0 == 0)
-		return;
+	puts("    CALLING recompute_eom()");
+	dumpmem(ctx);
 
 	/* -- Step 1: Identify new eom position -- */
 
@@ -587,6 +593,9 @@ static void recompute_eom(struct dcf77_high_level* ctx)
 
 	unsigned char curval;
 	unsigned char curopt;
+
+	/* DCF77_HIGH_LEVEL_LINES means none here (impossible index) */
+	unsigned char in_line_with_leapsec = DCF77_HIGH_LEVEL_LINES;
 
 	/*
 	 * Initially, all positions are potential new eoms...
@@ -635,8 +644,10 @@ static void recompute_eom(struct dcf77_high_level* ctx)
 		for(curbit = 0; curbit < 60; curbit++) {
 			curval = dcf77_telegram_read_bit(curbit,
 						current_valid_eom_options);
-			if(curval == 2)
+			if(curval == 2) {
+				in_line_with_leapsec = line;
 				break; /* OK, leap sec, this might be valid */
+			}
 		}
 	}
 	if(curbit == 60) {
@@ -652,14 +663,20 @@ static void recompute_eom(struct dcf77_high_level* ctx)
 
 	/* -- Step 3: Apply new eom position -- */
 
+	printf("    move_entries_backwards(ctx, curbit=%u, "
+		"in_line_with_leapsec=%u)\n", curbit, in_line_with_leapsec);
 	/*
-	 * Everyone needs to move curbit steps to the left. This should honor
-	 * the length of lines and consider the case of a reduction of the
+	 * Everyone needs to move curbit steps to the left. This honors
+	 * the length of lines and considers the case of a reduction of the
 	 * total number of lines.
-	 * TODO CSTAT SUBSTAT IMPLEMENT THIS ROUTINE. THERE IS ALREADY ONE FOR A ONE BIT SHIFT, BUT WE NEED POTENTIALLY MULTIPLE BYTES AND THEN MULTIPLE BITS: MIGHT EVEN SEPARATE AFTER THIS LOGIC, BUT STILL THE SHIFT NEEDS TO CONCERN MULTIPLE BITS!
 	 */
+	move_entries_backwards(ctx, curbit, in_line_with_leapsec);
+
+	dumpmem(ctx);
+	puts("    END recompute_eom()");
 }
 
+#if 0
 static void move_entries_backwards_old(struct dcf77_high_level* ctx,
 							unsigned char mov)
 {
@@ -708,7 +725,7 @@ static void move_entries_backwards_old(struct dcf77_high_level* ctx,
 	 *   been "set" by the previous step in the previous iteration,
 	 *   it is required to use "or" here.
 	 *
-	 * TODO CSTAT ALTHOUGH THE IDEA IS NICE, THERE IS STILL A MAJOR PROBLEM HERE: HOW DO WE COVER LINE LENGHTS HERE. THRE PROBLEM IS THAT LINES ARE NOT "FULL" (60 or 61 instead of the theoretically possible 64 entries). We thus need to move in a way that the "ends" of these bytes are not moved but rather "ignored" of sorts... Normalerweise werden nur die indices 0--14 benötigt (bits 0..59). Wenn ein bit60 vorhanden ist, dann ist es eine Schalteskunde. Man kann sich das in der Theorie so vorstellen, dass einfach nur die Bytes [0..14] bearbeitet werden und dann als "Sondersache" noch der eine Eintrag von der Schaltsekunde mitgenommen wird, falls er existiert. Weiterhin bedeutet das Verarbeiten eines solchen Eintrages generell, dass nachfoglgend eine "Verschiebung in der Verschiebung" vorliegt -- die relative Verschiebung der Einträge wird nämlich um 1 reduziert!
+	 * ALTHOUGH THE IDEA IS NICE, THERE IS STILL A MAJOR PROBLEM HERE: HOW DO WE COVER LINE LENGHTS HERE. THRE PROBLEM IS THAT LINES ARE NOT "FULL" (60 or 61 instead of the theoretically possible 64 entries). We thus need to move in a way that the "ends" of these bytes are not moved but rather "ignored" of sorts... Normalerweise werden nur die indices 0--14 benötigt (bits 0..59). Wenn ein bit60 vorhanden ist, dann ist es eine Schalteskunde. Man kann sich das in der Theorie so vorstellen, dass einfach nur die Bytes [0..14] bearbeitet werden und dann als "Sondersache" noch der eine Eintrag von der Schaltsekunde mitgenommen wird, falls er existiert. Weiterhin bedeutet das Verarbeiten eines solchen Eintrages generell, dass nachfoglgend eine "Verschiebung in der Verschiebung" vorliegt -- die relative Verschiebung der Einträge wird nämlich um 1 reduziert!
 	 */
 	for(bc = b0; bc != bl; bc = ((bc + 1) % (DCF77_HIGH_LEVEL_LINES *
 						DCF77_HIGH_LEVEL_LINE_BYTES))) {
@@ -724,6 +741,7 @@ static void move_entries_backwards_old(struct dcf77_high_level* ctx,
 		dist++;
 	}
 }
+#endif
 
 #define MOVENTRIES_ADVANCE_OUTPUT_CURSOR \
 	{ \
@@ -742,13 +760,15 @@ static void move_entries_backwards_old(struct dcf77_high_level* ctx,
 		} \
 	}
 
+/* TODO CSTAT THERE IS AN ERROR IN THIS PROCEDURE. IT NEEDS TO BE TESTED SEPARATELY FOR THIS TO BE FOUND. ADDITOINALLY, THERE IS AN OTHER ERROR WHICH CAUSES IT TO BE CALLED IN THE FIRST PLACE (TEST 7) BUT THAT IS YET ANOTHER ISSUE */
 /* @param mov: aka. v */
 static void move_entries_backwards(struct dcf77_high_level* ctx,
 		unsigned char mov, unsigned char in_line_holding_leapsec_marker)
 {
 	unsigned char il0; /* line in first inclusive */
 
-	unsigned char previll; /* previous input line length */
+	/* previous input line length. init w/ 0 to silence compiler warning */
+	unsigned char previll = 0;
 	unsigned char il;      /* current input line */
 	unsigned char ill;     /* current input line length */
 	unsigned char pil;     /* position in input line */
@@ -780,6 +800,8 @@ static void move_entries_backwards(struct dcf77_high_level* ctx,
 	unsigned char mov_entries = (mov % 4);
 	unsigned char mov_bytes_initial = mov / 4;
 
+	unsigned char shf;
+
 	/* -- Bestimme l0 -- */
 
 	/*
@@ -791,6 +813,8 @@ static void move_entries_backwards(struct dcf77_high_level* ctx,
 			ctx->private_line_lengths[il0] == 0 &&
 			il0 != ctx->private_line_current; il0 = nextl(il0));
 
+	printf("    il0=%u, mov_entries=%u, mov_bytes_initial=%u\n", il0, mov_entries, mov_bytes_initial);
+
 	ol = il0 * DCF77_HIGH_LEVEL_LINE_BYTES;
 
 	/* -- Hauptprozedur -- */
@@ -800,6 +824,7 @@ static void move_entries_backwards(struct dcf77_high_level* ctx,
 		next_produce_leapsec_marker |=
 					(il == in_line_holding_leapsec_marker);
 		ill = ctx->private_line_lengths[il];
+		printf("    il=%u, ill=%u, next_produce_leapsec_marker=%u, ol=%u, pol=%u, bytes_proc=%u\n", il, ill, next_produce_leapsec_marker, ol, pol, bytes_proc);
 		/* ctx->private_line_lengths[il] = 0; * superflous? */
 
 		/* skip empty input lines */
@@ -813,11 +838,18 @@ static void move_entries_backwards(struct dcf77_high_level* ctx,
 		 */
 		bytes_to_proc = ill / 4 + ((ill % 4) != 0 && ill < 60);
 		for(pil = 0; pil < bytes_to_proc; pil++) {
+			/* -- Verwerfen der allerersten Eingaben */
+			if(bytes_proc < mov_bytes_initial) {
+				INC_SATURATED(bytes_proc);
+				continue;
+			}
 			/* -- Verarbeiteprozedur: Lies Eingabe -- */
 			readib = pil + il * DCF77_HIGH_LEVEL_LINE_BYTES;
-			upper_low = ctx->data[readib] >> (2 * mov_entries);
+			upper_low = ctx->private_telegram_data[readib] >>
+							(2 * mov_entries);
 			shf = 8 * 2 - mov_entries;
-			lower_up = ((0xff >> shf) & ctx->data[readib]) << shf;
+			lower_up = ((0xff >> shf) &
+				ctx->private_telegram_data[readib]) << shf;
 			if(pil == 0 && previll == 61) {	
 				/* leap_in = X (might also want to read) */
 				upper_low = (upper_low << 2) |
@@ -829,32 +861,36 @@ static void move_entries_backwards(struct dcf77_high_level* ctx,
 			}
 			/* -- Verarbeiteprozedur: Schreibe Ausgabe -- */
 			produce_leap = ((prevoll == 61) && (pol == 0));
-			send_back_offset = (produceleap || pol == 0)? 2: 1;
+			send_back_offset = (produce_leap || pol == 0)? 2: 1;
 			wrpos = pol + ol * DCF77_HIGH_LEVEL_LINE_BYTES;
 			if(bytes_proc >= (mov_bytes_initial + send_back_offset))
-				ctx->data[wrpos - send_back_offset] |= lower_up;
+				ctx->private_telegram_data[wrpos -
+						send_back_offset] |= lower_up;
 
 			if(produce_leap) {
 				if(bytes_proc >= (mov_bytes_initial + 1))
-					ctx->data[wrpos - 1] =
+					ctx->private_telegram_data[wrpos - 1] =
 							DCF77_BIT_NO_SIGNAL;
 				upper_low <<= 2; /* cancel lowermost entry */
 			}
-			ctx->data[wrpos] |= upper_low;
-			INC_SAT(bytes_proc);
+			ctx->private_telegram_data[wrpos] |= upper_low;
+			INC_SATURATED(bytes_proc);
 			if(produce_leap) {
 				mov++;
-				mov_bytes = mov % 4;
-				if(mov_bytes == 0)
+				mov_entries = mov % 4;
+				if(mov_entries == 0)
 					continue; /* skip addr inc */
 			}
 			MOVENTRIES_ADVANCE_OUTPUT_CURSOR
 		}
 		previll = ill;
-	} while((il = nextl(il)) != l0);
+	} while((il = nextl(il)) != il0);
 	
 	/* -- Abschließende Aktualisierungen -- */
-	/* TODO SET LAT LINE LENGTH, THEN SET CURSOR; ctx->private_line_lengths[ol] = ... */
+	ctx->private_line_lengths[ol] = pol;
+	ctx->private_line_cursor = pol;
+	ctx->private_line_current = ol;
+	/* TODO TEST AND MAKE USE OF THIS PROCEDURE */
 }
 
 static void postprocess(struct dcf77_high_level* ctx,
