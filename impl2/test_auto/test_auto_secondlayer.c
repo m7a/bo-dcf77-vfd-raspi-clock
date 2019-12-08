@@ -2,8 +2,12 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* TODO NOTE THERE IS AN ONGOING EFFORT TO MOVE SOME CODE TO FILE dcf77_secondlayer.c AS TO SEPARATE THE TEST, IMPLEMENTATION AND INTERFACE BECAUSE EVEN FOR DEVELOPMENT IT IS GETTING TOO COMPLEX */
+
 #include "dcf77_bitlayer.h"
+#include "dcf77_secondlayer.h"
 #include "dcf77_proc_xeliminate.h"
+#include "dcf77_proc_moventries.h"
 #include "dcf77_telegram.h"
 #include "inc_sat.h"
 #include "xeliminate_testcases.h"
@@ -12,81 +16,13 @@
 
 /* ---------------------------------------[ Logic Declaration / Interface ]-- */
 
-#define DCF77_HIGH_LEVEL_LINES       9
-#define DCF77_HIGH_LEVEL_TIME_LEN    8
-#define DCF77_HIGH_LEVEL_DATE_LEN   10
-#define DCF77_HIGH_LEVEL_LINE_BYTES 16
-#define DCF77_HIGH_LEVEL_MEM        (DCF77_HIGH_LEVEL_LINE_BYTES * \
-							DCF77_HIGH_LEVEL_LINES)
-
-enum dcf77_high_level_input_mode {
-	/* Init mode. Push data backwards */
-	IN_BACKWARD,
-	/* Aligned+Unknown mode. Push data forwards */
-	IN_FORWARD
-};
-
-struct dcf77_high_level {
-	/* private */
-	enum dcf77_high_level_input_mode private_inmode;
-	unsigned char private_telegram_data[DCF77_HIGH_LEVEL_MEM];
-	/*
-	 * the start and end are actually fixed because if we were to write
-	 * continuously in the same manner, then some telegrams would start
-	 * at offsets inside bytes. As we want to avoid this very much, there
-	 * is instead the necessity to reogranize data in case a new marker
-	 * is intended to be used as "end" marker. The lengths given here
-	 * are in bits. The offsets of the lines are fixed which each line
-	 * having 16 bytes available.
-	 */
-	unsigned char private_line_lengths[DCF77_HIGH_LEVEL_LINES];
-	unsigned char private_line_current;
-	unsigned char private_line_cursor;
-	unsigned short private_leap_second_expected;
-
-	/* input */
-	enum dcf77_bitlayer_reading in_val;
-
-	/*
-	 * output
-	 *
-	 * Logic is a s follows:
-	 * if only out_telegram_1_len is > 0, then process that as truth
-	 * if both out_telegram_1_len and telegram_2_len are > 0 then
-	 * 	process telegram_2 as truth and telegram_1 is from the
-	 * 	previous 10min interval.
-	 * if both are <0, then no new telegram data exists.
-	 *
-	 * implicit information
-	 *
-	 * has new second <=>
-	 * 	has new measurement
-	 * 	(lower layer information may bypass second layer here)
-	 * has new telegram <=> out_telegram_1_len != 0
-	 *
-	 * For leap seconds, a regular telegram + length = 61 will be
-	 * returned. This is as of now considered perfectly OK and stems
-	 * from the xelimination not doing any elimination wrt. leapsec data.
-	 *
-	 * users should reset out_telegram_len values after processing!
-	 */
-	unsigned char out_telegram_1_len; /* in bits */
-	unsigned char out_telegram_2_len; /* in bits */
-	unsigned char out_telegram_1[DCF77_HIGH_LEVEL_LINE_BYTES];
-	unsigned char out_telegram_2[DCF77_HIGH_LEVEL_LINE_BYTES];
-
-	/* Number of resets performed (read-only output variable) */
-	unsigned char fault_reset;
-};
-
-void dcf77_high_level_init(struct dcf77_high_level* ctx);
-void dcf77_high_level_process(struct dcf77_high_level* ctx);
+void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx);
 
 /* -------------------------------------------------[ Test Implementation ]-- */
 
 static void printtel(unsigned char* data, unsigned char bitlen);
 static void printtel_sub(unsigned char* data);
-static void dumpmem(struct dcf77_high_level* ctx);
+static void dumpmem(struct dcf77_secondlayer* ctx);
 
 static const unsigned char CMPMASK[16] = {
 0x03,0x00,0x00,0x00,0x00,0x03,0x00,0xfc,0xff,0xff,0xff,0xff,0xff,0xff,0xff
@@ -100,10 +36,10 @@ static const unsigned char CMPMASK[16] = {
 
 int main(int argc, char** argv)
 {
-	struct dcf77_high_level uut;
+	struct dcf77_secondlayer uut;
 
 	unsigned char pass;
-	unsigned char cmpbuf[DCF77_HIGH_LEVEL_LINE_BYTES];
+	unsigned char cmpbuf[DCF77_SECONDLAYER_LINE_BYTES];
 
 	unsigned char curtest;
 	unsigned char i;
@@ -131,8 +67,8 @@ int main(int argc, char** argv)
 		 * tests to be present. disable this once the test runs
 		 * automatically TODO z
 		 */
-		memset(&uut, 0, sizeof(struct dcf77_high_level));
-		dcf77_high_level_init(&uut);
+		memset(&uut, 0, sizeof(struct dcf77_secondlayer));
+		dcf77_secondlayer_init(&uut);
 
 		for(i = 0; i < xeliminate_testcases[curtest].num_lines; i++) {
 			printf("  Line %2u -----------------------------------"
@@ -154,7 +90,7 @@ int main(int argc, char** argv)
 						data[i][j]);
 				*/
 				uut.in_val = bitval;
-				dcf77_high_level_process(&uut);
+				dcf77_secondlayer_process(&uut);
 				if(0 == 1) /* currently disabled */
 					dumpmem(&uut);
 				if(uut.out_telegram_1_len != 0) {
@@ -170,7 +106,7 @@ int main(int argc, char** argv)
 						uut.out_telegram_2_len != 0?
 							uut.out_telegram_2:
 							uut.out_telegram_1,
-						DCF77_HIGH_LEVEL_LINE_BYTES);
+						DCF77_SECONDLAYER_LINE_BYTES);
 
 					uut.out_telegram_1_len = 0;
 					uut.out_telegram_2_len = 0;
@@ -179,7 +115,7 @@ int main(int argc, char** argv)
 		}
 		/* now compare */
 		pass = 1;
-		for(i = 0; i < DCF77_HIGH_LEVEL_LINE_BYTES; i++) {
+		for(i = 0; i < DCF77_SECONDLAYER_LINE_BYTES; i++) {
 			if((cmpbuf[i] & CMPMASK[i]) != (xeliminate_testcases[
 					curtest].recovers_to[i] & CMPMASK[i])) {
 				printf("  [FAIL] Mismatch at index %d\n", i);
@@ -211,11 +147,11 @@ static void printtel_sub(unsigned char* data)
 	putchar('\n');
 }
 
-static void dumpmem(struct dcf77_high_level* ctx)
+static void dumpmem(struct dcf77_secondlayer* ctx)
 {
 	unsigned char i;
 	printf("    [DEBUG]         ");
-	for(i = 0; i < DCF77_HIGH_LEVEL_LINE_BYTES; i++) {
+	for(i = 0; i < DCF77_SECONDLAYER_LINE_BYTES; i++) {
 		if((ctx->private_line_cursor/4) == i) {
 			if(ctx->private_line_cursor % 4 >= 2)
 				printf("*  ");
@@ -226,40 +162,38 @@ static void dumpmem(struct dcf77_high_level* ctx)
 		}
 	}
 	putchar('\n');
-	for(i = 0; i < DCF77_HIGH_LEVEL_LINES; i++) {
+	for(i = 0; i < DCF77_SECONDLAYER_LINES; i++) {
 		printf("    [DEBUG] %s meml%d=", i == ctx->private_line_current?
 								"*": " ", i);
 		printtel_sub(ctx->private_telegram_data +
-					(i * DCF77_HIGH_LEVEL_LINE_BYTES));
+					(i * DCF77_SECONDLAYER_LINE_BYTES));
 	}
 	printf("    [DEBUG] line_current=%u, cursor=%u\n",
 			ctx->private_line_current, ctx->private_line_cursor);
 }
 
 /* ------------------------------------------------[ Logic Implementation ]-- */
-static void reset(struct dcf77_high_level* ctx);
-static void shift_existing_bits_to_the_left(struct dcf77_high_level* ctx);
-static void process_telegrams(struct dcf77_high_level* ctx);
+static void reset(struct dcf77_secondlayer* ctx);
+static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx);
+static void process_telegrams(struct dcf77_secondlayer* ctx);
 static inline unsigned char nextl(unsigned char inl);
 static inline unsigned char prevl(unsigned char inl);
-static void recompute_eom(struct dcf77_high_level* ctx);
-static void advance_to_next_line(struct dcf77_high_level* ctx);
-static void postprocess(struct dcf77_high_level* ctx,
+static void recompute_eom(struct dcf77_secondlayer* ctx);
+static void advance_to_next_line(struct dcf77_secondlayer* ctx);
+static void postprocess(struct dcf77_secondlayer* ctx,
 		unsigned char* in_out_telegram, unsigned char* in_telegram);
 static void add_missing_bits(unsigned char* in_out_telegram,
 						unsigned char* in_telegram);
-static void check_for_leapsec_announce(struct dcf77_high_level* ctx,
+static void check_for_leapsec_announce(struct dcf77_secondlayer* ctx,
 						unsigned char* telegram);
-static void move_entries_backwards(struct dcf77_high_level* ctx,
-	unsigned char mov, unsigned char in_line_holding_leapsec_marker);
 
-void dcf77_high_level_init(struct dcf77_high_level* ctx)
+void dcf77_secondlayer_init(struct dcf77_secondlayer* ctx)
 {
 	reset(ctx);
 	ctx->fault_reset = 0; /* reset number of resets "the first is free" */
 }
 
-static void reset(struct dcf77_high_level* ctx)
+static void reset(struct dcf77_secondlayer* ctx)
 {
 	ctx->private_inmode               = IN_BACKWARD;
 	ctx->private_line_current         = 0;
@@ -268,15 +202,15 @@ static void reset(struct dcf77_high_level* ctx)
 	/* denote number of resets */
 	INC_SATURATED(ctx->fault_reset);
 	/* initialize with 0 */
-	memset(ctx->private_line_lengths,  0, DCF77_HIGH_LEVEL_LINES);
+	memset(ctx->private_line_lengths,  0, DCF77_SECONDLAYER_LINES);
 	/* initialize with epsilon */
-	memset(ctx->private_telegram_data, 0, DCF77_HIGH_LEVEL_MEM);
+	memset(ctx->private_telegram_data, 0, DCF77_SECONDLAYER_MEM);
 
 	ctx->out_telegram_1_len = 0;
 	ctx->out_telegram_2_len = 0;
 }
 
-void dcf77_high_level_process(struct dcf77_high_level* ctx)
+void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx)
 {
 	/* do nothing if no update */
 	if(ctx->in_val == DCF77_BIT_NO_UPDATE)
@@ -284,7 +218,7 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 
 	/* write new input */
 	ctx->private_telegram_data[
-			ctx->private_line_current * DCF77_HIGH_LEVEL_LINE_BYTES
+			ctx->private_line_current * DCF77_SECONDLAYER_LINE_BYTES
 			+ ctx->private_line_cursor / 4] |= 
 		(ctx->in_val << ((ctx->private_line_cursor % 4) * 2));
 	ctx->private_line_lengths[ctx->private_line_current]++;
@@ -395,13 +329,13 @@ void dcf77_high_level_process(struct dcf77_high_level* ctx)
 	}
 }
 
-static void shift_existing_bits_to_the_left(struct dcf77_high_level* ctx)
+static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx)
 {
 	unsigned char current_byte;
 
 	/* TODO z not sure if this -1 makes sense here / BAK for(current_byte = 15 - (ctx->private_line_lengths[0] / 4) - (ctx->private_line_lengths[0] % 4 != 0); */
 	for(current_byte = (60 - ctx->private_line_lengths[0] - 1) / 4;
-				current_byte < DCF77_HIGH_LEVEL_LINE_BYTES;
+				current_byte < DCF77_SECONDLAYER_LINE_BYTES;
 				current_byte++) {
 		/*
 		 * split off the first two bits (lowermost idx,
@@ -421,7 +355,7 @@ static void shift_existing_bits_to_the_left(struct dcf77_high_level* ctx)
 	}
 }
 
-static void process_telegrams(struct dcf77_high_level* ctx)
+static void process_telegrams(struct dcf77_secondlayer* ctx)
 {
 	unsigned char lastlen = 60;
 	unsigned char line;
@@ -430,8 +364,8 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 	/* Input situation: cursor is at the end of the current minute. */
 
 	/* first clear buffers to no signal */
-	memset(ctx->out_telegram_1, 0x55, DCF77_HIGH_LEVEL_LINE_BYTES);
-	memset(ctx->out_telegram_2, 0x55, DCF77_HIGH_LEVEL_LINE_BYTES);
+	memset(ctx->out_telegram_1, 0x55, DCF77_SECONDLAYER_LINE_BYTES);
+	memset(ctx->out_telegram_2, 0x55, DCF77_SECONDLAYER_LINE_BYTES);
 
 	/* merge till mismatch */
 	/* TODO z printf("    [DEBUG] FROM %u to %u\n", nextl(ctx->private_line_current + 1), ctx->private_line_current); */
@@ -446,13 +380,13 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 		printf("    [DEBUG] xeliminate1(\n");
 		printf("    [DEBUG]   ");
 		printtel_sub(ctx->private_telegram_data + 
-					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
+					(DCF77_SECONDLAYER_LINE_BYTES * line));
 		printf("    [DEBUG]   ");
 		printtel_sub(ctx->out_telegram_1);
 		*/
 		match = dcf77_proc_xeliminate(ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
-					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
+					(DCF77_SECONDLAYER_LINE_BYTES * line),
 					ctx->out_telegram_1);
 		/*
 		printf("    [DEBUG] )=%d\n", match);
@@ -462,7 +396,7 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 
 	postprocess(ctx, ctx->out_telegram_1,
 					ctx->private_telegram_data +
-					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
+					(DCF77_SECONDLAYER_LINE_BYTES * line));
 
 	if(match) {
 		/* that was already the actual output */
@@ -492,14 +426,14 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 			printf("    [DEBUG] xeliminate2(\n");
 			printf("    [DEBUG]   ");
 			printtel_sub(ctx->private_telegram_data + 
-					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
+					(DCF77_SECONDLAYER_LINE_BYTES * line));
 			printf("    [DEBUG]   ");
 			printtel_sub(ctx->out_telegram_2);
 			*/
 			match = dcf77_proc_xeliminate(
 					ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
-					(DCF77_HIGH_LEVEL_LINE_BYTES * line),
+					(DCF77_SECONDLAYER_LINE_BYTES * line),
 					ctx->out_telegram_2);
 			/*
 			printf("    [DEBUG] )=%d\n", match);
@@ -515,7 +449,7 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 			ctx->out_telegram_2_len = lastlen;
 			postprocess(ctx, ctx->out_telegram_2,
 					ctx->private_telegram_data +
-					(DCF77_HIGH_LEVEL_LINE_BYTES * line));
+					(DCF77_SECONDLAYER_LINE_BYTES * line));
 			advance_to_next_line(ctx);
 			/* return */
 		} else {
@@ -533,27 +467,27 @@ static void process_telegrams(struct dcf77_high_level* ctx)
 }
 
 /* includes clearing the next line's contents */
-static void advance_to_next_line(struct dcf77_high_level* ctx)
+static void advance_to_next_line(struct dcf77_secondlayer* ctx)
 {
 	ctx->private_line_cursor = 0;
 	ctx->private_line_current = nextl(ctx->private_line_current);
 	ctx->private_line_lengths[ctx->private_line_current] = 0;
 	memset(ctx->private_telegram_data +
-		(ctx->private_line_current * DCF77_HIGH_LEVEL_LINE_BYTES),
-		0, DCF77_HIGH_LEVEL_LINE_BYTES);
+		(ctx->private_line_current * DCF77_SECONDLAYER_LINE_BYTES),
+		0, DCF77_SECONDLAYER_LINE_BYTES);
 }
 
 static inline unsigned char nextl(unsigned char inl)
 {
-	return (inl + 1) % DCF77_HIGH_LEVEL_LINES;
+	return (inl + 1) % DCF77_SECONDLAYER_LINES;
 }
 
 static inline unsigned char prevl(unsigned char inl)
 {
-	return ((inl == 0)? (DCF77_HIGH_LEVEL_LINES - 1): (inl - 1));
+	return ((inl == 0)? (DCF77_SECONDLAYER_LINES - 1): (inl - 1));
 }
 
-static void recompute_eom(struct dcf77_high_level* ctx)
+static void recompute_eom(struct dcf77_secondlayer* ctx)
 {
 	/*
 	 * Precondition: Current line is "full", but does not end on eom.
@@ -587,15 +521,15 @@ static void recompute_eom(struct dcf77_high_level* ctx)
 	 * 01 = two+ mism never good
 	 * 00 = (error)   too many decrements = bug = should not happen
 	 */
-	unsigned char current_valid_eom_options[DCF77_HIGH_LEVEL_LINE_BYTES];
+	unsigned char current_valid_eom_options[DCF77_SECONDLAYER_LINE_BYTES];
 	unsigned char line;
 	unsigned char curbit;
 
 	unsigned char curval;
 	unsigned char curopt;
 
-	/* DCF77_HIGH_LEVEL_LINES means none here (impossible index) */
-	unsigned char in_line_with_leapsec = DCF77_HIGH_LEVEL_LINES;
+	/* DCF77_SECONDLAYER_LINES means none here (impossible index) */
+	unsigned char in_line_with_leapsec = DCF77_SECONDLAYER_LINES;
 
 	/*
 	 * Initially, all positions are potential new eoms...
@@ -621,7 +555,7 @@ static void recompute_eom(struct dcf77_high_level* ctx)
 			curval = dcf77_telegram_read_bit(
 				curbit,
 				ctx->private_telegram_data + (line *
-						DCF77_HIGH_LEVEL_LINE_BYTES)
+						DCF77_SECONDLAYER_LINE_BYTES)
 			);
 			if(curval == DCF77_BIT_1)
 				/* a place with 1 is never accepted */
@@ -670,14 +604,14 @@ static void recompute_eom(struct dcf77_high_level* ctx)
 	 * the length of lines and considers the case of a reduction of the
 	 * total number of lines.
 	 */
-	move_entries_backwards(ctx, curbit, in_line_with_leapsec);
+	dcf77_proc_move_entries_backwards(ctx, curbit, in_line_with_leapsec);
 
 	dumpmem(ctx);
 	puts("    END recompute_eom()");
 }
 
 #if 0
-static void move_entries_backwards_old(struct dcf77_high_level* ctx,
+static void move_entries_backwards_old(struct dcf77_secondlayer* ctx,
 							unsigned char mov)
 {
 	unsigned char mov_bytes   = mov / 4; /* how many bytes move backwards */
@@ -702,9 +636,9 @@ static void move_entries_backwards_old(struct dcf77_high_level* ctx,
 			ctx->private_line_lengths[l0] == 0 &&
 			l0 != ctx->private_line_current; l0 = nextl(l0));
 	
-	b0 = l0 * DCF77_HIGH_LEVEL_LINE_BYTES;
+	b0 = l0 * DCF77_SECONDLAYER_LINE_BYTES;
 	/* -1 for exclusive -> inclusive */
-	bl = ctx->private_line_current * DCF77_HIGH_LEVEL_LINE_BYTES +
+	bl = ctx->private_line_current * DCF77_SECONDLAYER_LINE_BYTES +
 		ctx->private_line_lengths[ctx->private_line_current] - 1;
 
 	/*
@@ -727,8 +661,8 @@ static void move_entries_backwards_old(struct dcf77_high_level* ctx,
 	 *
 	 * ALTHOUGH THE IDEA IS NICE, THERE IS STILL A MAJOR PROBLEM HERE: HOW DO WE COVER LINE LENGHTS HERE. THRE PROBLEM IS THAT LINES ARE NOT "FULL" (60 or 61 instead of the theoretically possible 64 entries). We thus need to move in a way that the "ends" of these bytes are not moved but rather "ignored" of sorts... Normalerweise werden nur die indices 0--14 benötigt (bits 0..59). Wenn ein bit60 vorhanden ist, dann ist es eine Schalteskunde. Man kann sich das in der Theorie so vorstellen, dass einfach nur die Bytes [0..14] bearbeitet werden und dann als "Sondersache" noch der eine Eintrag von der Schaltsekunde mitgenommen wird, falls er existiert. Weiterhin bedeutet das Verarbeiten eines solchen Eintrages generell, dass nachfoglgend eine "Verschiebung in der Verschiebung" vorliegt -- die relative Verschiebung der Einträge wird nämlich um 1 reduziert!
 	 */
-	for(bc = b0; bc != bl; bc = ((bc + 1) % (DCF77_HIGH_LEVEL_LINES *
-						DCF77_HIGH_LEVEL_LINE_BYTES))) {
+	for(bc = b0; bc != bl; bc = ((bc + 1) % (DCF77_SECONDLAYER_LINES *
+						DCF77_SECONDLAYER_LINE_BYTES))) {
 		upper_low = ctx->private_telegram_data[bc] >> (2 * mov_entries);
 		shf = 8 - 2 * mov_entries;
 		if(mov_bytes + 1 <= dist)
@@ -743,157 +677,7 @@ static void move_entries_backwards_old(struct dcf77_high_level* ctx,
 }
 #endif
 
-#define MOVENTRIES_ADVANCE_OUTPUT_CURSOR \
-	{ \
-		if(pol == 14) { \
-			pol = 0; \
-			if(next_produce_leapsec_marker) { \
-				next_produce_leapsec_marker   = 0; \
-				ctx->private_line_lengths[ol] = 61; \
-			} else { \
-				ctx->private_line_lengths[ol] = 60; \
-			} \
-			prevoll = ctx->private_line_lengths[ol]; \
-			ol = nextl(ol); \
-		} else { \
-			pol++; \
-		} \
-	}
-
-/* TODO CSTAT THERE IS AN ERROR IN THIS PROCEDURE. IT NEEDS TO BE TESTED SEPARATELY FOR THIS TO BE FOUND. ADDITOINALLY, THERE IS AN OTHER ERROR WHICH CAUSES IT TO BE CALLED IN THE FIRST PLACE (TEST 7) BUT THAT IS YET ANOTHER ISSUE */
-/* @param mov: aka. v */
-static void move_entries_backwards(struct dcf77_high_level* ctx,
-		unsigned char mov, unsigned char in_line_holding_leapsec_marker)
-{
-	unsigned char il0; /* line in first inclusive */
-
-	/* previous input line length. init w/ 0 to silence compiler warning */
-	unsigned char previll = 0;
-	unsigned char il;      /* current input line */
-	unsigned char ill;     /* current input line length */
-	unsigned char pil;     /* position in input line */
-	unsigned char bytes_to_proc;
-
-	unsigned char readib;  /* read input byte position in memory */
-	/*
-	 * upper bytes will be moved "forward" and placed at a low position
-	 * within the byte
-	 */
-	unsigned char upper_low;
-	/*
-	 * lower bytes will be moved "backward" and placed at a high position
-	 * within the byte
-	 */
-	unsigned char lower_up;
-
-	unsigned char next_produce_leapsec_marker; /* bool */
-	unsigned char produce_leap; /* bool */
-	unsigned char send_back_offset;
-	unsigned char ol;
-	unsigned char wrpos;
-
-	unsigned char bytes_proc = 0;
-
-	char prevoll = -1;     /* previous output line length */
-	unsigned char pol = 0; /* position output line */
-
-	unsigned char mov_entries = (mov % 4);
-	unsigned char mov_bytes_initial = mov / 4;
-
-	unsigned char shf;
-
-	/* -- Bestimme l0 -- */
-
-	/*
-	 * start from the first line in buffer.
-	 * This is the first line following from the current which is not
-	 * empty.
-	 */
-	for(il0 = nextl(ctx->private_line_current);
-			ctx->private_line_lengths[il0] == 0 &&
-			il0 != ctx->private_line_current; il0 = nextl(il0));
-
-	printf("    il0=%u, mov_entries=%u, mov_bytes_initial=%u\n", il0, mov_entries, mov_bytes_initial);
-
-	ol = il0 * DCF77_HIGH_LEVEL_LINE_BYTES;
-
-	/* -- Hauptprozedur -- */
-	next_produce_leapsec_marker = 0;
-	il = il0;
-	do {
-		next_produce_leapsec_marker |=
-					(il == in_line_holding_leapsec_marker);
-		ill = ctx->private_line_lengths[il];
-		printf("    il=%u, ill=%u, next_produce_leapsec_marker=%u, ol=%u, pol=%u, bytes_proc=%u\n", il, ill, next_produce_leapsec_marker, ol, pol, bytes_proc);
-		/* ctx->private_line_lengths[il] = 0; * superflous? */
-
-		/* skip empty input lines */
-		if(ill == 0)
-			continue;
-
-		/* 
-		 * 0..14 werden immer verarbeitet
-		 * 15    nur bei leapsec und dann von einer separaten Logik
-		 * ob man <60 oder <61 schreibt ist egal.
-		 */
-		bytes_to_proc = ill / 4 + ((ill % 4) != 0 && ill < 60);
-		for(pil = 0; pil < bytes_to_proc; pil++) {
-			/* -- Verwerfen der allerersten Eingaben */
-			if(bytes_proc < mov_bytes_initial) {
-				INC_SATURATED(bytes_proc);
-				continue;
-			}
-			/* -- Verarbeiteprozedur: Lies Eingabe -- */
-			readib = pil + il * DCF77_HIGH_LEVEL_LINE_BYTES;
-			upper_low = ctx->private_telegram_data[readib] >>
-							(2 * mov_entries);
-			shf = 8 * 2 - mov_entries;
-			lower_up = ((0xff >> shf) &
-				ctx->private_telegram_data[readib]) << shf;
-			if(pil == 0 && previll == 61) {	
-				/* leap_in = X (might also want to read) */
-				upper_low = (upper_low << 2) |
-							DCF77_BIT_NO_SIGNAL;
-				mov--;
-				mov_entries = mov % 4;
-				if(mov_entries == 0)
-					MOVENTRIES_ADVANCE_OUTPUT_CURSOR
-			}
-			/* -- Verarbeiteprozedur: Schreibe Ausgabe -- */
-			produce_leap = ((prevoll == 61) && (pol == 0));
-			send_back_offset = (produce_leap || pol == 0)? 2: 1;
-			wrpos = pol + ol * DCF77_HIGH_LEVEL_LINE_BYTES;
-			if(bytes_proc >= (mov_bytes_initial + send_back_offset))
-				ctx->private_telegram_data[wrpos -
-						send_back_offset] |= lower_up;
-
-			if(produce_leap) {
-				if(bytes_proc >= (mov_bytes_initial + 1))
-					ctx->private_telegram_data[wrpos - 1] =
-							DCF77_BIT_NO_SIGNAL;
-				upper_low <<= 2; /* cancel lowermost entry */
-			}
-			ctx->private_telegram_data[wrpos] |= upper_low;
-			INC_SATURATED(bytes_proc);
-			if(produce_leap) {
-				mov++;
-				mov_entries = mov % 4;
-				if(mov_entries == 0)
-					continue; /* skip addr inc */
-			}
-			MOVENTRIES_ADVANCE_OUTPUT_CURSOR
-		}
-		previll = ill;
-	} while((il = nextl(il)) != il0);
-	
-	/* -- Abschließende Aktualisierungen -- */
-	ctx->private_line_lengths[ol] = pol;
-	ctx->private_line_cursor = pol;
-	ctx->private_line_current = ol;
-	/* TODO TEST AND MAKE USE OF THIS PROCEDURE */
-}
-
-static void postprocess(struct dcf77_high_level* ctx,
+static void postprocess(struct dcf77_secondlayer* ctx,
 		unsigned char* in_out_telegram, unsigned char* in_telegram)
 {
 	add_missing_bits(in_out_telegram, in_telegram);
@@ -917,7 +701,7 @@ static void add_missing_bits(unsigned char* in_out_telegram,
 					in_out_telegram + (i / 4), i % 4);
 }
 
-static void check_for_leapsec_announce(struct dcf77_high_level* ctx,
+static void check_for_leapsec_announce(struct dcf77_secondlayer* ctx,
 							unsigned char* telegram)
 {
 	/*
