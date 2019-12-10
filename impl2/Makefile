@@ -18,7 +18,7 @@ MAIN        = main.o
 CC_TEST     = gcc
 CC_PROD     = avr-gcc
 CFLAGS_DEBG = -Wall -I../interface -O0 -DDEBUG
-CFLAGS_TEST = -Wall -I../interface -O2
+CFLAGS_TEST = -Wall -I../interface -O2 -DTEST
 CFLAGS_PROD = -Wall -I../interface -O2 -DF_CPU=16000000UL -mmcu=atmega328p
 
 compile-test:

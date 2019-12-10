@@ -66,6 +66,11 @@ struct dcf77_secondlayer {
 };
 
 void dcf77_secondlayer_init(struct dcf77_secondlayer* ctx);
-/* void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx); */
+void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx);
 
-/* Exported symbols for testing purposes. Can become static for production. */
+/* Exported symbols for testing purposes. Static for production. */
+#ifdef TEST
+void dcf77_secondlayer_reset(struct dcf77_secondlayer* ctx);
+void dcf77_secondlayer_write_new_input(struct dcf77_secondlayer* ctx);
+void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx);
+#endif

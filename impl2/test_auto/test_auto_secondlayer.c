@@ -173,7 +173,6 @@ static void dumpmem(struct dcf77_secondlayer* ctx)
 }
 
 /* ------------------------------------------------[ Logic Implementation ]-- */
-static void reset(struct dcf77_secondlayer* ctx);
 static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx);
 static void process_telegrams(struct dcf77_secondlayer* ctx);
 static inline unsigned char nextl(unsigned char inl);
@@ -187,29 +186,7 @@ static void add_missing_bits(unsigned char* in_out_telegram,
 static void check_for_leapsec_announce(struct dcf77_secondlayer* ctx,
 						unsigned char* telegram);
 
-void dcf77_secondlayer_init(struct dcf77_secondlayer* ctx)
-{
-	reset(ctx);
-	ctx->fault_reset = 0; /* reset number of resets "the first is free" */
-}
-
-static void reset(struct dcf77_secondlayer* ctx)
-{
-	ctx->private_inmode               = IN_BACKWARD;
-	ctx->private_line_current         = 0;
-	ctx->private_line_cursor          = 59;
-	ctx->private_leap_second_expected = 0; /* no leap second expected */
-	/* denote number of resets */
-	INC_SATURATED(ctx->fault_reset);
-	/* initialize with 0 */
-	memset(ctx->private_line_lengths,  0, DCF77_SECONDLAYER_LINES);
-	/* initialize with epsilon */
-	memset(ctx->private_telegram_data, 0, DCF77_SECONDLAYER_MEM);
-
-	ctx->out_telegram_1_len = 0;
-	ctx->out_telegram_2_len = 0;
-}
-
+#if 0
 void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx)
 {
 	/* do nothing if no update */
@@ -254,7 +231,10 @@ void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx)
 			 * for this are quite low, so we can well say it is
 			 * most likely a fault!
 			 */
-			reset(ctx);
+			/* reset(ctx); */
+			/* TODO DISABLED FOR DEBUG ONLY */
+			printf("reset(ctx)\n");
+			exit(64);
 		} else {
 			/*
 			 * Now that we have added our input, move bits and
@@ -328,6 +308,7 @@ void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx)
 		break;
 	}
 }
+#endif
 
 static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx)
 {
@@ -591,7 +572,10 @@ static void recompute_eom(struct dcf77_secondlayer* ctx)
 		 * bug (more likely). In any case, there is nothing but
 		 * a reset to solve this data inconsistency
 		 */
-		reset(ctx);
+		/* reset(ctx); */
+		/* TODO RESET DISABLED FOR DEBUG ONLY */
+		printf("reset(ctx)\n");
+		exit(64);
 		return;
 	}
 
