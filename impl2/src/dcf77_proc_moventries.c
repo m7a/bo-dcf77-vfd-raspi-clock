@@ -77,7 +77,7 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 			ctx->private_line_lengths[il0] == 0 &&
 			il0 != ctx->private_line_current; il0 = nextl(il0));
 
-	/* printf("    il0=%u, mov_entries=%u, mov_bytes_initial=%u\n", il0, mov_entries, mov_bytes_initial); */
+	printf("    il0=%u, mov_entries=%u, mov_bytes_initial=%u\n", il0, mov_entries, mov_bytes_initial); /* TODO ASTAT DEBUG ONLY */
 
 	ol = il0 * DCF77_SECONDLAYER_LINE_BYTES;
 

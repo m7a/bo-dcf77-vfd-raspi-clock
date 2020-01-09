@@ -116,7 +116,13 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 	}
 }
 
-/* TODO MIGHT REPLACE BY THE OTHER SHIFT PROCEDURE ONCE THE OTHER ONE IS STABLE BECAUSE THIS IS SPECIAL CASE OF NOLEAP and v=1 */
+/*
+ * Although similar to the more complex shift procedure, they work on different
+ * starting lines and assumptions.
+ *
+ * TODO z if code size is an issue might want to re-use the other procedure by
+ *        providing l0 manually.
+ */
 static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx)
 {
 	unsigned char current_byte;
@@ -163,8 +169,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * end-of-minute marker
 			 */
 			/* process_telegrams(ctx); */
-			printf("process_telegrams\n");
-			exit(64);
+			printf("[WARN] process_telegrams DISABLED FOR DEBUG ONLY / DO NOT TRUST THE RESULTS\n");
 		} else if(ctx->in_val == DCF77_BIT_0 &&
 				ctx->private_leap_second_expected > 0) {
 			/*

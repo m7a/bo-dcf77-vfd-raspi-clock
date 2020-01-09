@@ -173,7 +173,7 @@ static void dumpmem(struct dcf77_secondlayer* ctx)
 }
 
 /* ------------------------------------------------[ Logic Implementation ]-- */
-static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx);
+/* static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx); */
 static void process_telegrams(struct dcf77_secondlayer* ctx);
 static inline unsigned char nextl(unsigned char inl);
 static inline unsigned char prevl(unsigned char inl);
@@ -310,6 +310,7 @@ void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx)
 }
 #endif
 
+#if 0
 static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx)
 {
 	unsigned char current_byte;
@@ -335,6 +336,7 @@ static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx)
 		ctx->private_telegram_data[current_byte] >>= 2;
 	}
 }
+#endif
 
 static void process_telegrams(struct dcf77_secondlayer* ctx)
 {
@@ -487,7 +489,7 @@ static void recompute_eom(struct dcf77_secondlayer* ctx)
 	 * may sound. the problem is: there is actually no new telegram until
 	 * the new "current" minute has finished. Thus will usually end there
 	 * w/o returning new telegram data [can there be different behaviour in
-	 * the presence of leap seconds? Not so eays to answer...]
+	 * the presence of leap seconds? Not so easy to answer...]
 	 */
 
 	puts("    CALLING recompute_eom()");
