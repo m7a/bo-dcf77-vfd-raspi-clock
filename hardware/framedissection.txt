@@ -69,9 +69,9 @@ https://de.wikipedia.org/wiki/DCF77
 30    VAL     Stunde Einer   (2)
 31    VAL     Stunde Einer   (4)
 32    VAL     Stunde Einer   (8)
-33    VAL     Stunde Zehner (10)
-34    VAL     Stunde Zehner (20)
-35    VAL     Stunde Zehner (40)
+33    VAL     Stunde Zehner (10) \ 
+34    VAL     Stunde Zehner (20)  \ ??? ist falsch? sollte eigentlich nur 2 bits sein?
+35    VAL     Stunde Zehner (40) /
 36    CHCK    Parität Stunde           Anzahl der 1-en 29--36 muss gerade sein
 36    VAL     Tag Einer
 37    VAL     Tag Einer
@@ -83,7 +83,7 @@ https://de.wikipedia.org/wiki/DCF77
 43    VAL     Wochentag
 44    VAL     Wochentag
 45    VAL     Monat Einer
-46    VAL     Monat EIner
+46    VAL     Monat Einer
 47    VAL     Monat Einer
 48    VAL     Monat Einer
 49    VAL     Monat Zehner (1 für +10, 0 für einstellige Monate)
@@ -108,3 +108,6 @@ Schaltsekunden: Normal: bei 59 "keine Sekundenmarke" 3,
 
 Es werden immer die Informationen der Folgeminute übertragen, also -1min rechnen
 vor dem Anzeigen? (Prüft man wohl am besten mit einer Vergleichsuhr)
+
+Testvektor
+010111011010111001001100101011110100110010011001001001100013
