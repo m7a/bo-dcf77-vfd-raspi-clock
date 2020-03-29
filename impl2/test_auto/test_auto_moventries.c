@@ -70,6 +70,19 @@ static const struct test_case_moventries TESTS[] = {
 			0x3f
 		},
 	},
+	{
+		.title = "One real telegram appears 03.01.2016 21:09.",
+		.in_length = 60,
+		.in = {
+			/* 03.01.2016 21:09:00 | ee,ee,ba,bf,ba,af,ab,ae,ba,af,fa,af,ea,bb,7a,55 */
+			2, 3, 2, 3, 2, 3, 2, 3, 2, 2, 3, 2, 3, 3, 3, 2, 2, 2, 3, 2,
+			3, 3, 2, 2, 3, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
+			2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 3, 3, 2, 3, 2, 2, 2, 3, 1,
+		},
+		.out = {0xee,0xee,0xba,0xbf,0xba,0xaf,0xab,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a},
+	},
+	/* Next: Two telegrams test / 03.01.2016 21:10:00 | TODO SUBSTAT JAVA TOOL NEEDS TO GENERATE WITH PROPER PARITY!!! */
+#if 0
 	/* TODO CSTAT TEST FAILS PRODUCES A 3 (NO SIGNAL) instead of a 1 (BIT_1) / FIND OUTHOW IT FINDS THE BIT TO WRITE TO TARGET... | REASON: The first line to be processed is set to idx=0 ... maybe it does not read from the "next" line (idx=1) / ES IST IRGENDWAS MIT EINEM MISMATCH ZWISCHEN DER INPUT LINE UND DER OUTPUT LINE BZW. ES WIRD AUS DER FALSCHEN "RICHTUNG" GELESEN??? Normalerweise fängt man an mit der "aktuellen" Zeile und verschiebt rückwärts? Die Implementierung ist aktuell aber anders? CHCK W/ PLAN / MAYBE IT ACTUALLY WORKS THIS WAY BUT THE TEST IS WRONG BECAUSE THE "CURRENT LINE" IS NOT TAKEN INTO CONSIDERATION "on purpose"? / We should be able to resolve this by supplying two full lines and then move backwards ~> changes should occur in the full lines. The current line might as well remain untouched? / Check on how the procedure is used if this signifies some changes are necessary? / YES: The key is recompute_eom()'s preconditions clearly specify that we have just finished a current line before calling the movement procedure. Thus pls adjust test case to supply one full line which does not end on proper EOM and then invoke movement! For this, we can actually do exactly as tested here there is no expectation that the bits from the "next line" are touched in any way!!! Current behaviour for this test is correct!!! / PROBLEM: NEED TO SUPPLY AT LEAST TWO LINES BECAUSE THE CURRENT VARIANT REALLY DOES NOT MAKE SENSE... */
 	{
 		.title = "Send two lines of pattern 1010, no special processing",
@@ -138,9 +151,6 @@ static const struct test_case_moventries TESTS[] = {
 			0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0x6e,
 		},
 	},
-		#if 0
-		#endif
-	#if 0
 	{
 		/* DOES NOT WORK BLK FIX OTHER FIRST */
 		.title = "Three bit arrive ltr, then move backwards by two places.",
@@ -159,7 +169,7 @@ static const struct test_case_moventries TESTS[] = {
 			0x03
 		},
 	},
-	#endif
+#endif
 };
 #define NUMCASES (sizeof(TESTS)/sizeof(struct test_case_moventries))
 

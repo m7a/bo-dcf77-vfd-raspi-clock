@@ -127,7 +127,8 @@ class AppWnd {
 						"Leap Second Announced");
 
 	private final ExactTextField rawInOutBinary = new ExactTextField("",61);
-	private final JTextArea rawInOutBinaryCSV = new JTextArea(3, 60);
+	private final JTextArea rawInOutBinaryCSV = new JTextArea(2, 60);
+	private final JTextArea rawOutBinaryCSVBitlayer = new JTextArea(2, 60);
 	private final ExactTextField rawInOutHex = new ExactTextField("", 80);
 	private final ExactTextField rawInOutHexC = new ExactTextField("", 80);
 
@@ -218,6 +219,9 @@ class AppWnd {
 		csvBinPan.setBorder(new TitledBorder("CSV Binary"));
 		rawInOutBinaryCSV.setLineWrap(true);
 		csvBinPan.add(new JScrollPane(rawInOutBinaryCSV));
+		rawOutBinaryCSVBitlayer.setLineWrap(true);
+		rawOutBinaryCSVBitlayer.setEditable(false);
+		csvBinPan.add(new JScrollPane(rawOutBinaryCSVBitlayer));
 		csvBinPan.add(makeButton("Process Binary (0,1,3) CSV",
 							this::processBinCSV));
 		telEditOuter.add(csvBinPan);
@@ -344,33 +348,27 @@ class AppWnd {
 		parsedCEST.setSelected(dstval.equals("1"));
 
 		// -- set raw in out binary csv --
+		StringBuilder rvc = new StringBuilder(
+					String.valueOf(charToAssocBin(chr[0])));
 		StringBuilder rv = new StringBuilder(
-						String.valueOf(chr[0]));
+					String.valueOf(chr[0]));
 		for(int i = 1; i < chr.length; i++) {
 			rv.append(", ");
+			rvc.append(", ");
 			rv.append(chr[i]);
+			rvc.append(charToAssocBin(chr[i]));
 		}
 		rawInOutBinaryCSV.setText(rv.toString());
+		rawOutBinaryCSVBitlayer.setText(rvc.toString());
 
 		// -- set raw in out hex --
-		StringBuilder rvc = new StringBuilder();
+		rvc.setLength(0);
 		rv.setLength(0);
 		for(int i = 0; i < chr.length; i += 4) {
 			int val = 0;
 			for(int j = 3; j >= 0; j--) {
-				int assocBin;
-				if(i + j >= chr.length) {
-					assocBin = 1;
-				} else {
-					switch(chr[i + j]) {
-					case '0': assocBin = 2; break; /* 10 */
-					case '1': assocBin = 3; break; /* 11 */
-					case '2': assocBin = 0; break; /* 00 */
-					case '3': assocBin = 1; break; /* 01 */
-					default: throw new RuntimeException(
-						"N_IMPL: >" + chr[i + j] + "<");
-					}
-				}
+				int assocBin = (i + j >= chr.length)? 1:
+						charToAssocBin(chr[i + j]);
 				val = 0xff & ((val << 2) | assocBin);
 			}
 			rv.append(String.format("%02x,", val));
@@ -382,6 +380,16 @@ class AppWnd {
 		}
 		rawInOutHex.setText(rv.toString());
 		rawInOutHexC.setText(rvc.toString());
+	}
+
+	private static int charToAssocBin(char in) {
+		switch(in) {
+		case '0': return 2; /* 10 */
+		case '1': return 3; /* 11 */
+		case '2': return 0; /* 00 */
+		case '3': return 1; /* 01 */
+		default: throw new RuntimeException("N_IMPL: >" + in + "<");
+		}
 	}
 
 	private static String decodeRawToHuman(char[] chr, int offset,
