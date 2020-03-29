@@ -4,6 +4,10 @@ import java.util.Arrays;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
+
+// TODO z perform and display parity checks?
+// Test vector 010101010010111000101100100001000010110000111100000110100013
 
 class AppWnd {
 
@@ -116,9 +120,16 @@ class AppWnd {
 		field21ende,
 	};
 
+	private final ExactTextField parsedInOut = new ExactTextField("", 20);
+	private final JRadioButton parsedCET = new JRadioButton("CET/Winter");
+	private final JRadioButton parsedCEST = new JRadioButton("CEST/Summer");
+	private final JCheckBox announceLeapSecond = new JCheckBox(
+						"Leap Second Announced");
+
 	private final ExactTextField rawInOutBinary = new ExactTextField("",61);
 	private final JTextArea rawInOutBinaryCSV = new JTextArea(3, 60);
-	private final ExactTextField rawInOutHex = new ExactTextField("", 90);
+	private final ExactTextField rawInOutHex = new ExactTextField("", 80);
+	private final ExactTextField rawInOutHexC = new ExactTextField("", 80);
 
 	private final JFrame wnd;
 
@@ -132,8 +143,24 @@ class AppWnd {
 
 		JTabbedPane tabs = new JTabbedPane();
 		Box telEditOuter = new Box(BoxLayout.Y_AXIS);
+
+		JPanel telEditParsed = new JPanel(new FlowLayout(
+						FlowLayout.CENTER, 10, 20));
+		telEditParsed.setBorder(new TitledBorder("Parsed"));
+		telEditParsed.add(parsedInOut);
+		ButtonGroup bg = new ButtonGroup();
+		bg.add(parsedCET);
+		bg.add(parsedCEST);
+		telEditParsed.add(parsedCET);
+		telEditParsed.add(parsedCEST);
+		telEditParsed.add(announceLeapSecond);
+		telEditParsed.add(makeButton("Process Parsed",
+							this::processParsed));
+		telEditOuter.add(telEditParsed);
+
 		JPanel telEditSpc = new JPanel(new FlowLayout(
 						FlowLayout.CENTER, 10, 20));
+		telEditSpc.setBorder(new TitledBorder("Raw and Decoded"));
 
 		Box telegramEditor = new Box(BoxLayout.Y_AXIS);
 
@@ -188,6 +215,7 @@ class AppWnd {
 
 		JPanel csvBinPan = new JPanel(new FlowLayout(
 							FlowLayout.CENTER));
+		csvBinPan.setBorder(new TitledBorder("CSV Binary"));
 		rawInOutBinaryCSV.setLineWrap(true);
 		csvBinPan.add(new JScrollPane(rawInOutBinaryCSV));
 		csvBinPan.add(makeButton("Process Binary (0,1,3) CSV",
@@ -196,8 +224,13 @@ class AppWnd {
 
 		JPanel csvHexPan = new JPanel(new FlowLayout(
 							FlowLayout.CENTER));
-		csvHexPan.add(rawInOutHex);
-		csvHexPan.add(makeButton("Process HEX (0xaa,...)",
+		csvHexPan.setBorder(new TitledBorder("CSV Hex"));
+		Box csvLeft = new Box(BoxLayout.Y_AXIS);
+		csvLeft.add(rawInOutHex);
+		rawInOutHexC.setEditable(false);
+		csvLeft.add(rawInOutHexC);
+		csvHexPan.add(csvLeft);
+		csvHexPan.add(makeButton("Process HEX (ee/0xee)",
 							this::processHex));
 		telEditOuter.add(csvHexPan);
 
@@ -220,8 +253,54 @@ class AppWnd {
 						JOptionPane.ERROR_MESSAGE);
 	}
 
+	private void processParsed(ActionEvent ev) {
+		String[] tokens = parsedInOut.getText().split("[.: ]");
+
+		setEinerZehner(tokens[0], field13tageiner, field14tagzehner);//d
+		setEinerZehner(tokens[1], field16moneiner, field17monzehner);//m
+		setEinerZehner(tokens[2].substring(2),
+					field18jahreiner, field19jahrzehner);//Y
+		setEinerZehner(tokens[3], field10heiner,  field11hzehner);   //h
+		setEinerZehner(tokens[4], field7mineiner, field8minzehner);  //m
+
+		field5leapsec.setText(announceLeapSecond.isSelected()?
+								"1": "0");
+		field4dstval.setText(parsedCET.isSelected()? "2": "1");
+		processDecoded();
+	}
+
+	private void setEinerZehner(String data, PartialField e,
+							PartialField z) {
+		z.setText(String.valueOf(data.charAt(0)));
+		e.setText(String.valueOf(data.charAt(1)));
+	}
+
 	private void processDecoded(ActionEvent ev) {
-		// TODO MISSING
+		processDecoded();
+	}
+
+	private void processDecoded() {
+		char[] out = new char[60];
+		int oidx = 0;
+		for(int curf = 0; curf < fieldsRawDecoded.length; curf++) {
+			int readbits = fieldsRawDecoded[curf].width;
+			if(readbits == 1) {
+				out[oidx] = fieldsRawDecoded[curf].getText().
+								charAt(0);
+			} else if(readbits > 4) {
+				for(int j = 0; j < readbits; j++)
+					out[oidx + j] = '0';
+			} else {
+				int dataVal = Integer.parseInt(
+					fieldsRawDecoded[curf].getText());
+				for(int j = 0; j < readbits; j++)
+					out[oidx + j] = (((dataVal & (1 << j))
+							!= 0)? '1': '0');
+			}
+			oidx += readbits;
+		}
+		rawInOutBinary.setText(new String(out));
+		processRaw();
 	}
 
 	private void processRaw(ActionEvent ev) {
@@ -247,6 +326,23 @@ class AppWnd {
 			i += readbits;
 		}
 
+		// -- set human readable --
+		parsedInOut.setText(String.format(
+			"%s%s.%s%s.20%s%s %s%s:%s%s:00",
+			field14tagzehner.getText(),  field13tageiner.getText(),
+			field17monzehner.getText(),  field16moneiner.getText(),
+			field19jahrzehner.getText(), field18jahreiner.getText(),
+			field11hzehner.getText(),    field10heiner.getText(),
+			field8minzehner.getText(),   field7mineiner.getText()
+		));
+		announceLeapSecond.setSelected(field5leapsec.getText().
+								equals("1"));
+		String dstval = field4dstval.getText();
+		// inverse to what one would expect, but this is due to
+		// endianess in decoding (this is not really a BCD field...)
+		parsedCET.setSelected(dstval.equals("2"));
+		parsedCEST.setSelected(dstval.equals("1"));
+
 		// -- set raw in out binary csv --
 		StringBuilder rv = new StringBuilder(
 						String.valueOf(chr[0]));
@@ -257,6 +353,7 @@ class AppWnd {
 		rawInOutBinaryCSV.setText(rv.toString());
 
 		// -- set raw in out hex --
+		StringBuilder rvc = new StringBuilder();
 		rv.setLength(0);
 		for(int i = 0; i < chr.length; i += 4) {
 			int val = 0;
@@ -277,10 +374,14 @@ class AppWnd {
 				val = 0xff & ((val << 2) | assocBin);
 			}
 			rv.append(String.format("%02x,", val));
+			rvc.append(String.format("0x%02x,", val));
 		}
-		if(chr.length <= 60)
+		if(chr.length <= 60) {
 			rv.append("55,");
+			rvc.append("0x55,");
+		}
 		rawInOutHex.setText(rv.toString());
+		rawInOutHexC.setText(rvc.toString());
 	}
 
 	private static String decodeRawToHuman(char[] chr, int offset,
@@ -330,14 +431,5 @@ class AppWnd {
 		return (in & (3 << (entry * 2))) >> (entry * 2);
 	}
 
-	// TODO CSTAT NEXT STEPS:
-	// * NEED TO ADD SECOND HEX NOTATION AS OUTPUT-ONLY (with 0x... st. it can be used in arrays)
-	// * Need to provide a real human datetime entry field with Timestamp "DD.MM.YYYY HH:ii:ss" + radiobutton CET/CEST + checkbox leap sec announce
-	// * Need to perform and display parity checks
 
 }
-
-/*
-Test vectors
-010101010010111000101100100001000010110000111100000110100013
-*/
