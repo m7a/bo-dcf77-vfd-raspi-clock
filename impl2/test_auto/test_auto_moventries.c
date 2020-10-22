@@ -81,35 +81,52 @@ static const struct test_case_moventries TESTS[] = {
 		},
 		.out = {0xee,0xee,0xba,0xbf,0xba,0xaf,0xab,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a},
 	},
-	/* Next: Two telegrams test / 03.01.2016 21:10:00 | TODO SUBSTAT JAVA TOOL NEEDS TO GENERATE WITH PROPER PARITY!!! */
-#if 0
-	/* TODO CSTAT TEST FAILS PRODUCES A 3 (NO SIGNAL) instead of a 1 (BIT_1) / FIND OUTHOW IT FINDS THE BIT TO WRITE TO TARGET... | REASON: The first line to be processed is set to idx=0 ... maybe it does not read from the "next" line (idx=1) / ES IST IRGENDWAS MIT EINEM MISMATCH ZWISCHEN DER INPUT LINE UND DER OUTPUT LINE BZW. ES WIRD AUS DER FALSCHEN "RICHTUNG" GELESEN??? Normalerweise fängt man an mit der "aktuellen" Zeile und verschiebt rückwärts? Die Implementierung ist aktuell aber anders? CHCK W/ PLAN / MAYBE IT ACTUALLY WORKS THIS WAY BUT THE TEST IS WRONG BECAUSE THE "CURRENT LINE" IS NOT TAKEN INTO CONSIDERATION "on purpose"? / We should be able to resolve this by supplying two full lines and then move backwards ~> changes should occur in the full lines. The current line might as well remain untouched? / Check on how the procedure is used if this signifies some changes are necessary? / YES: The key is recompute_eom()'s preconditions clearly specify that we have just finished a current line before calling the movement procedure. Thus pls adjust test case to supply one full line which does not end on proper EOM and then invoke movement! For this, we can actually do exactly as tested here there is no expectation that the bits from the "next line" are touched in any way!!! Current behaviour for this test is correct!!! / PROBLEM: NEED TO SUPPLY AT LEAST TWO LINES BECAUSE THE CURRENT VARIANT REALLY DOES NOT MAKE SENSE... */
 	{
-		.title = "Send two lines of pattern 1010, no special processing",
-		.in_length = 62,
+		.title = "First telegram part. bit mistaken for end: before mov 03.01.2016 21:05+21:06.",
+		.in_length = 78,
 		.in = {
-			/* first line almost empty */
-			DCF77_BIT_1, DCF77_BIT_NO_SIGNAL,
-
-			/* second line with pattern */
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_NO_SIGNAL, /* needs to end on no signal */
+			/* 03.01.2016 21:05:00 | aa,aa,aa,aa,ba,ef,aa,ae,ba,af,fa,af,ea,bb,7a,55 */
+			/*                                                    v defunct, cause NL */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 1,
+			3, 3, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
+			2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 3, 3, 2, 3, 2, 2, 2, 3, 1,
+			/* 03.01.2016 21:06:00 | aa,aa,aa,aa,ba,fb,aa,ae,ba,af,fa,af,ea,bb,7a,55 */
+			/* partial telegram, supply exactly enough data to not cause automatic reorg */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, /* 3, 2, */
 		},
-		/* TODO Z TEST WORKS ONLY AS LONG AS PROCESS TELEGRAMS REMAINS DISABLED... */
 		.out = {
-			0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x70,0,
-			0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0x6e,
+			0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xaa,0xaa,0xaa,0xaa,0x7a,0x00,
+			0xef,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0x0a,
 		},
 	},
+	{
+		.title = "First telegram part. bit mistaken for end after mov 03.01.2016 21:05+21:06.",
+		.in_length = 78,
+		.in = {
+			/* 03.01.2016 21:05:00 | aa,aa,aa,aa,ba,ef,aa,ae,ba,af,fa,af,ea,bb,7a,55 */
+			/*                                                    v defunct, cause NL */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 1,
+			3, 3, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
+			2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 3, 3, 2, 3, 2, 2, 2, 3, 1,
+			/* 03.01.2016 21:06:00 | aa,aa,aa,aa,ba,fb,aa,ae,ba,af,fa,af,ea,bb,7a,55 */
+			/* partial telegram, supply exactly enough data to not cause automatic reorg */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, /* 3, 2, */
+		},
+		.out = {
+			/* Matches the telegram for 03.01.2016 21:05:00 except for broken part 0x7a in place of 0xba */
+			0xaa,0xaa,0xaa,0xaa,0x7a,0xef,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0x00,
+			/* This data is not needed/will be overriden but that's how the memory looks like after the move */
+			0xef,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0x0a,
+		},
+		.callproc = PROC_MOVE_LEFTWARDS,
+		.arg0 = 40, /* move 40 places s.t. ends on 0x7a */
+		.arg1 = 9, /* noleap */
+		/* NB: When this test was created, cursor ended at x=5, y=1; seems strange that it would not go to x=0? */
+	},
+	/* TODO ASTAT/CSTAT NEXT IT SEEMS MORE COMPLEX TESTS WILL REQUIRE THE REORGANIZATION FUNCTIONS TO BE RE-ENABLED. WORK TOWARDS IT AND CONSULT/CONSOLIDATE NOTES FROM BELOW. |
+
+		--------> Current Idea: Make another duplicate of the test First telegram part. ... but disable MOVE_LEFTWARDS and INSTEAD: trigger procedures to do automatic move and check their results! */
+#if 0
 	{
 		.title = "Send two lines of pattern 1010, move backwards by one",
 		.in_length = 62,
@@ -133,9 +150,9 @@ static const struct test_case_moventries TESTS[] = {
 		.callproc = PROC_MOVE_LEFTWARDS,
 		.arg0 = 1, /* move by one place (2 bits) */
 		.arg1 = 9, /* noleap */
-		/* TODO TEST WORKS ONLY AS LONG AS PROCESS TELEGRAMS REMAINS DISABLED... CSTAT TEST FAILS MISERABLY MIGHT AGAIN BE DUE TO THE TELEGRAMS BEING INVALID :( BECAUSE MOVE LEFTWARDS NEED NOT DO ANYTHING SPECIAL AS IT "KNOWS" THAT A NO SIGNAL NEEDS TO BE MOVED UPWARDS ETC... JUST SO DAMN DIFFICULT TO TEST :(  / IT SEEMS ONE CANNOT DO SYNTHETICALLY. JUST DO WITH ACTUAL AND REAL TEST DATA AND DEBUG IT :( :( / GIVE UP ON INDIVIDUAL PROCEDURE TESTING? OR REALLY FIND SOME CASE THAT SATISFIES ALL THE CONDITIONS. MABE IT IS BETTER TO SUPPLY THE INPUT MEMORY MANUALLY RATHER THAN RELYING ON THE PROCESS FUNCTION TO FILL IT / BECAUSE IT HAS SO MANY DETAILS TO BE AWARE OF. TEST THE TWO THINGS ENTIRELY SEPARATELY. DO NOT PREPARE DATA BY USING THE REGULAR FUNCTION BECAUSE IT WILL ONLY WORK WITH ACTUAL VALID DATA! */
+		/* TODO TEST WORKS ONLY AS LONG AS PROCESS TELEGRAMS REMAINS DISABLED... TEST FAILS MISERABLY MIGHT AGAIN BE DUE TO THE TELEGRAMS BEING INVALID :( BECAUSE MOVE LEFTWARDS NEED NOT DO ANYTHING SPECIAL AS IT "KNOWS" THAT A NO SIGNAL NEEDS TO BE MOVED UPWARDS ETC... JUST SO DAMN DIFFICULT TO TEST :(  / IT SEEMS ONE CANNOT DO SYNTHETICALLY. JUST DO WITH ACTUAL AND REAL TEST DATA AND DEBUG IT :( :( / GIVE UP ON INDIVIDUAL PROCEDURE TESTING? OR REALLY FIND SOME CASE THAT SATISFIES ALL THE CONDITIONS. MABE IT IS BETTER TO SUPPLY THE INPUT MEMORY MANUALLY RATHER THAN RELYING ON THE PROCESS FUNCTION TO FILL IT / BECAUSE IT HAS SO MANY DETAILS TO BE AWARE OF. TEST THE TWO THINGS ENTIRELY SEPARATELY. DO NOT PREPARE DATA BY USING THE REGULAR FUNCTION BECAUSE IT WILL ONLY WORK WITH ACTUAL VALID DATA! */
 		/*
-		TODO CSTAT HERE IS THE TEST REORGANIZAZION
+		TODO HERE IS THE TEST REORGANIZAZION
 		 * SECONDLAYER TEST: SPLIT IN "RECOVERY" TEST WHICH USES EXISTING TELEGRAMS (LIKE NOW) + ONE "SIMPLE" test which is similar to what I have in this moventries file except it does not ever invoke moventries. Once all these tests pass.
 		 * Create two separate moventries tests: One with actual real data that flows to the process functions and one (first one) with memory input/output.
 
@@ -178,6 +195,7 @@ static void printtel_sub(unsigned char* data)
 	unsigned char j;
 	for(j = 0; j < 15; j++)
 		printf("%02x,", data[j]);
+	printf("(%02x)", data[15]);
 	putchar('\n');
 }
 

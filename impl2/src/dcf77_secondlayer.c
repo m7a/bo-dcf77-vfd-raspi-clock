@@ -168,7 +168,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * no signal in any case means this is our
 			 * end-of-minute marker
 			 */
-			/* process_telegrams(ctx); */
+			/*process_telegrams(ctx);*/
 			printf("[WARN] process_telegrams DISABLED FOR DEBUG ONLY / DO NOT TRUST THE RESULTS\n");
 		} else if(ctx->in_val == DCF77_BIT_0 &&
 				ctx->private_leap_second_expected > 0) {
