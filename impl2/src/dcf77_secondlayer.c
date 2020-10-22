@@ -182,7 +182,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 		} else {
 			/*
 			 * A signal was received but in this specific
-			 * data arragngement, there should definitely
+			 * data arrangement, there should definitely
 			 * have been a `NO_SIGNAL` at this place.
 			 * We need to reorganize the datastructure
 			 * to align to the "reality".
