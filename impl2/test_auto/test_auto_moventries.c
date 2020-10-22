@@ -123,70 +123,36 @@ static const struct test_case_moventries TESTS[] = {
 		.arg1 = 9, /* noleap */
 		/* NB: When this test was created, cursor ended at x=5, y=1; seems strange that it would not go to x=0? */
 	},
-	/* TODO ASTAT/CSTAT NEXT IT SEEMS MORE COMPLEX TESTS WILL REQUIRE THE REORGANIZATION FUNCTIONS TO BE RE-ENABLED. WORK TOWARDS IT AND CONSULT/CONSOLIDATE NOTES FROM BELOW. |
-
-		--------> Current Idea: Make another duplicate of the test First telegram part. ... but disable MOVE_LEFTWARDS and INSTEAD: trigger procedures to do automatic move and check their results! */
-#if 0
 	{
-		.title = "Send two lines of pattern 1010, move backwards by one",
-		.in_length = 62,
+		.title = "First telegram part. bit mistaken for end auto mov 03.01.2016 21:05+21:06.",
+		.in_length = 80,
 		.in = {
-			/* first line almost empty */
-			DCF77_BIT_1, DCF77_BIT_NO_SIGNAL,
-
-			/* second line with pattern */
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_1, 
-			DCF77_BIT_0, DCF77_BIT_1, DCF77_BIT_0, DCF77_BIT_NO_SIGNAL, /* needs to end on no signal */
+			/* 03.01.2016 21:05:00 | aa,aa,aa,aa,ba,ef,aa,ae,ba,af,fa,af,ea,bb,7a,55 */
+			/*                                                    v defunct, cause NL */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 1,
+			3, 3, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
+			2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 3, 3, 2, 3, 2, 2, 2, 3, 1,
+			/* 03.01.2016 21:06:00 | aa,aa,aa,aa,ba,fb,aa,ae,ba,af,fa,af,ea,bb,7a,55 */
+			/* partial telegram, supply enough data to cause one recompute_eom() */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2,
+			3, 2, 3, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
 		},
-		.callproc = PROC_MOVE_LEFTWARDS,
-		.arg0 = 1, /* move by one place (2 bits) */
-		.arg1 = 9, /* noleap */
-		/* TODO TEST WORKS ONLY AS LONG AS PROCESS TELEGRAMS REMAINS DISABLED... TEST FAILS MISERABLY MIGHT AGAIN BE DUE TO THE TELEGRAMS BEING INVALID :( BECAUSE MOVE LEFTWARDS NEED NOT DO ANYTHING SPECIAL AS IT "KNOWS" THAT A NO SIGNAL NEEDS TO BE MOVED UPWARDS ETC... JUST SO DAMN DIFFICULT TO TEST :(  / IT SEEMS ONE CANNOT DO SYNTHETICALLY. JUST DO WITH ACTUAL AND REAL TEST DATA AND DEBUG IT :( :( / GIVE UP ON INDIVIDUAL PROCEDURE TESTING? OR REALLY FIND SOME CASE THAT SATISFIES ALL THE CONDITIONS. MABE IT IS BETTER TO SUPPLY THE INPUT MEMORY MANUALLY RATHER THAN RELYING ON THE PROCESS FUNCTION TO FILL IT / BECAUSE IT HAS SO MANY DETAILS TO BE AWARE OF. TEST THE TWO THINGS ENTIRELY SEPARATELY. DO NOT PREPARE DATA BY USING THE REGULAR FUNCTION BECAUSE IT WILL ONLY WORK WITH ACTUAL VALID DATA! */
-		/*
-		TODO HERE IS THE TEST REORGANIZAZION
-		 * SECONDLAYER TEST: SPLIT IN "RECOVERY" TEST WHICH USES EXISTING TELEGRAMS (LIKE NOW) + ONE "SIMPLE" test which is similar to what I have in this moventries file except it does not ever invoke moventries. Once all these tests pass.
-		 * Create two separate moventries tests: One with actual real data that flows to the process functions and one (first one) with memory input/output.
-
-		 * Thus do as follows
-			1. Clean up the mess. Remove existing moventries and secondlayer tests. Remove unwanted test exports from the files from the real implementation.
-			2. Create secondlayer tests secondlayer_simple.c: All the cases without reorganizazion (secondlayer_simple.c)
-			3. Create secondlayer tests with existing telegrams: secondlayer_recovery.c: All test cases without reorganizazion should pass. All others may fail freely.
-			4. Create moventries tests with input memories s.t. all the secondary conditions can be ignored which are not necessary for the movement procedure. This test is moventries_simple.c.
-			5. After fixing all the moventries_simple cases, the existing telegrams tests should also pass for the cases with moventries involved.
-		*/
 		.out = {
-			0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x70,0,
-			0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0xee,0x6e,
+			/* Matches the telegram for 03.01.2016 21:05:00 except for broken part 0x7a in place of 0xba */
+			0xaa,0xaa,0xaa,0xaa,0x7a,0xef,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0x00,
+			/* This data is not needed/will be overriden but that's how the memory looks like after the move */
+			0xef,0xaa,0xae,0xba,0xbf,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0xba
 		},
 	},
-	{
-		/* DOES NOT WORK BLK FIX OTHER FIRST */
-		.title = "Three bit arrive ltr, then move backwards by two places.",
-		.in_length = 4,
-		.in = {
-			DCF77_BIT_NO_SIGNAL,
-			DCF77_BIT_1, DCF77_BIT_1, DCF77_BIT_1
-		},
-		.callproc = PROC_MOVE_LEFTWARDS,
-		.arg0 = 2, /* move by two places (4 bits) */
-		.arg1 = 9, /* noleap */
-		.out = {
-			/* should end on 2311 which means 01 (no signal/3), 11 (1), 11 (1) ~> last is 11_11_01_00 = 0xf4 */
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xf4, 0,
-			/* next line should be reduced to single 11 = 00_00_00_11 = 0x03 */
-			0x03
-		},
-	},
-#endif
+	/* TODO ASTAT/CSTAT NEXT DO SIMILAR TESTS TO DEBUG MOVE CASES, STATUS OF INVESTIGATION:
+
+		-> move cases which are not divisable by 8, preferrably 39 because that seemed to wreck havoc in the data [TO BE VERIFIED BY TEST CASE]
+		-> leap second cases
+		-> can we already process more than two telegrams with the current status of the program?
+	Future:
+	Afterwards work towards deprecating current contents of secondlayer test, because it will no longer be needed.
+	One may still want a secondlayer test to check the outputs from functions rather than the memory contents which is what we are doing here, actually! Might also extend the format to not only have memory output comparing but also output data comparison?
+	*/
 };
 #define NUMCASES (sizeof(TESTS)/sizeof(struct test_case_moventries))
 
@@ -232,7 +198,7 @@ int main(int argc, char** argv)
 
 	for(test_id = 0; test_id < NUMCASES; test_id++) {
 		/* run test */
-		/* memset(&test_ctx, 0, sizeof(struct dcf77_secondlayer)); */
+		memset(&test_ctx, 0, sizeof(struct dcf77_secondlayer));
 		dcf77_secondlayer_init(&test_ctx);
 		for(i = 0; i < TESTS[test_id].in_length; i++) {
 			test_ctx.in_val = TESTS[test_id].in[i];
