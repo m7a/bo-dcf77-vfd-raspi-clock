@@ -1,12 +1,13 @@
 package ma.dcf77t.telegram;
 
-import java.util.Arrays;
+import java.util.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
 
-// TODO z perform and display parity checks?
 // Test vector 010101010010111000101100100001000010110000111100000110100013
 
 class AppWnd {
@@ -14,9 +15,11 @@ class AppWnd {
 	private static final Color MEDIUMLIGHTGRAY = new Color(0xcc,0xcc,0xcc);
 	private static final Color LIGHTBLUE = new Color(0xaa, 0xaa, 0xff);
 	private static final Color LIGHTGREEN = new Color(0xaa, 0xff, 0xaa);
-	private static final Color LIGHTYELLOW = new Color(0xff, 0xff, 0xaa);
 	private static final Color LIGHTCYAN = new Color(0xaa, 0xff, 0xff);
 	private static final Color LIGHTMAGENTA = new Color(0xff, 0xaa, 0xff);
+
+	private static final Color LIGHTYELLOW = new Color(0xff, 0xff, 0xaa);
+	private static final Color LIGHTRED = new Color(0xff, 0xaa, 0xaa);
 
 	// 0
 	private final PartialField field0const0  = new PartialField("0", 1);
@@ -55,7 +58,7 @@ class AppWnd {
 	// 34    VAL     Stunde Zehner (20)
 	private final PartialField field11hzehner = new PartialField("HZ", 2);
 	// 35    CHCK    Parität Stunde
-	//               Anzahl der 1-en 29--36 muss gerade sein
+	//               Anzahl der 1-en 29--35 muss gerade sein
 	private final PartialField field12hpar = new PartialField("_", 1);
 	// 36    VAL     Tag Einer
 	// 37    VAL     Tag Einer
@@ -258,7 +261,22 @@ class AppWnd {
 	}
 
 	private void processParsed(ActionEvent ev) {
-		String[] tokens = parsedInOut.getText().split("[.: ]");
+		String text = parsedInOut.getText();
+
+		SimpleDateFormat sdf = new SimpleDateFormat(
+							"dd.MM.yyyy HH:mm:ss");
+		TimeZone tz = TimeZone.getTimeZone("Europe/Berlin");
+		sdf.setTimeZone(tz);
+		Calendar cal = Calendar.getInstance(tz, Locale.GERMANY);
+		try {
+			cal.setTime(sdf.parse(text));
+		} catch(ParseException ex) {
+			throw new RuntimeException(ex);
+		}
+		int dow = transformToGermanDOWConvention(
+						cal.get(Calendar.DAY_OF_WEEK));
+
+		String[] tokens = text.split("[.: ]");
 
 		setEinerZehner(tokens[0], field13tageiner, field14tagzehner);//d
 		setEinerZehner(tokens[1], field16moneiner, field17monzehner);//m
@@ -270,7 +288,47 @@ class AppWnd {
 		field5leapsec.setText(announceLeapSecond.isSelected()?
 								"1": "0");
 		field4dstval.setText(parsedCET.isSelected()? "2": "1");
+
+		field1weather.setText("00000000000000");
+		field2call.setText("0");
+		field3dstchg.setText("0");
+
+		field9minpar.setText("0");
+		field12hpar.setText("0");
+		field20datpar.setText("0");
+		field15dow.setText(String.valueOf(dow));
+
+		field21ende.setText("3");
+
 		processDecoded();
+
+		// re-process on parity mismatch (quite inefficient...)
+		if(correctParity(field9minpar) || correctParity(field12hpar) ||
+						correctParity(field20datpar))
+			processDecoded();
+	}
+
+	private static int transformToGermanDOWConvention(int us) {
+		switch(us) {
+		case Calendar.MONDAY:    return 1;
+		case Calendar.TUESDAY:   return 2;
+		case Calendar.WEDNESDAY: return 3;
+		case Calendar.THURSDAY:  return 4;
+		case Calendar.FRIDAY:    return 5;
+		case Calendar.SATURDAY:  return 6;
+		case Calendar.SUNDAY:    return 7;
+		default: throw new RuntimeException("N_IMPL: " + us);
+		}
+	}
+
+	/** @return true if value changed */
+	private boolean correctParity(PartialField f) {
+		if(f.getBackground() == LIGHTRED) {
+			f.setText("1");
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	private void setEinerZehner(String data, PartialField e,
@@ -295,6 +353,9 @@ class AppWnd {
 				for(int j = 0; j < readbits; j++)
 					out[oidx + j] = '0';
 			} else {
+				//String text = ;
+				//int dataVal = (text.matches("[0-9]+"))?
+				//		Integer.parseInt(text): 0;
 				int dataVal = Integer.parseInt(
 					fieldsRawDecoded[curf].getText());
 				for(int j = 0; j < readbits; j++)
@@ -348,6 +409,10 @@ class AppWnd {
 		parsedCEST.setSelected(dstval.equals("1"));
 
 		// -- set raw in out binary csv --
+		int parityMinuteOnes = 0; // sum bits 21-28
+		int parityHourOnes   = 0; // sum bits 29-36
+		int parityDateOnes   = 0; // sum bits 36-58
+
 		StringBuilder rvc = new StringBuilder(
 					String.valueOf(charToAssocBin(chr[0])));
 		StringBuilder rv = new StringBuilder(
@@ -357,9 +422,26 @@ class AppWnd {
 			rvc.append(", ");
 			rv.append(chr[i]);
 			rvc.append(charToAssocBin(chr[i]));
+
+			if(chr[i] == '1') {
+				if(i >= 21 && i <= 28)
+					parityMinuteOnes++;
+				if(i >= 29 && i <= 35)
+					parityHourOnes++;
+				if(i >= 36 && i <= 58)
+					parityDateOnes++;
+			}
 		}
 		rawInOutBinaryCSV.setText(rv.toString());
 		rawOutBinaryCSVBitlayer.setText(rvc.toString());
+
+		// -- set colors for parity check results --
+		field9minpar.setBackground(((parityMinuteOnes % 2) == 0)?
+							LIGHTYELLOW: LIGHTRED);
+		field12hpar.setBackground(((parityHourOnes % 2) == 0)?
+							LIGHTYELLOW: LIGHTRED);
+		field20datpar.setBackground(((parityDateOnes % 2) == 0)?
+							LIGHTYELLOW: LIGHTRED);
 
 		// -- set raw in out hex --
 		rvc.setLength(0);
