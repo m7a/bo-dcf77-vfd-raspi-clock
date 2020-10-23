@@ -100,7 +100,8 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 		 * 15    nur bei leapsec und dann von einer separaten Logik
 		 * ob man <60 oder <61 schreibt ist egal.
 		 */
-		bytes_to_proc = ill / 4 + ((ill % 4) != 0 && ill < 60);
+		bytes_to_proc = ill / 4 + (((ill % 4) != 0) && (ill < 60));
+		/*printf("       bytes_to_proc = %d\n", bytes_to_proc); / 15 OK DEBUG */
 		for(pil = 0; pil < bytes_to_proc; pil++) {
 			/* -- Verwerfen der allerersten Eingaben */
 			if(bytes_proc < mov_bytes_initial) {
@@ -109,15 +110,15 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 			}
 			/* -- Verarbeiteprozedur: Lies Eingabe -- */
 			readib = pil + il * DCF77_SECONDLAYER_LINE_BYTES;
-			upper_low = ctx->private_telegram_data[readib] >>
-							(2 * mov_entries);
-			shf = 8 * 2 - mov_entries;
-			lower_up = ((0xff >> shf) &
-				ctx->private_telegram_data[readib]) << shf;
+			upper_low = (ctx->private_telegram_data[readib] >>
+							(2 * mov_entries));
+			shf = 8 - 2 * mov_entries;
+			lower_up = (((0xff >> shf) &
+				ctx->private_telegram_data[readib]) << shf);
 			if(pil == 0 && previll == 61) {	
 				/* leap_in = X (might also want to read) */
-				upper_low = (upper_low << 2) |
-							DCF77_BIT_NO_SIGNAL;
+				upper_low = ((upper_low << 2) |
+							DCF77_BIT_NO_SIGNAL);
 				mov--;
 				mov_entries = mov % 4;
 				if(mov_entries == 0)
@@ -125,7 +126,7 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 			}
 			/* -- Verarbeiteprozedur: Schreibe Ausgabe -- */
 			produce_leap = ((prevoll == 61) && (pol == 0));
-			send_back_offset = (produce_leap || pol == 0)? 2: 1;
+			send_back_offset = ((produce_leap || pol == 0)? 2: 1);
 			wrpos = pol + ol * DCF77_SECONDLAYER_LINE_BYTES;
 			if(bytes_proc >= (mov_bytes_initial + send_back_offset))
 				ctx->private_telegram_data[wrpos -
@@ -141,7 +142,7 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 			INC_SATURATED(bytes_proc);
 			if(produce_leap) {
 				mov++;
-				mov_entries = mov % 4;
+				mov_entries = (mov % 4);
 				if(mov_entries == 0)
 					continue; /* skip addr inc */
 			}

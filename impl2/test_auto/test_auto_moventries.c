@@ -144,9 +144,42 @@ static const struct test_case_moventries TESTS[] = {
 			0xef,0xaa,0xae,0xba,0xbf,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0xba
 		},
 	},
+	{
+		.title = "Like before 03.01.2016 21:05+21:06, but mov does not fit byte",
+		.in_length = 82,
+		.in = {
+			/* 03.01.2016 21:05:00 | aa,aa,aa,aa,ba,ef,aa,ae,ba,af,fa,af,ea,bb,7a,55 */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2,
+			/* v defunct, cause NL */
+			3, 1, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
+			2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 3, 3, 2, 3, 2, 2, 2, 3, 1,
+			/* 03.01.2016 21:06:00 | aa,aa,aa,aa,ba,fb,aa,ae,ba,af,fa,af,ea,bb,7a,55 */
+			/* partial telegram, supply enough data to cause one recompute_eom() */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2,
+			3, 2, 3, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
+			2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 3, 3, 2, 3, 2, 2, 2, 3, 1,
+		},
+		.out = {
+			/* Matches the telegram for 03.01.2016 21:05:00 except for broken part */
+			/*
+				TODO CSTAT SUBSTAT: Below is the correct ocmparison data. However, we get a 7b instead 0f 7a when running the code. That must be a bug:
+	
+0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15
+Expected telegram "7a"
+0000 0000 0000 0000 0010 1301 0000 0100 0010 1100 0011 1100 0001 1010 0013 3 "03.10.2016 21:0X:00"
+Got telegram "7b"
+0000 0000 0000 0000 0010 1301 0000 0100 0010 1100 0011 1100 0001 1010 1013 3 "03.01.2056 21:0X:00"
+							              ^_ additional 1 should not be there
+			*/
+			0xaa,0xaa,0xaa,0xaa,0xba,0xe7,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0x00,
+			/* This data is not needed/will be overriden but that's how the memory looks like after the move */
+			/*0xef,0xaa,0xae,0xba,0xbf,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0xba TBD*/
+		},
+	},
 	/* TODO ASTAT/CSTAT NEXT DO SIMILAR TESTS TO DEBUG MOVE CASES, STATUS OF INVESTIGATION:
 
-		-> move cases which are not divisable by 8, preferrably 39 because that seemed to wreck havoc in the data [TO BE VERIFIED BY TEST CASE]
+		-> move cases which are not divisable by 8, preferrably 39 because that seemed to wreck havoc in the data [TO BE VERIFIED BY TEST CASE] --------> WORK IN PROGRESS SEE ABOVE!
+
 		-> leap second cases
 		-> can we already process more than two telegrams with the current status of the program?
 	Future:
