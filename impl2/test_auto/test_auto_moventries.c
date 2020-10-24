@@ -115,8 +115,8 @@ static const struct test_case_moventries TESTS[] = {
 		.out = {
 			/* Matches the telegram for 03.01.2016 21:05:00 except for broken part 0x7a in place of 0xba */
 			0xaa,0xaa,0xaa,0xaa,0x7a,0xef,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0x00,
-			/* This data is not needed/will be overriden but that's how the memory looks like after the move */
-			0xef,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0x0a,
+			/*        | This data is not needed/will be overriden but that's how the memory looks like after the move */
+			0xaa,0xaa,0xaa,0xaa,0x0a,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0x0a,
 		},
 		.callproc = PROC_MOVE_LEFTWARDS,
 		.arg0 = 40, /* move 40 places s.t. ends on 0x7a */
@@ -140,8 +140,8 @@ static const struct test_case_moventries TESTS[] = {
 		.out = {
 			/* Matches the telegram for 03.01.2016 21:05:00 except for broken part 0x7a in place of 0xba */
 			0xaa,0xaa,0xaa,0xaa,0x7a,0xef,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0x00,
-			/* This data is not needed/will be overriden but that's how the memory looks like after the move */
-			0xef,0xaa,0xae,0xba,0xbf,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0xba
+			/*        | This data is not needed/will be overriden but that's how the memory looks like after the move */
+			0xaa,0xaa,0xaa,0xaa,0xba,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0xba,0x00,
 		},
 	},
 	{
@@ -161,30 +161,20 @@ static const struct test_case_moventries TESTS[] = {
 		},
 		.out = {
 			/* Matches the telegram for 03.01.2016 21:05:00 except for broken part */
-			/*
-				TODO CSTAT SUBSTAT: Below is the correct ocmparison data. However, we get a 7b instead 0f 7a when running the code. That must be a bug:
-	
-0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15
-Expected telegram "7a"
-0000 0000 0000 0000 0010 1301 0000 0100 0010 1100 0011 1100 0001 1010 0013 3 "03.10.2016 21:0X:00"
-Got telegram "7b"
-0000 0000 0000 0000 0010 1301 0000 0100 0010 1100 0011 1100 0001 1010 1013 3 "03.01.2056 21:0X:00"
-							              ^_ additional 1 should not be there
-			*/
 			0xaa,0xaa,0xaa,0xaa,0xba,0xe7,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0x00,
 			/* This data is not needed/will be overriden but that's how the memory looks like after the move */
-			/*0xef,0xaa,0xae,0xba,0xbf,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0xba TBD*/
+			0xaa,0xaa,0xaa,0xaa,0xba,0x0b,0xaa,0xbe,0xab,0xa7,0xaa,0xaa,0xaa,0xaa,0xbb,
 		},
 	},
-	/* TODO ASTAT/CSTAT NEXT DO SIMILAR TESTS TO DEBUG MOVE CASES, STATUS OF INVESTIGATION:
-
-		-> move cases which are not divisable by 8, preferrably 39 because that seemed to wreck havoc in the data [TO BE VERIFIED BY TEST CASE] --------> WORK IN PROGRESS SEE ABOVE!
+	/* TODO CSTAT NEXT DO SIMILAR TESTS TO DEBUG MOVE CASES, STATUS OF INVESTIGATION:
 
 		-> leap second cases
 		-> can we already process more than two telegrams with the current status of the program?
+		-> can we get coverage statistics?
+
 	Future:
-	Afterwards work towards deprecating current contents of secondlayer test, because it will no longer be needed.
-	One may still want a secondlayer test to check the outputs from functions rather than the memory contents which is what we are doing here, actually! Might also extend the format to not only have memory output comparing but also output data comparison?
+		Afterwards work towards deprecating current contents of secondlayer test, because it will no longer be needed.
+		One may still want a secondlayer test to check the outputs from functions rather than the memory contents which is what we are doing here, actually! Might also extend the format to not only have memory output comparing but also output data comparison?
 	*/
 };
 #define NUMCASES (sizeof(TESTS)/sizeof(struct test_case_moventries))

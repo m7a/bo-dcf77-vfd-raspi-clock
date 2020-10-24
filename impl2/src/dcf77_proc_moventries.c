@@ -66,6 +66,8 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 
 	unsigned char shf;
 
+	/* dumpmem(ctx); * TODO DEBUG ONLY */
+
 	/* -- Bestimme l0 -- */
 
 	/*
@@ -88,7 +90,7 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 		next_produce_leapsec_marker |=
 					(il == in_line_holding_leapsec_marker);
 		ill = ctx->private_line_lengths[il];
-		/* printf("    il=%u, ill=%u, next_produce_leapsec_marker=%u, ol=%u, pol=%u, bytes_proc=%u\n", il, ill, next_produce_leapsec_marker, ol, pol, bytes_proc); */
+		/* printf("    il=%u, ill=%u, next_produce_leapsec_marker=%u, ol=%u, pol=%u, bytes_proc=%u\n", il, ill, next_produce_leapsec_marker, ol, pol, bytes_proc); * DEBUG ONLY */
 		/* ctx->private_line_lengths[il] = 0; * superflous? */
 
 		/* skip empty input lines */
@@ -101,7 +103,7 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 		 * ob man <60 oder <61 schreibt ist egal.
 		 */
 		bytes_to_proc = ill / 4 + (((ill % 4) != 0) && (ill < 60));
-		/*printf("       bytes_to_proc = %d\n", bytes_to_proc); / 15 OK DEBUG */
+		/* printf("    bytes_to_proc = %d\n", bytes_to_proc); * 15 OK DEBUG */
 		for(pil = 0; pil < bytes_to_proc; pil++) {
 			/* -- Verwerfen der allerersten Eingaben */
 			if(bytes_proc < mov_bytes_initial) {
@@ -138,7 +140,16 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 							DCF77_BIT_NO_SIGNAL;
 				upper_low <<= 2; /* cancel lowermost entry */
 			}
-			ctx->private_telegram_data[wrpos] |= upper_low;
+			/*
+			 * Seit 24.10.2020 hier = statt |=, denn: Die Bytes
+			 * müssen ja einmal im Zuge des Verschiebens auf 0
+			 * gesetzt werden undd as scheint ein angemessener
+			 * Zeitpunkt zu sein. Nacfolgend "nach hinten"
+			 * verschobene Bytes (send_back_offset] |= lower_up)
+			 * dürfen natürlich dann nicht auf 0 setzten, da sie
+			 * sonst bereits vorhandene Daten überschreiben.
+			 */
+			ctx->private_telegram_data[wrpos] = upper_low;
 			INC_SATURATED(bytes_proc);
 			if(produce_leap) {
 				mov++;
@@ -149,10 +160,14 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 			MOVENTRIES_ADVANCE_OUTPUT_CURSOR
 		}
 		previll = ill;
+
+		/* dumpmem(ctx); * TODO DEBUG ONLY */
 	} while((il = nextl(il)) != il0);
 	
 	/* -- Abschließende Aktualisierungen -- */
 	ctx->private_line_lengths[ol] = pol;
 	ctx->private_line_cursor = pol;
 	ctx->private_line_current = ol;
+
+	/* dumpmem(ctx); * TODO DEBUG ONLY */
 }
