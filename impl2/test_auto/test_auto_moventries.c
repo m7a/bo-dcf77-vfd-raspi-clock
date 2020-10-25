@@ -10,15 +10,26 @@
 
 enum callproc {
 	PROC_NONE = 0,
-	/* arg0 = number of places to move */
-	/* arg1 = line with leapsec */
+
+	/*
+	 * called after having sent all data
+	 * arg0 = number of places to move 
+	 * arg1 = line with leapsec
+	 */
 	PROC_MOVE_LEFTWARDS = 1,
+
+	/*
+	 * called before sending the first bit.
+	 * arg0 = value for leap sec announce in minutes (will be taken * 60)
+	 */
+	PROC_SET_LEAPSEC_ANNOUNCE = 2,
 };
 
 struct test_case_moventries {
 	char title[80];
 	unsigned char in_length;
 	enum dcf77_bitlayer_reading in[MAXIN];
+
 	enum callproc callproc; /* procedure ID */
 	unsigned char arg0;     /* primary parameter */
 	unsigned char arg1;     /* secondary parameter */
@@ -166,15 +177,87 @@ static const struct test_case_moventries TESTS[] = {
 			0xaa,0xaa,0xaa,0xaa,0xba,0x0b,0xaa,0xbe,0xab,0xa7,0xaa,0xaa,0xaa,0xaa,0xbb,
 		},
 	},
+	{
+		.title     = "Leapsec single tel: pre, in. Announce predef. Noproc",
+		.callproc  = PROC_SET_LEAPSEC_ANNOUNCE,
+		.arg0      = 3, /* should happen within next three minutes */
+		.in_length = 100,
+		.in        = {
+			/* 01.07.2012 01:59:00, ankuend | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 (last 40b) */
+			3, 3, 2, 2, 3, 3, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+			/* 01.07.2012 02:00:00, hasl    | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55  */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, /* 1, <- leap here */
+		},
+		.out = {
+			/* Partial first telegram */
+			0x00,0x00,0x00,0x00,0x00,0xaf,0xef,0xae,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x00,
+			/* Second telegram except for leap part */
+			0xaa,0xef,0xff,0xbb,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0xba
+		}
+	},
+	{
+		.title     = "Leapsec single tel: pre, in. Announce predef. Shallproc.",
+		.callproc  = PROC_SET_LEAPSEC_ANNOUNCE,
+		.arg0      = 3, /* should happen within next three minutes */
+		.in_length = 101,
+		.in        = {
+			/* 01.07.2012 01:59:00, ankuend | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 (last 40 bits) */
+			3, 3, 2, 2, 3, 3, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+			/* 01.07.2012 02:00:00, hasl    | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55 */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
+		},
+		.out = {
+			/* Partial first telegram */
+			0x00,0x00,0x00,0x00,0x00,0xaf,0xef,0xae,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x00,
+			/* Second telegram except for leap part */
+			0xaa,0xef,0xff,0xbb,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0xba,0x01,
+		}
+	}
+#if 0
+	{
+		.title = "Leapsec 2 telegram: pre, in. Regular case.",
+		.in_length = 121,
+		.in = {
+			/* 01.07.2012 01:59:00, ankuend | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 3, 3, 3, 2, 3, 2, 2, 2, 3, 2, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 3, 2, 2, 3, 3, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+			/* 01.07.2012 02:00:00, hasl    | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55  */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
+		},
+		.out = {
+			TBD
+		},
+	}
+#endif
 	/* TODO CSTAT NEXT DO SIMILAR TESTS TO DEBUG MOVE CASES, STATUS OF INVESTIGATION:
 
-		-> leap second cases
-		-> can we already process more than two telegrams with the current status of the program?
-		-> can we get coverage statistics?
+		-> (3) leap second cases -- problem: require process procedure that is not part of the program yet.
+			-> (2) in the meantime found another bug: if the first byte received is "by chance 1/60" the first bit of the current minute's telegram, in theory we could immediately call process_telegrams after having received the firs ttelegram. This needs to be added and tested before divulging further into the leap seconds.
+			   Afterwards not possible to develop w/o process_telegrams because leapsec in move requires `previll = 61` which can only be the case if telegrams have been processed properly? Unless of course: We would allow predefining some memories and then running some tests on them directly. Unclear if that would be a good idea. TODO CSTAT SUBSTAT DECIDE THEN CONTINUE.
+
+		-> (4) can we already process more than two telegrams with the current status of the program?
 
 	Future:
 		Afterwards work towards deprecating current contents of secondlayer test, because it will no longer be needed.
-		One may still want a secondlayer test to check the outputs from functions rather than the memory contents which is what we are doing here, actually! Might also extend the format to not only have memory output comparing but also output data comparison?
+		One may still want a secondlayer test to check the outputs from functions rather than the memory contents which is what we are doing here, actually! Might also extend the format to not only have memory output comparing but also output data comparison? -> YES
+
+
+Leap second test telegrams:
+
+00011111010000100101100011011100000110000011111100010010001  So, 01.07.12 01:58:00, SZ   ankünd
+01110100010110100101110011010100000110000011111100010010001  So, 01.07.12 01:59:00, SZ   ankünd
+000011011111101001011000000000100001100000111111000100100010 So, 01.07.12 02:00:00, SZ   leap
+00100101011110100100110000001010000110000011111100010010001  So, 01.07.12 02:01:00, SZ   postleap
+
 	*/
 };
 #define NUMCASES (sizeof(TESTS)/sizeof(struct test_case_moventries))
@@ -223,21 +306,28 @@ int main(int argc, char** argv)
 		/* run test */
 		memset(&test_ctx, 0, sizeof(struct dcf77_secondlayer));
 		dcf77_secondlayer_init(&test_ctx);
+		/* invoke pre-procedure */
+		switch(TESTS[test_id].callproc) {
+		case PROC_SET_LEAPSEC_ANNOUNCE:
+			test_ctx.private_leap_second_expected =
+						TESTS[test_id].arg0 * 60;
+			break;
+		default: /* pass */
+			break;
+		}
+		/* send data */
 		for(i = 0; i < TESTS[test_id].in_length; i++) {
 			test_ctx.in_val = TESTS[test_id].in[i];
 			dcf77_secondlayer_process(&test_ctx);
 		}
-		/* invoke procedure */
+		/* invoke post-procedure */
 		switch(TESTS[test_id].callproc) {
-		case PROC_NONE:
-			break;
 		case PROC_MOVE_LEFTWARDS:
 			dcf77_proc_move_entries_backwards(&test_ctx,
 				TESTS[test_id].arg0, TESTS[test_id].arg1);
 			break;
-		default:
-			printf("[ERRO] UNKNOWN PROCEDURE: %d\n",
-						TESTS[test_id].callproc);
+		default: /* pass */
+			break;
 		}
 		/* compare result */
 		if(memcmp(test_ctx.private_telegram_data, TESTS[test_id].out,

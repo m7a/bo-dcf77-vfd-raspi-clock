@@ -190,7 +190,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * We need to reorganize the datastructure
 			 * to align to the "reality".
 			 */
-			puts("    recompute_eom because: NO_SIGNAL expected.");
+			printf("    recompute_eom because: NO_SIGNAL expected, leapexp=%d.\n", ctx->private_leap_second_expected);
 			recompute_eom(ctx);
 		}
 	} else if(ctx->private_line_cursor == 60) {

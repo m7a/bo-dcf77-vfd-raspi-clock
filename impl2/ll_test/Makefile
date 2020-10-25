@@ -7,4 +7,8 @@ compile: $(DEPS)
 	$(CC) $(CFLAGS) -c $*.c
 
 clean:
-	rm $(DEPS) > /dev/null 2>&1 || true
+	-rm $(DEPS) *.gcno *.gcda *.c.gcov cov.info > /dev/null 2>&1
+
+cov:
+	gcov *.c
+	lcov -c -d . -o cov.info
