@@ -35,6 +35,12 @@ struct test_case_moventries {
 	unsigned char arg1;     /* secondary parameter */
 
 	unsigned char out[DCF77_SECONDLAYER_MEM]; /* expected memory content */
+	/* expected telegram lengths (default 0/0) */
+	unsigned char out_telegram_1_len;
+	unsigned char out_telegram_2_len;
+	/* expected telegram contents (if len != 0) */
+	unsigned char out_telegram_1[DCF77_SECONDLAYER_LINE_BYTES];
+	unsigned char out_telegram_2[DCF77_SECONDLAYER_LINE_BYTES];
 };
 
 static const struct test_case_moventries TESTS[] = {
@@ -218,7 +224,11 @@ static const struct test_case_moventries TESTS[] = {
 			0x00,0x00,0x00,0x00,0x00,0xaf,0xef,0xae,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x00,
 			/* Second telegram including leap part */
 			0xaa,0xef,0xff,0xbb,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0xba,0x01,
-		}
+		},
+		.out_telegram_1_len = 60,
+		.out_telegram_2_len = 61,
+		.out_telegram_1 = { 0x56,0x55,0x55,0x55,0x6e,0x57,0xed,0xad,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55, },
+		.out_telegram_2 = { 0x56,0x55,0x55,0x55,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55, }
 	}
 #if 0
 	{
@@ -241,16 +251,13 @@ static const struct test_case_moventries TESTS[] = {
 #endif
 	/* TODO CSTAT NEXT DO SIMILAR TESTS TO DEBUG MOVE CASES, STATUS OF INVESTIGATION:
 
-		-> (3) leap second cases -- problem: require process procedure that is not part of the program yet.
-			-> (2) in the meantime found another bug: if the first byte received is "by chance 1/60" the first bit of the current minute's telegram, in theory we could immediately call process_telegrams after having received the firs ttelegram. This needs to be added and tested before divulging further into the leap seconds.
-			   Afterwards not possible to develop w/o process_telegrams because leapsec in move requires `previll = 61` which can only be the case if telegrams have been processed properly? Unless of course: We would allow predefining some memories and then running some tests on them directly. Unclear if that would be a good idea. TODO CSTAT SUBSTAT DECIDE THEN CONTINUE.
+		-> (3) leap second cases -- require process procedure that is not part of the program yet.
+			-> (2) in the meantime found another bug: if the first byte received is "by chance 1/60" the first bit of the current minute's telegram, in theory we could immediately call process_telegrams after having received the firs ttelegram. This needs to be added and tested before divulging further into the leap seconds. -> TODO CSTAT SUBSTAT CONTINUE HERE NOW THAT PROCESS TELEGRAMS IS IN PLACE AND ALIVE!
 
 		-> (4) can we already process more than two telegrams with the current status of the program?
 
 	Future:
-		Afterwards work towards deprecating current contents of secondlayer test, because it will no longer be needed.
-		One may still want a secondlayer test to check the outputs from functions rather than the memory contents which is what we are doing here, actually! Might also extend the format to not only have memory output comparing but also output data comparison? -> YES
-
+		Afterwards work towards fixing the secondlayer test.
 
 Leap second test telegrams:
 
@@ -335,19 +342,46 @@ int main(int argc, char** argv)
 			break;
 		}
 		/* compare result */
-		if(memcmp(test_ctx.private_telegram_data, TESTS[test_id].out,
-						DCF77_SECONDLAYER_MEM) == 0) {
+		if(
+			memcmp(test_ctx.private_telegram_data,
+				TESTS[test_id].out, DCF77_SECONDLAYER_MEM) == 0
+			&&
+			(TESTS[test_id].out_telegram_1_len == 0 || (
+				test_ctx.out_telegram_1_len ==
+					TESTS[test_id].out_telegram_1_len
+				&& 
+				memcmp(test_ctx.out_telegram_1,
+					TESTS[test_id].out_telegram_1,
+					DCF77_SECONDLAYER_LINE_BYTES) == 0))
+			&&
+			(TESTS[test_id].out_telegram_2_len == 0 || (
+				test_ctx.out_telegram_2_len ==
+					TESTS[test_id].out_telegram_2_len
+				&& 
+				memcmp(test_ctx.out_telegram_2,
+					TESTS[test_id].out_telegram_2,
+					DCF77_SECONDLAYER_LINE_BYTES) == 0))
+		) {
 			printf("[ OK ] test_id=%d, %s\n", test_id,
 							TESTS[test_id].title);
-			dumpmem(&test_ctx);
 		} else {
 			printf("[FAIL] test_id=%d, %s\n", test_id,
 							TESTS[test_id].title);
 			puts("Got");
 			dumpmem(&test_ctx);
 			puts("Expected");
+			test_ctx.out_telegram_1_len =
+					TESTS[test_id].out_telegram_1_len;
+			test_ctx.out_telegram_2_len =
+					TESTS[test_id].out_telegram_2_len;
 			memcpy(&test_ctx.private_telegram_data,
 				TESTS[test_id].out, DCF77_SECONDLAYER_MEM);
+			memcpy(&test_ctx.out_telegram_1,
+				TESTS[test_id].out_telegram_1,
+				DCF77_SECONDLAYER_LINE_BYTES);
+			memcpy(&test_ctx.out_telegram_2,
+				TESTS[test_id].out_telegram_2,
+				DCF77_SECONDLAYER_LINE_BYTES);
 			dumpmem(&test_ctx);
 		}
 	}
