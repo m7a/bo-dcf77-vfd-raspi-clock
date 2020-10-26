@@ -88,14 +88,34 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 		 * let us thus start a new line and switch to aligned
 		 * mode without moving bits.
 		 */
+		if(ctx->private_line_lengths[0] == 60) {
+			/*
+			 * special case: The first telegram started with its
+			 * first bit. Hence, we already have a full minute
+			 * in our memory. Process it!
+			 */
+			printf("    process_telegrams (3)\n"); /* DEBUG ONLY */
+			dcf77_proc_process_telegrams(ctx);
+			if(ctx->out_telegram_1_len != 60) {
+				/*
+				 * Somehow the data received was not valid.
+				 * This is expected to happen only in case of
+				 * bytes recevied by wrong value. Existent data
+				 * becomes untrustworthy. Force reset.
+				 */
+				dcf77_secondlayer_reset(ctx);
+				return;
+			}
+		} else {
+			/*
+			 * we set the length to 60 because now the epsilons
+			 * become part of the telegram.
+			 */
+			ctx->private_line_lengths[0] = 60;
+		}
 		ctx->private_inmode       = IN_FORWARD;
 		ctx->private_line_current = 1;
 		ctx->private_line_cursor  = 0;
-		/*
-		 * we set the length to 60 because now the epsilons
-		 * become part of the telegram.
-		 */
-		ctx->private_line_lengths[0] = 60;
 	} else if(ctx->private_line_lengths[0] == 60) {
 		/*
 		 * we processed 59 bits before, this is the 60. without
@@ -119,9 +139,6 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 /*
  * Although similar to the more complex shift procedure, they work on different
  * starting lines and assumptions.
- *
- * TODO z if code size is an issue might want to re-use the other procedure by
- *        providing l0 manually.
  */
 static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx)
 {
@@ -168,7 +185,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * no signal in any case means this is our
 			 * end-of-minute marker
 			 */
-			printf("    process_telegrams (1)\n");
+			printf("    process_telegrams (1)\n"); /* DEBUG ONLY */
 			dcf77_proc_process_telegrams(ctx);
 		} else if(ctx->in_val == DCF77_BIT_0 &&
 				ctx->private_leap_second_expected > 0) {

@@ -98,6 +98,8 @@ static const struct test_case_moventries TESTS[] = {
 			2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 3, 3, 2, 3, 2, 2, 2, 3, 1,
 		},
 		.out = {0xee,0xee,0xba,0xbf,0xba,0xaf,0xab,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a},
+		.out_telegram_1_len = 60,
+		.out_telegram_1 = {0x56,0x55,0x55,0x55,0xba,0xaf,0xab,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0x55},
 	},
 	{
 		.title = "First telegram part. bit mistaken for end: before mov 03.01.2016 21:05+21:06.",
@@ -229,10 +231,28 @@ static const struct test_case_moventries TESTS[] = {
 		.out_telegram_2_len = 61,
 		.out_telegram_1 = { 0x56,0x55,0x55,0x55,0x6e,0x57,0xed,0xad,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55, },
 		.out_telegram_2 = { 0x56,0x55,0x55,0x55,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55, }
-	}
-#if 0
+	},
 	{
-		.title = "Leapsec 2 telegram: pre, in. Regular case.",
+		.title = "Pre leapsec telegram. Start at 0. Full telegram. Shallproc.",
+		.in_length = 60,
+		.in = {
+			/* 01.07.2012 01:59:00, ankuend | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 3, 3, 3, 2, 3, 2, 2, 2, 3, 2, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 3, 2, 2, 3, 3, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+		},
+		.out = {
+			/* Memory = input telegram */
+			0xfe,0xae,0xee,0xbb,0xee,0xaf,0xef,0xae,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x00,
+		},
+		.out_telegram_1_len = 60,
+		.out_telegram_1 = {
+			/* out telegram = in telegram except for weather bits */
+			0x56,0x55,0x55,0x55,0xee,0xaf,0xef,0xae,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55,
+		 }
+	},
+	{
+		.title = "Leapsec 2 full telegram: pre, in.",
 		.in_length = 121,
 		.in = {
 			/* 01.07.2012 01:59:00, ankuend | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 */
@@ -245,15 +265,21 @@ static const struct test_case_moventries TESTS[] = {
 			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
 		},
 		.out = {
-			TBD
+			0xfe,0xae,0xee,0xbb,0xee,0xaf,0xef,0xae,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x00,
+			0xaa,0xef,0xff,0xbb,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0xba,0x01,
+		},
+		.out_telegram_1_len = 60,
+		.out_telegram_2_len = 61,
+		.out_telegram_1 = {
+			0x56,0x55,0x55,0x55,0x6e,0x57,0xed,0xad,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55,
+		},
+		.out_telegram_2 = {
+			0x56,0x55,0x55,0x55,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55,
 		},
 	}
-#endif
 	/* TODO CSTAT NEXT DO SIMILAR TESTS TO DEBUG MOVE CASES, STATUS OF INVESTIGATION:
 
-		-> (3) leap second cases -- require process procedure that is not part of the program yet.
-			-> (2) in the meantime found another bug: if the first byte received is "by chance 1/60" the first bit of the current minute's telegram, in theory we could immediately call process_telegrams after having received the firs ttelegram. This needs to be added and tested before divulging further into the leap seconds. -> TODO CSTAT SUBSTAT CONTINUE HERE NOW THAT PROCESS TELEGRAMS IS IN PLACE AND ALIVE!
-
+		-> (3) leap second cases which have to move leap second marker
 		-> (4) can we already process more than two telegrams with the current status of the program?
 
 	Future:
