@@ -33,7 +33,8 @@ struct test_case_moventries {
 	enum callproc callproc; /* procedure ID */
 	unsigned char arg0;     /* primary parameter */
 	unsigned char arg1;     /* secondary parameter */
-	unsigned char out[DCF77_SECONDLAYER_MEM];
+
+	unsigned char out[DCF77_SECONDLAYER_MEM]; /* expected memory content */
 };
 
 static const struct test_case_moventries TESTS[] = {
@@ -215,7 +216,7 @@ static const struct test_case_moventries TESTS[] = {
 		.out = {
 			/* Partial first telegram */
 			0x00,0x00,0x00,0x00,0x00,0xaf,0xef,0xae,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x00,
-			/* Second telegram except for leap part */
+			/* Second telegram including leap part */
 			0xaa,0xef,0xff,0xbb,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0xba,0x01,
 		}
 	}
@@ -294,6 +295,10 @@ static void dumpmem(struct dcf77_secondlayer* ctx)
 	}
 	printf("    [DEBUG] line_current=%u, cursor=%u\n",
 			ctx->private_line_current, ctx->private_line_cursor);
+	printf("    [DEBUG] out_telegram_1 len=%2u: ", ctx->out_telegram_1_len);
+	printtel_sub(ctx->out_telegram_1);
+	printf("    [DEBUG] out_telegram_2 len=%2u: ", ctx->out_telegram_2_len);
+	printtel_sub(ctx->out_telegram_2);
 }
 
 int main(int argc, char** argv)
@@ -334,6 +339,7 @@ int main(int argc, char** argv)
 						DCF77_SECONDLAYER_MEM) == 0) {
 			printf("[ OK ] test_id=%d, %s\n", test_id,
 							TESTS[test_id].title);
+			dumpmem(&test_ctx);
 		} else {
 			printf("[FAIL] test_id=%d, %s\n", test_id,
 							TESTS[test_id].title);

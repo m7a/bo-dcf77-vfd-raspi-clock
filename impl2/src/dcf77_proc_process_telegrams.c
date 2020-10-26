@@ -16,6 +16,16 @@ static void add_missing_bits(unsigned char* in_out_telegram,
 static void check_for_leapsec_announce(struct dcf77_secondlayer* ctx,
 						unsigned char* telegram);
 
+/* TODO DEBUG ONLY */
+static void printtel_sub(unsigned char* data)
+{
+	unsigned char j;
+	for(j = 0; j < 15; j++)
+		printf("%02x,", data[j]);
+	printf("(%02x)", data[15]);
+	putchar('\n');
+}
+
 void dcf77_proc_process_telegrams(struct dcf77_secondlayer* ctx)
 {
 	unsigned char lastlen = 60;
@@ -30,77 +40,81 @@ void dcf77_proc_process_telegrams(struct dcf77_secondlayer* ctx)
 
 	/* merge till mismatch */
 	/* TODO z printf("    [DEBUG] FROM %u to %u\n", nextl(ctx->private_line_current + 1), ctx->private_line_current); */
-	for(match = 1, line = dcf77_nextl(ctx->private_line_current);
-				line != ctx->private_line_current && match;
-				line = dcf77_nextl(line)) {
+	match = 1;
+	line = ctx->private_line_current;
+	do {
+		line = dcf77_nextl(line);
+
 		/* ignore empty lines */
 		if(ctx->private_line_lengths[line] == 0)
 			continue;
 
-		/*
+		/* TODO DEBUG ONLY */
 		printf("    [DEBUG] xeliminate1(\n");
 		printf("    [DEBUG]   ");
 		printtel_sub(ctx->private_telegram_data + 
 					(DCF77_SECONDLAYER_LINE_BYTES * line));
 		printf("    [DEBUG]   ");
 		printtel_sub(ctx->out_telegram_1);
-		*/
+		/* END DEBUG ONLY */
 		match = dcf77_proc_xeliminate(ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
 					(DCF77_SECONDLAYER_LINE_BYTES * line),
 					ctx->out_telegram_1);
-		/*
-		printf("    [DEBUG] )=%d\n", match);
-		*/
+		printf("    [DEBUG] )=%d\n", match); /* TODO DEBUG ONLY */
 		lastlen = ctx->private_line_lengths[line];
-	}
-
-	postprocess(ctx, ctx->out_telegram_1,
-					ctx->private_telegram_data +
-					(DCF77_SECONDLAYER_LINE_BYTES * line));
+	} while((line != ctx->private_line_current) && match);
 
 	if(match) {
+		postprocess(ctx, ctx->out_telegram_1,
+					ctx->private_telegram_data +
+					(DCF77_SECONDLAYER_LINE_BYTES * line));
 		/* that was already the actual output */
 		ctx->out_telegram_1_len = lastlen;
 		ctx->out_telegram_2_len = 0;
 		advance_to_next_line(ctx);
 		/* return */
 	} else {
-		/* repeat and write to actual output */
+		/*
+		 * repeat and write to actual output
+		 * line is the line that failed and which we reprocess.
+		 */
 
-		/* this is the line that failed and which we reprocess */
-		line = prevl(line);
-		/* this is the length of the line before the line that failed */
+		/* This is the length of the line before the line that failed */
 		ctx->out_telegram_1_len =
 					ctx->private_line_lengths[prevl(line)];
 
-		match = 1;
-		/* we eliminate to generic thus set length to 60 */
-		lastlen = 60;
-		for(; line != ctx->private_line_current && match;
-						line = dcf77_nextl(line)) {
-			/* ignore empty lines (relevant in the beginning) */
-			if(ctx->private_line_lengths[line] == 0)
-				continue;
+		match   = 1;
+		lastlen = 0; /* First iteration does not invoke nextl yet. */
+		do {
+			if(lastlen == 0) {
+				/*
+				 * Set to 60 independent of actual length.
+				 * This handles x-elimination in a "generic"
+				 * and safe way. Additionally, it avoids the
+				 * corner case that there is only a single line
+				 * to process, this line is the current line
+				 * and its len is 61. This special corner case
+				 * would produce a 61/61 elimination if the
+				 * real length were to be used here. Such a case
+				 * is, however, not supported by xeliminate.
+				 * Thus chose 60 to be safe against this.
+				 */
+				lastlen = 60;
+			} else {
+				line = dcf77_nextl(line);
 
-			/*
-			printf("    [DEBUG] xeliminate2(\n");
-			printf("    [DEBUG]   ");
-			printtel_sub(ctx->private_telegram_data + 
-					(DCF77_SECONDLAYER_LINE_BYTES * line));
-			printf("    [DEBUG]   ");
-			printtel_sub(ctx->out_telegram_2);
-			*/
+				/* ignore empty lines (first ten minutes) */
+				if(ctx->private_line_lengths[line] == 0)
+					continue;
+			}
 			match = dcf77_proc_xeliminate(
 					ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
 					(DCF77_SECONDLAYER_LINE_BYTES * line),
 					ctx->out_telegram_2);
-			/*
-			printf("    [DEBUG] )=%d\n", match);
-			*/
 			lastlen = ctx->private_line_lengths[line];
-		}
+		} while(line != ctx->private_line_current && match);
 
 		if(match) {
 			/*
@@ -151,20 +165,28 @@ static void postprocess(struct dcf77_secondlayer* ctx,
 }
 
 /*
- * this is not a "proper" X-elimination but copies minute value bits and
- * leap second announce bits from the last telegram processed prior to
- * outputting something. It allows the higher layers to receive and process
- * these bits although they are not used in the normal xelimination.
+ * this is not a "proper" X-elimination but copies minute value bits,
+ * leap second announce bit and minute parity from the last telegram processed
+ * prior to outputting something. It allows the higher layers to receive and
+ * process these bits although they are not set by the normal xelimination.
  */
 static void add_missing_bits(unsigned char* in_out_telegram,
 						unsigned char* in_telegram)
 {
 	unsigned char i;
+
+	/* leap sec announce */
 	dcf77_proc_xeliminate_entry(in_telegram[19 / 4],
 					in_out_telegram + (19 / 4), 19 % 4);
+
+	/* minute ones */
 	for(i = 21; i <= 24; i++)
 		dcf77_proc_xeliminate_entry(in_telegram[i / 4],
 					in_out_telegram + (i / 4), i % 4);
+
+	/* minute parity */
+	dcf77_proc_xeliminate_entry(in_telegram[28 / 4],
+					in_out_telegram + (28 / 4), 28 % 4);
 }
 
 static void check_for_leapsec_announce(struct dcf77_secondlayer* ctx,
