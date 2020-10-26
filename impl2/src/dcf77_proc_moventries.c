@@ -1,12 +1,8 @@
 #include "inc_sat.h"
 #include "dcf77_bitlayer.h"
 #include "dcf77_secondlayer.h"
+#include "dcf77_nextl.h"
 #include "dcf77_proc_moventries.h"
-
-static inline unsigned char nextl(unsigned char inl)
-{
-	return (inl + 1) % DCF77_SECONDLAYER_LINES;
-}
 
 #define MOVENTRIES_ADVANCE_OUTPUT_CURSOR \
 	{ \
@@ -19,7 +15,7 @@ static inline unsigned char nextl(unsigned char inl)
 				ctx->private_line_lengths[ol] = 60; \
 			} \
 			prevoll = ctx->private_line_lengths[ol]; \
-			ol = nextl(ol); \
+			ol = dcf77_nextl(ol); \
 		} else { \
 			pol++; \
 		} \
@@ -75,9 +71,9 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 	 * This is the first line following from the current which is not
 	 * empty.
 	 */
-	for(il0 = nextl(ctx->private_line_current);
-			ctx->private_line_lengths[il0] == 0 &&
-			il0 != ctx->private_line_current; il0 = nextl(il0));
+	for(il0 = dcf77_nextl(ctx->private_line_current);
+		ctx->private_line_lengths[il0] == 0 &&
+		il0 != ctx->private_line_current; il0 = dcf77_nextl(il0));
 
 	printf("    il0=%u, mov_entries=%u, mov_bytes_initial=%u\n", il0, mov_entries, mov_bytes_initial); /* TODO ASTAT DEBUG ONLY */
 
@@ -162,7 +158,7 @@ void dcf77_proc_move_entries_backwards(struct dcf77_secondlayer* ctx,
 		previll = ill;
 
 		/* dumpmem(ctx); * TODO DEBUG ONLY */
-	} while((il = nextl(il)) != il0);
+	} while((il = dcf77_nextl(il)) != il0);
 	
 	/* -- Abschließende Aktualisierungen -- */
 	ctx->private_line_lengths[ol] = pol;

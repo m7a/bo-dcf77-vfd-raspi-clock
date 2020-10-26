@@ -1,6 +1,7 @@
 DEPS = display.o interrupt.o dcf77_bitlayer.o mainloop_timing.o \
 	formatted_display.o dcf77_proc_xeliminate.o dcf77_proc_moventries.o \
-	dcf77_secondlayer.o
+	dcf77_proc_recompute_eom.o dcf77_secondlayer.o \
+	dcf77_proc_process_telegrams.o
 
 compile: $(DEPS)
 
