@@ -17,7 +17,6 @@ static void check_for_leapsec_announce(struct dcf77_secondlayer* ctx,
 						unsigned char* telegram);
 
 /* TODO DEBUG ONLY */
-/*
 static void printtel_sub(unsigned char* data)
 {
 	unsigned char j;
@@ -26,6 +25,7 @@ static void printtel_sub(unsigned char* data)
 	printf("(%02x)", data[15]);
 	putchar('\n');
 }
+/*
 */
 
 void dcf77_proc_process_telegrams(struct dcf77_secondlayer* ctx)
@@ -51,19 +51,19 @@ void dcf77_proc_process_telegrams(struct dcf77_secondlayer* ctx)
 		if(ctx->private_line_lengths[line] == 0)
 			continue;
 
-		/* TODO DEBUG ONLY *
+		/* TODO DEBUG ONLY */
 		printf("    [DEBUG] xeliminate1(\n");
 		printf("    [DEBUG]   ");
 		printtel_sub(ctx->private_telegram_data + 
 					(DCF77_SECONDLAYER_LINE_BYTES * line));
 		printf("    [DEBUG]   ");
 		printtel_sub(ctx->out_telegram_1);
-		* END DEBUG ONLY */
+		/* END DEBUG ONLY */
 		match = dcf77_proc_xeliminate(ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
 					(DCF77_SECONDLAYER_LINE_BYTES * line),
 					ctx->out_telegram_1);
-		/* printf("    [DEBUG] )=%d\n", match); * TODO DEBUG ONLY */
+		printf("    [DEBUG] )=%d\n", match); /* TODO DEBUG ONLY */
 		lastlen = ctx->private_line_lengths[line];
 	} while((line != ctx->private_line_current) && match);
 
@@ -110,11 +110,22 @@ void dcf77_proc_process_telegrams(struct dcf77_secondlayer* ctx)
 				if(ctx->private_line_lengths[line] == 0)
 					continue;
 			}
+
+			/* TODO BEGIN DEBUG ONLY */
+			printf("    [DEBUG] xeliminate2(\n");
+			printf("    [DEBUG]   ");
+			printtel_sub(ctx->private_telegram_data +
+					(DCF77_SECONDLAYER_LINE_BYTES * line));
+			printf("    [DEBUG]   ");
+			printtel_sub(ctx->out_telegram_2);
+			/* END DEBUG ONLY */
+
 			match = dcf77_proc_xeliminate(
 					ctx->private_line_lengths[line],
 					lastlen, ctx->private_telegram_data +
 					(DCF77_SECONDLAYER_LINE_BYTES * line),
 					ctx->out_telegram_2);
+			printf("    [DEBUG] )=%d\n", match); /* TODO DEBUG ONLY */
 			lastlen = ctx->private_line_lengths[line];
 		} while(line != ctx->private_line_current && match);
 

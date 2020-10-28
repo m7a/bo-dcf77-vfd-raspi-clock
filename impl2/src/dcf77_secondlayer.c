@@ -24,6 +24,7 @@ static void dcf77_secondlayer_automaton_case_specific_handling(
 static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx);
 
 static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx);
+static void complex_reorganization(struct dcf77_secondlayer* ctx);
 
 void dcf77_secondlayer_init(struct dcf77_secondlayer* ctx)
 {
@@ -218,14 +219,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			printf("    process_telegrams (2)\n");
 			dcf77_proc_process_telegrams(ctx);
 		} else {
-			/*
-			 * would have expected an end-of-minute marker.
-			 * We have a mismatch although a leap-second
-			 * was announced for around this time.
-			 *
-			 * TODO Z RECOVER FROM THIS CASE BY DOING TWO STEPS: (1) move current bit to next line, then shift previous line one rightwards (this would actually need to go through the whole memory and fill the first space with a `2`/epsilon)? -- the problem here is: that is quite complicated. It would seem that it might be possible to integrate this functionality into the reorganization function, in any case it is not trivial and might be enough complexity to warrant a reset for this rare case of an announced leap second and async...
-			 */
-			printf("[DEBUG] N_IMPL/TODO COMPLEX REORGANIZATION REQUIRED\n");
+			complex_reorganization(ctx);
 		}
 	} else {
 		/*
@@ -235,4 +229,37 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 		 */
 		ctx->private_line_cursor++;
 	}
+}
+
+/*
+ * This case is known as "complex reorganization"
+ *
+ * Condition: Would have expected an end-of-minute marker. We have a mismatch
+ * although a leap-second was announced for around this time.
+ *
+ * Action: We rewrite the data to step back one position such that the case is
+ * equivalent ot cursor = 59 and NO_SIGNAL expected. Then, we call
+ * recompute_eom() to fix up the situation so far. Unlike in the case of the
+ * actual cursor = 59 we still need to process that one misplaced bit. We do
+ * this by repeating part of the computation.
+ */
+static void complex_reorganization(struct dcf77_secondlayer* ctx)
+{
+	/* clear the bit in memory under consideration */
+	ctx->private_telegram_data[ctx->private_line_current *
+					DCF77_SECONDLAYER_LINE_BYTES + 15] = 0;
+
+	/* move the cursor */
+	ctx->private_line_cursor--;
+
+	/* call recompute_eom() */
+	printf("    recompute_eom because NO_SINGAL expected complex reorganization!\n"); /* TODO DEBUG ONLY */
+	dcf77_proc_recompute_eom(ctx);
+
+	/*
+	 * Process the misplaced bit.
+	 * Does not decrease the leap second expectation again.
+	 */
+	dcf77_secondlayer_write_new_input(ctx);
+	dcf77_secondlayer_automaton_case_specific_handling(ctx);
 }

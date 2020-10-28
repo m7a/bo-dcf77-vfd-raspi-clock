@@ -276,21 +276,182 @@ static const struct test_case_moventries TESTS[] = {
 		.out_telegram_2 = {
 			0x56,0x55,0x55,0x55,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55,
 		},
-	}
-	/* TODO CSTAT NEXT DO SIMILAR TESTS TO DEBUG MOVE CASES, STATUS OF INVESTIGATION:
+	},
+	{
+		.title = "Leapsec 3 full telegram: pre, in, post.",
+		.in_length = 181,
+		.in = {
+			/* 01.07.2012 01:59:00, ankuend  | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 3, 3, 3, 2, 3, 2, 2, 2, 3, 2, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 3, 2, 2, 3, 3, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+			/* 01.07.2012 02:00:00, hasl     | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55 */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
+			/* 01.07.2012 02:01:00, postleap | ba,ee,fe,bb,ae,af,aa,bb,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 2, 3, 2, 2, 3, 2, 3, 2, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 2,
+			3, 3, 2, 2, 2, 2, 2, 2, 3, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+		},
+		.out = {
+			0xfe,0xae,0xee,0xbb,0xee,0xaf,0xef,0xae,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x00,
+			0xaa,0xef,0xff,0xbb,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0xba,0x01,
+			0xba,0xee,0xfe,0xbb,0xae,0xaf,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x00,
+		},
+		.out_telegram_1_len = 60,
+		.out_telegram_2_len = 60,
+		.out_telegram_1 = {
+			0x56,0x55,0x55,0x55,0x6e,0x57,0xed,0xad,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55,
+		},
+		.out_telegram_2 = {
+			0x56,0x55,0x55,0x55,0xae,0xaf,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x55,
+		},
+	},
+	{
+		/*
+		 * Preliminary test that checks if this distorte data can
+		 * actually be loaded without being processed. It mainly aids as
+		 * an intermediate step to the next test. Should it already
+		 * behave strangely here, there is no need to check the
+		 * advanced fllow-up test.
+		 *
+		 * So far, this test mimics a very distorted but potentially
+		 * occurring data.
+		 */
+		.title = "Leapsec 2 miasligned distorted: pre, in. Preparatory.",
+		.in_length = 121,
+		.in = {
+			/* 01.07.2012 01:59:00, ankuend  | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 3, 3, 3, 2, 3, 2, 2, 2, 3, 2, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			/*             v */
+			3, 3, 2, 2, 3, 1, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 1, 1, 3, 3, 3, 2, 2, 2, 1, 2, 2, 1, 2, 2, 1, 1, 1,
+			/* 01.07.2012 02:00:00, hasl     | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55 */
+			2, 1, 2, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 3, 2, 2, 1, 2, 1,
+			1, 1, 2, 2, 1, 1, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
+		},
+		.out = {
+			/* in-memory view of the distorted data */
+			0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xe0,0xef,0xea,0xbe,0xeb,0xfe,0x7a,0x00,
+			0xee,0xaa,0xbe,0xaa,0xd7,0xaf,0xa6,0x69,0x65,0x5a,0x56,0x95,0x6b,0x56,0x5a,0x00,
+			0xaa,0xab,0xbe,0xaa,0xff,0xaf,0xae,0xab,0x1b,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+		},
+		/*
+		 * Note: These output telegrams are mostly indecipherable inside
+		 *       the GUI tool. For the purpose of this tests, it is
+		 *       not considered what the upper layers would do with such
+		 *       bad telegrams which are most likely _not_ to be
+		 *       mappable to realistic times. Maybe it would just
+		 *       ignore them until data starts to make sense, or it
+		 *       would trigger some re-organization already before that?
+		 */
+		.out_telegram_1_len = 60,
+		.out_telegram_2_len = 60,
+		.out_telegram_1 = {
+			0x56,0x55,0x55,0x55,0x57,0x57,0xa5,0x69,0xe5,0xef,0xea,0xbe,0xeb,0xfe,0x7a,0x55,
+		},
+		.out_telegram_2 = {
+			0x56,0x55,0x55,0x55,0xd7,0xaf,0xa6,0x69,0x65,0x5a,0x56,0x95,0x6b,0x56,0x5a,0x55,
+		},
+	},
+	{
+		/*
+		Es scheint zwei Fälle zu unterschieden zu geben:
+
+		Variante 1, wie vorliegend:
+			Alles war irgendwie misaligned, ging aber solange durch,
+			bis es irgendwo krachte. Im vorliegenden Falle wurde
+			aufgrund der `2` statt `3` vermutet, dass es sich wohl
+			um die Minute mit der leapsec handeln müsste.
+			Dann wurde anhand der nächsten `2` (statt `3`) erkannt,
+			dass auch der Leapsec-Fall hier nicht zutrifft und es
+			also ein misalignment geben muss. In diesem Fall steht
+			COMPLEX REOGRANIZATION an. Konkret wäre diese aber gar
+			nicht unbedingt so komplex: Man würde "einfach" das
+			aktuelle Bit nicht in den leapsec-Teil, sondern in die
+			nächste Zeile schreiben und anschließend ein recompute_eom()
+			durchführen. Somit würden alle "auf reguläre Weise"
+			(ohne Leapsec-Sonderbehandlung) etwas zurückgeschoben
+			und das Verfahren würde sich wieder alignen.
+
+		Variante 2:
+			Der Fall, dass bei einem realignment tatsächlich
+			diese Sonderfälle für produce leap etc. auftreten kann
+			dann aufkommen, wenn auch dieses 3. Telegramm
+			misaligned durchging und somti eine Leapsec geschrieben
+			wurde, obwohl es keine war. Anschließend würde der
+			spätere realignment-Prozess (bzw. die zweite Leapsec/V1)
+			dazu führen, dass hier ebenfalls ein recompute_eom()
+			käme, dass dann aber eine Zeile mitverarbeitet, in der
+			ein Bit mehr steckt. Dieses müsste sich wieder in die
+			normalen Daten einreihen.
+
+			Problem hierbei: Im gleichen ZUge könnte es sein, dass
+			ein anderes Minutentelegramm (mit neuem EOM), die
+			Leapsec enthält. Soweit ich das verstehe ist das
+			wirklich ein seltener Fall, wird aber von recompute_eom
+			im Prinzip schon soweit berücksichtigt. In diesem Falle
+			käme es dann zum berüchtigten/zu testenden
+			produce_leapsec-Fall.
+
+		Frage: Sind diese Fälle überhaupt betrachtenswert? Wenn nein,
+			könnte man auch versuchen, die Behandlung soweit
+			rückzubauen, dass leapsec nur noch in perfekt aligned
+			Fällen akzeptiert werden. Wenn ein move auf eine
+			leapsec trifft, würde sofort ein kompletter Reset
+			der unteren Ebene ausgelöst? -> UMSETZUNG A
+
+		UMSETZUNG B: Es muss dieser "complex reogranization" Fall
+			implementiert werden, der eigentlich gar nicht so
+			"complex" ist und anschließend muss eine weitere
+			Variante des vorliegenden Tests gemacht werden, bei dem
+			die falsche Leapsec durchgeht und es später zu einem
+			recompute_eom() kommt, bei dem tatsächlich ein solches
+			Leapsec-Teil verschoben werden muss...
+			-> Diese Umsetzung wurde gewählt.
+
+				-> Das unmittelbare Problem jetzt ist, dass die
+				   Speicherinhalte ziemlich "falsch" zu sein
+				   scheinen. Es bedarf einer enaueren
+				   Untersuchung, ob bzw. was falsch läuft...
+
+			TODO CSTAT SUBSTAT CONTINUE HERE
+		*/
+		.title = "Leapsec 3 miasligned distorted: pre, in. Mov leapsec marker.",
+		.in_length = 147,
+		.in = {
+			/* 01.07.2012 01:59:00, ankuend  | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 3, 3, 3, 2, 3, 2, 2, 2, 3, 2, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			/*             v */
+			3, 3, 2, 2, 3, 1, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 1, 1, 3, 3, 3, 2, 2, 2, 1, 2, 2, 1, 2, 2, 1, 1, 1,
+			/* 01.07.2012 02:00:00, hasl     | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55 */
+			2, 1, 2, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 3, 2, 2, 1, 2, 1,
+			1, 1, 2, 2, 1, 1, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
+			/* 01.07.2012 02:01:00, postleap | ba,ee,fe,bb,ae,af,aa,bb,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 2, 3, 2, 2, 3, 2, 3, 2, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 2,
+			3, 3, 2, 2, 2, 2, /* 2, 2, 3, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2, */
+		},
+		.out = {
+			/* TBD */
+		},
+		.out_telegram_1_len = 60,
+		.out_telegram_2_len = 60,
+		.out_telegram_1 = {
+		},
+		.out_telegram_2 = {
+		},
+	},
+	/* TODO NEXT DO SIMILAR TESTS TO DEBUG MOVE CASES, STATUS OF INVESTIGATION:
 
 		-> (3) leap second cases which have to move leap second marker
 		-> (4) can we already process more than two telegrams with the current status of the program?
 
 	Future:
 		Afterwards work towards fixing the secondlayer test.
-
-Leap second test telegrams:
-
-00011111010000100101100011011100000110000011111100010010001  So, 01.07.12 01:58:00, SZ   ankünd
-01110100010110100101110011010100000110000011111100010010001  So, 01.07.12 01:59:00, SZ   ankünd
-000011011111101001011000000000100001100000111111000100100010 So, 01.07.12 02:00:00, SZ   leap
-00100101011110100100110000001010000110000011111100010010001  So, 01.07.12 02:01:00, SZ   postleap
 
 	*/
 };
