@@ -417,7 +417,67 @@ static const struct test_case_moventries TESTS[] = {
 				   scheinen. Es bedarf einer enaueren
 				   Untersuchung, ob bzw. was falsch läuft...
 
-			TODO CSTAT SUBSTAT CONTINUE HERE
+		TODO CSTAT SUBSTAT CONTINUE HERE:
+
+		Bei genauerer Untersuchung ergab sich, dass recompute_eom()
+		die Telegramme gar nicht und auch xeliminate() die Korrektheit
+		der Telegramme nur sehr rudimentär prüft.
+		Dadurch werden Telegramme mit völlig wilden BCD-Kombinationen
+		generiert. Die Lösung dafür ist es, an einer Stelle auch die
+		Korrektheit der BCDs zu prüfen. Folgende Gedanken dazu:
+
+		  * Höhere Ebenen sind dafür nicht verantwortlich, da sie sich
+		    rein um den Vergleich zwischen den zwei Telegrammen bzw.
+		    die Rekonstruktion von FEHLENDEN Inhalten kümmern sollen.
+		    Hintergrund: Wenn ein Fehler erst auf höherer Ebene
+		    festgestellt wird, dann kann ihm nur noch durch einen
+		    reset() oder anderweitiges "brachiales" Mittel
+		    entegegengewirkt werden. Entsprechend sollte der Vertrag
+		    so sein, dass aus dem secondlayer nur BCD-korrekte
+		    Telegramme herausfallen
+
+		  * Es gibt dann zwei Möglichkeiten, wo man die Überprüfung
+		    hineschreiben kann:
+
+			a) xeliminate().
+			   Vorteil: Es ist in diesem Falle relativ gut
+			   individuell über die bestehenden xeliminate-Tests
+		           testbar.
+		           Nachteil: Eleminieren gegen ein leeres Telegramm kann
+			   neuerdings fehlschlagen. Und: Wenn man das zweite
+		           Telegram nach dem Uhrstart empfangen hat und sich
+		           darin ein Fehler befindet, dann wird dieses
+		           als "mismatch" erkannt und nicht als "inkorrekt", da
+		           xeliminate() nur OK/FAIL zurückggibt. Einen dritten
+			   Rückgabewert einzuführen würde wiederum die Tests
+		           erschweren und eine komplette Überprüfun gder
+		           bestehenden Logik nachsichzeihen sowie die separation
+			   of concerns unterlaufen.
+
+			b) check_telegram().
+			   Vorteil: Es kann an den benötigten Stellen aufgerufen
+		           werden. Alle relevanten Fälle werden unterschieden.
+		           Nachteil: Muss auch separat getestet werden.
+
+			   >>>>> NACH AKTUELLEM STAND DER DINGE IST DAS
+			         DIE BEVORZUGTE REALISIERUNG. ALS NÄCHSTES
+				 DIESE FUNKTION IMPLEMENTIEREN UND DIE NOTIZ
+			         VON HIER DORT ALS DESIGNENTSCHEIDUNG
+				 HINSCHREIBEN <<<<<
+
+			   Integration dieser neuen Routine in recompute_eom()
+			   und den telegram_process()-Aufruf. Bei Erkennung
+			   eines ungültigen Telegramms wird recompute_eom()
+			   aufgerufen, dessen Aufruf neuerdings sicherstellen
+			   wird, dass nur solche Endmarkierungen in Frage kommen,
+			   bei denen BCD-korrekte Telegramme entstehen.
+
+			   Schwierigkeit bei der Implementierung: Durch die
+			   Verwendung in recompute_eom() muss die check_telegram
+			   Routine auch "zwischen den Zeilen" arbeiten, also
+			   sie bekommt statt eines Eingabetelegrammes zwei
+			   pointer und offset-length-offset-Angabe. Leapsec-Fälle
+			   sind auch hier zu berücksichtigen...
 		*/
 		.title = "Leapsec 3 miasligned distorted: pre, in. Mov leapsec marker.",
 		.in_length = 147,
@@ -452,6 +512,20 @@ static const struct test_case_moventries TESTS[] = {
 
 	Future:
 		Afterwards work towards fixing the secondlayer test.
+
+Before move
+
+2222222222222222222222222222222222011101000101101001011100132
+0101000001100000133111000300300333030033033333301003033300332
+0000100001100000111111000100100010300100101011110100100110002
+
+It decides to move by 32 entries (34 expected?)
+
+After move
+
+2201110100010110100101110013010100000110000013311100030030032
+3303003303333330100303330033000010000110000011111100010010003
+2101100101012222222222222222222222222222222222222222222222222
 
 	*/
 };

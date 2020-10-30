@@ -27,7 +27,7 @@ compile-test:
 				"INNERDEP=c_ll_test c_test_auto" compile-inner
 
 compile-debug:
-	make "CC=$(CC_TEST)" "CFLAGS=$(CFLAGS_DEBG)" \
+	make "CC=$(CC_TEST)" "CFLAGS=$(CFLAGS_DEBG)" "LDFLAGS=$(LDFLAGS_TEST)" \
 				"INNERDEP=c_ll_test c_test_auto" compile-inner
 
 compile-prod:

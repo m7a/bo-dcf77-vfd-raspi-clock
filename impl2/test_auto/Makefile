@@ -11,6 +11,8 @@ compile: $(DEPS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o decode_telegram_bin \
 			decode_telegram_bin.o ../ll_test/*.o ../src/*.o
 
+test_auto_xeliminate.c: xeliminate_testcases.h
+
 %.o: %.c ../interface/%.h
 	$(CC) $(CFLAGS) -c $*.c
 

@@ -12,14 +12,14 @@ import java.text.ParseException;
 
 class AppWnd {
 
-	private static final Color MEDIUMLIGHTGRAY = new Color(0xcc,0xcc,0xcc);
-	private static final Color LIGHTBLUE = new Color(0xaa, 0xaa, 0xff);
-	private static final Color LIGHTGREEN = new Color(0xaa, 0xff, 0xaa);
-	private static final Color LIGHTCYAN = new Color(0xaa, 0xff, 0xff);
-	private static final Color LIGHTMAGENTA = new Color(0xff, 0xaa, 0xff);
-
-	private static final Color LIGHTYELLOW = new Color(0xff, 0xff, 0xaa);
-	private static final Color LIGHTRED = new Color(0xff, 0xaa, 0xaa);
+	private static final Color MEDIUMLIGHTGRAY = new Color(0x20, 0x20, 0x20);
+	private static final Color LIGHTBLUE    = new Color(0x00, 0x00, 0x80);
+	private static final Color LIGHTGREEN   = new Color(0x00, 0x80, 0x00);
+	private static final Color LIGHTCYAN    = new Color(0x00, 0x80, 0x80);
+	private static final Color LIGHTMAGENTA = new Color(0x80, 0x00, 0x80);
+	private static final Color LIGHTYELLOW  = new Color(0x80, 0x80, 0x00);
+	private static final Color LIGHTRED     = new Color(0x80, 0x00, 0x00);
+	private static final Color CONSTCOLOR   = new Color(0x90, 0x90, 0x90);
 
 	// 0
 	private final PartialField field0const0  = new PartialField("0", 1);
@@ -135,6 +135,8 @@ class AppWnd {
 	private final ExactTextField rawInOutHex = new ExactTextField("", 80);
 	private final ExactTextField rawInOutHexC = new ExactTextField("", 80);
 
+	private final JTextArea statusText = new JTextArea(5, 60);
+
 	private final JFrame wnd;
 
 	AppWnd() {
@@ -172,11 +174,13 @@ class AppWnd {
 									0, 0));
 
 		// -- Farben einstellen --
+		field0const0.setBackground(CONSTCOLOR);
 		field1weather.setBackground(MEDIUMLIGHTGRAY);
 		field2call.setBackground(MEDIUMLIGHTGRAY);
 		field3dstchg.setBackground(LIGHTBLUE);
 		field4dstval.setBackground(LIGHTCYAN);
 		field5leapsec.setBackground(LIGHTYELLOW);
+		field6const1.setBackground(CONSTCOLOR);
 		field7mineiner.setBackground(LIGHTCYAN);
 		field8minzehner.setBackground(LIGHTCYAN);
 		field9minpar.setBackground(LIGHTYELLOW);
@@ -217,29 +221,42 @@ class AppWnd {
 
 		telEditOuter.add(telEditSpc);
 
-		JPanel csvBinPan = new JPanel(new FlowLayout(
-							FlowLayout.CENTER));
+		JPanel csvBinPan = new JPanel(new BorderLayout());
 		csvBinPan.setBorder(new TitledBorder("CSV Binary"));
+		JPanel csvBinPanTxt = new JPanel(new GridLayout(2, 1));
 		rawInOutBinaryCSV.setLineWrap(true);
-		csvBinPan.add(new JScrollPane(rawInOutBinaryCSV));
+		csvBinPanTxt.add(new JScrollPane(rawInOutBinaryCSV));
 		rawOutBinaryCSVBitlayer.setLineWrap(true);
 		rawOutBinaryCSVBitlayer.setEditable(false);
-		csvBinPan.add(new JScrollPane(rawOutBinaryCSVBitlayer));
-		csvBinPan.add(makeButton("Process Binary (0,1,3) CSV",
+		csvBinPanTxt.add(new JScrollPane(rawOutBinaryCSVBitlayer));
+		csvBinPan.add("Center", csvBinPanTxt);
+		csvBinPan.add("East", makeButton("Process Binary (0,1,3) CSV",
 							this::processBinCSV));
 		telEditOuter.add(csvBinPan);
 
 		JPanel csvHexPan = new JPanel(new FlowLayout(
 							FlowLayout.CENTER));
 		csvHexPan.setBorder(new TitledBorder("CSV Hex"));
+		JPanel csvHexPanInner = new JPanel(new BorderLayout());
 		Box csvLeft = new Box(BoxLayout.Y_AXIS);
 		csvLeft.add(rawInOutHex);
 		rawInOutHexC.setEditable(false);
 		csvLeft.add(rawInOutHexC);
-		csvHexPan.add(csvLeft);
-		csvHexPan.add(makeButton("Process HEX (ee/0xee)",
+		csvHexPanInner.add("Center", csvLeft);
+		csvHexPanInner.add("East", makeButton("Process HEX (ee/0xee)",
 							this::processHex));
+		csvHexPan.add(csvHexPanInner);
 		telEditOuter.add(csvHexPan);
+
+		JPanel statusPan = new JPanel(new BorderLayout());
+		statusPan.setBorder(new TitledBorder("Status"));
+		statusText.setEditable(false);
+		statusText.setForeground(Color.RED);
+		statusPan.add("Center", new JScrollPane(statusText));
+		Box statusButtons = new Box(BoxLayout.Y_AXIS);
+		statusButtons.add(makeButton("Reset", this::reset));
+		statusPan.add("East", statusButtons);
+		telEditOuter.add(statusPan);
 
 		tabs.add("Telegram Details", telEditOuter);
 
@@ -249,9 +266,19 @@ class AppWnd {
 		wnd.setVisible(true);
 	}
 
-	private static JButton makeButton(String str, ActionListener lst) {
+	private JButton makeButton(String str, ActionListener lst) {
 		JButton btn = new JButton(str);
-		btn.addActionListener(lst);
+		btn.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent ev) {
+				statusText.setText("");
+				try {
+					lst.actionPerformed(ev);
+				} catch(RuntimeException ex) {
+					statusText.setText(ex.toString());
+				}
+			}
+		});
 		return btn;
 	}
 
@@ -519,6 +546,21 @@ class AppWnd {
 
 	private static int readEntry(int in, int entry) {
 		return (in & (3 << (entry * 2))) >> (entry * 2);
+	}
+
+	private void reset(ActionEvent ev) {
+		for(PartialField f: fieldsRawDecoded)
+			f.setText("");
+
+		parsedInOut.setText("");
+		parsedCET.setSelected(false);
+		parsedCEST.setSelected(false);
+		announceLeapSecond.setSelected(false);
+		rawInOutBinary.setText("");
+		rawInOutBinaryCSV.setText("");
+		rawOutBinaryCSVBitlayer.setText("");
+		rawInOutHex.setText("");
+		statusText.setText("");
 	}
 
 

@@ -4,6 +4,46 @@
 #include "dcf77_nextl.h"
 #include "dcf77_proc_moventries.h"
 
+/* TODO DEBUG ONLY */
+static void printtel_sub(unsigned char* data)
+{
+	unsigned char j;
+	for(j = 0; j < 15; j++)
+		printf("%02x,", data[j]);
+	printf("(%02x)", data[15]);
+	putchar('\n');
+}
+
+static void dumpmem(struct dcf77_secondlayer* ctx)
+{
+	unsigned char i;
+	printf("    [DEBUG]         ");
+	for(i = 0; i < DCF77_SECONDLAYER_LINE_BYTES; i++) {
+		if((ctx->private_line_cursor/4) == i) {
+			if(ctx->private_line_cursor % 4 >= 2)
+				printf("*  ");
+			else
+				printf(" * ");
+		} else {
+			printf("   ");
+		}
+	}
+	putchar('\n');
+	for(i = 0; i < DCF77_SECONDLAYER_LINES; i++) {
+		printf("    [DEBUG] %s meml%d=", i == ctx->private_line_current?
+								"*": " ", i);
+		printtel_sub(ctx->private_telegram_data +
+					(i * DCF77_SECONDLAYER_LINE_BYTES));
+	}
+	printf("    [DEBUG] line_current=%u, cursor=%u\n",
+			ctx->private_line_current, ctx->private_line_cursor);
+	printf("    [DEBUG] out_telegram_1 len=%2u: ", ctx->out_telegram_1_len);
+	printtel_sub(ctx->out_telegram_1);
+	printf("    [DEBUG] out_telegram_2 len=%2u: ", ctx->out_telegram_2_len);
+	printtel_sub(ctx->out_telegram_2);
+}
+/* END DEBUG ONLY */
+
 void dcf77_proc_recompute_eom(struct dcf77_secondlayer* ctx)
 {
 	/*
@@ -163,6 +203,7 @@ void dcf77_proc_recompute_eom(struct dcf77_secondlayer* ctx)
 
 	printf("    move_entries_backwards(ctx, curbit=%u, "
 		"in_line_with_leapsec=%u)\n", curbit, in_line_with_leapsec);
+	dumpmem(ctx); /* DEBUG ONLY */
 	/*
 	 * Everyone needs to move curbit steps to the left. This honors
 	 * the length of lines and considers the case of a reduction of the
@@ -170,7 +211,6 @@ void dcf77_proc_recompute_eom(struct dcf77_secondlayer* ctx)
 	 */
 	dcf77_proc_move_entries_backwards(ctx, curbit + 1,
 							in_line_with_leapsec);
-
-	/*dumpmem(ctx); DEBUG ONLY */
+	dumpmem(ctx); /* DEBUG ONLY */
 	puts("    END recompute_eom()");
 }
