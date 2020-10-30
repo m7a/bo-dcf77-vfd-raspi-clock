@@ -1,0 +1,70 @@
+0
+
+1--14 (14 items)
+
+15    Rufbit
+
+16    SCHALT  bei 1: Am Ende dieser Stunde Zeitumstellung!
+
+17    SCHALT  bei 1: Sommerzeit, 0: Winterzeit \_ 10 Sommerzeit
+18    SCHALT  bei 1: Winterzeit, 0: Sommerzeit /  01 Winterzeit
+
+19    SCHALT  bei 1: Am Ende dieser Stunde Schaltsekunde!
+
+20    CONST1  Start Zeitinformationen 
+
+21    VAL     Minute Einer   (1)
+22    VAL     Minute Einer   (2)
+23    VAL     Minute Einer   (4)
+24    VAL     Minute Einer   (8)
+
+25    VAL     Minute Zehner (10)
+26    VAL     Minute Zehner (20)
+27    VAL     Minute Zehner (40)
+
+28    CHCK    Parität Minute
+              Anzahl der 1-en 21--28 muss gerade sein
+
+29    VAL     Stunde Einer   (1)
+30    VAL     Stunde Einer   (2)
+31    VAL     Stunde Einer   (4)
+32    VAL     Stunde Einer   (8)
+
+33    VAL     Stunde Zehner (10)
+34    VAL     Stunde Zehner (20)
+
+35    CHCK    Parität Stunde
+              Anzahl der 1-en 29--35 muss gerade sein
+
+36    VAL     Tag Einer
+37    VAL     Tag Einer
+38    VAL     Tag Einer
+39    VAL     Tag Einer
+
+40    VAL     Tag Zehner
+41    VAL     Tag Zehner
+
+42    VAL     Wochentag (nur Einer von Mon1-Son7)
+43    VAL     Wochentag
+44    VAL     Wochentag
+
+45    VAL     Monat Einer
+46    VAL     Monat EIner
+47    VAL     Monat Einer
+48    VAL     Monat Einer
+
+49    VAL     Monat Zehner (1 für +10, 0 für einstellige Monate)
+
+50    VAL     Jahr Einer
+51    VAL     Jahr Einer
+52    VAL     Jahr Einer
+53    VAL     Jahr Einer
+
+54    VAL     Jahr Zehner
+55    VAL     Jahr Zehner
+56    VAL     Jahr Zehner
+57    VAL     Jahr Zehner
+
+58    CHCK    Parität Datum  Anzahl der 1-en 36-58 muss gerade sein
+
+59    SPECIAL Endmarkierung -- kein Signal (3)
