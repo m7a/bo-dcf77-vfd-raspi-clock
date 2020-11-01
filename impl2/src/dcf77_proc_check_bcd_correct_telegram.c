@@ -4,6 +4,8 @@
 #include "dcf77_offsets.h"
 
 /*
+ * Leapsec EOMs are not allowed!
+ *
  * Returns 1 if telegram is correct/OK.
  * Returns 0 if telegram is incorrect/WRONG.
  */

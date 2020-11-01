@@ -1,47 +1,63 @@
 #define DCF77_SECONDLAYER_LINES       9
-#define DCF77_SECONDLAYER_TIME_LEN    8
-#define DCF77_SECONDLAYER_DATE_LEN   10
-#define DCF77_SECONDLAYER_LINE_BYTES 16
+#define DCF77_SECONDLAYER_NOLEAP      9
+#define DCF77_SECONDLAYER_LINE_BYTES 15
 #define DCF77_SECONDLAYER_MEM        (DCF77_SECONDLAYER_LINE_BYTES * \
 							DCF77_SECONDLAYER_LINES)
 
 enum dcf77_secondlayer_input_mode {
-	/* Init mode. Push data backwards */
-	IN_BACKWARD,
-	/* Aligned+Unknown mode. Push data forwards */
-	IN_FORWARD
+	IN_BACKWARD,   /* Init mode. Push data backwards */
+	IN_FORWARD     /* Aligned+Unknown mode. Push data forwards */
 };
 
 struct dcf77_secondlayer {
-	/* private */
+	/* ======================================================= private == */
 	enum dcf77_secondlayer_input_mode private_inmode;
 	unsigned char private_telegram_data[DCF77_SECONDLAYER_MEM];
+
 	/*
-	 * the start and end are actually fixed because if we were to write
-	 * continuously in the same manner, then some telegrams would start
-	 * at offsets inside bytes. As we want to avoid this very much, there
-	 * is instead the necessity to reogranize data in case a new marker
-	 * is intended to be used as "end" marker. The lengths given here
-	 * are in bits. The offsets of the lines are fixed which each line
-	 * having 16 bytes available.
+	 * Current line to work on
 	 */
-	unsigned char private_line_lengths[DCF77_SECONDLAYER_LINES];
 	unsigned char private_line_current;
+
+	/*
+	 * Position in line given in data points “bits”.
+	 * Ranges from 0 to 59 both incl.
+	 *
+	 * In forward mode, this sets the position to write the next bit to.
+	 *
+	 * In backward mode, this sets the position to move the earliest bit to
+	 * after writing the new bit to the end of the first line.
+	 */
 	unsigned char private_line_cursor;
+
+	/*
+	 * Gives the index of a line that has a leap second.	
+	 *
+	 * The additional NO_SIGNAL for the leap second is not stored
+	 * anywhere, but only reflected by this value. As long as there is no
+	 * leap second recorded anywhere, this field has value
+	 * DCF77_SECONDLAYER_NOLEAP (9).
+	 */
+	unsigned char private_leap_in_line;
+
+	/*
+	 * Leap second announce timer/countdown in seconds.
+	 *
+	 * Set to 70 * 60 seconds upon first seeing a leap second announce bit.
+	 * This way, it will expire ten minutes after the latest point in time
+	 * where the leap second could occur.
+	 */
 	unsigned short private_leap_second_expected;
 
-	/* input */
+	/* ========================================================= input == */
 	enum dcf77_bitlayer_reading in_val;
 
 	/*
-	 * output
+	 * ======================================================== output == *
 	 *
 	 * Logic is a s follows:
-	 * if only out_telegram_1_len is > 0, then process that as truth
-	 * if both out_telegram_1_len and telegram_2_len are > 0 then
-	 * 	process telegram_2 as truth and telegram_1 is from the
-	 * 	previous 10min interval.
-	 * if both are <0, then no new telegram data exists.
+	 * out_telegram_1 is always the truth if len != 0
+	 * out_telegram_2 contains data from previous minute if len != 0
 	 *
 	 * implicit information
 	 *

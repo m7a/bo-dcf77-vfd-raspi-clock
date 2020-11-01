@@ -13,7 +13,6 @@
 #else
 #define EXPORTED_FOR_TESTING static
 static void dcf77_secondlayer_reset(struct dcf77_secondlayer* ctx);
-static void dcf77_secondlayer_write_new_input(struct dcf77_secondlayer* ctx);
 static void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx);
 #endif
 
@@ -38,30 +37,20 @@ void dcf77_secondlayer_reset(struct dcf77_secondlayer* ctx)
 	ctx->private_inmode               = IN_BACKWARD;
 	ctx->private_line_current         = 0;
 	ctx->private_line_cursor          = 59;
+	ctx->private_leap_in_line         = DCF77_SECONDLAYER_NOLEAP;
 	ctx->private_leap_second_expected = 0; /* no leap second expected */
+	ctx->out_telegram_1_len           = 0;
+	ctx->out_telegram_2_len           = 0;
 	INC_SATURATED(ctx->fault_reset); /* track number of resets */
-	memset(ctx->private_line_lengths,  0, DCF77_SECONDLAYER_LINES); /* 0 */
 	memset(ctx->private_telegram_data, 0, DCF77_SECONDLAYER_MEM); /* eps */
-	ctx->out_telegram_1_len = 0;
-	ctx->out_telegram_2_len = 0;
 }
 
 void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx)
 {
 	if(ctx->in_val != DCF77_BIT_NO_UPDATE) { /* do nothing if no update */
-		dcf77_secondlayer_write_new_input(ctx);
 		dcf77_secondlayer_decrease_leap_second_expectation(ctx);
 		dcf77_secondlayer_automaton_case_specific_handling(ctx);
 	}
-}
-
-EXPORTED_FOR_TESTING
-void dcf77_secondlayer_write_new_input(struct dcf77_secondlayer* ctx)
-{
-	ctx->private_telegram_data[ctx->private_line_current *
-		DCF77_SECONDLAYER_LINE_BYTES + ctx->private_line_cursor / 4] |= 
-			(ctx->in_val << ((ctx->private_line_cursor % 4) * 2));
-	ctx->private_line_lengths[ctx->private_line_current]++;
 }
 
 static void dcf77_secondlayer_decrease_leap_second_expectation(
@@ -83,13 +72,24 @@ static void dcf77_secondlayer_automaton_case_specific_handling(
 EXPORTED_FOR_TESTING
 void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 {
+	unsigned char current_line_is_full = (dcf77_telegram_read_bit(0,
+			ctx->private_telegram_data) != DCF77_BIT_NO_UPDATE);
+
+	/* cursor fixed at bit index 59 */
+	dcf77_telegram_write_bit(59, ctx->private_telegram_data +
+		(ctx->private_line_current * DCF77_SECONDLAYER_LINE_BYTES),
+		ctx->in_val);
+
+	/* assert cursor > 0 */
+	ctx->private_line_cursor--;
+
 	if(ctx->in_val == DCF77_BIT_NO_SIGNAL) {
 		/*
 		 * no signal might indicate: end of minute.
 		 * let us thus start a new line and switch to aligned
 		 * mode without moving bits.
 		 */
-		if(ctx->private_line_lengths[0] == 60) {
+		if(current_line_is_full) {
 			/*
 			 * special case: The first telegram started with its
 			 * first bit. Hence, we already have a full minute
@@ -107,17 +107,11 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 				dcf77_secondlayer_reset(ctx);
 				return;
 			}
-		} else {
-			/*
-			 * we set the length to 60 because now the epsilons
-			 * become part of the telegram.
-			 */
-			ctx->private_line_lengths[0] = 60;
 		}
 		ctx->private_inmode       = IN_FORWARD;
 		ctx->private_line_current = 1;
 		ctx->private_line_cursor  = 0;
-	} else if(ctx->private_line_lengths[0] == 60) {
+	} else if(current_line_is_full) {
 		/*
 		 * we processed 59 bits before, this is the 60. without
 		 * an end of minute. This is bad data. Discard
@@ -145,15 +139,8 @@ static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx)
 {
 	unsigned char current_byte;
 
-	/*
-	 * not sure if this -1 makes sense here /
-	 * BAK
-	 * for(current_byte = 15 - (ctx->private_line_lengths[0] / 4) -
-	 * 			(ctx->private_line_lengths[0] % 4 != 0);
-	 */
-	for(current_byte = (60 - ctx->private_line_lengths[0] - 1) / 4;
-				current_byte < DCF77_SECONDLAYER_LINE_BYTES;
-				current_byte++) {
+	for(current_byte = ctx->private_line_cursor / 4; current_byte <
+				DCF77_SECONDLAYER_LINE_BYTES; current_byte++) {
 		/*
 		 * split off the first two bits (lowermost idx,
 		 * which get shifted out) and put them in the previous byte
@@ -174,6 +161,13 @@ static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx)
 
 static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 {
+	/* variable cursor */
+	if(ctx->private_line_cursor < 60)
+		dcf77_telegram_write_bit(ctx->private_line_cursor,
+				ctx->private_telegram_data +
+				(ctx->private_line_current *
+				DCF77_SECONDLAYER_LINE_BYTES), ctx->in_val);
+
 	if(ctx->private_line_cursor == 59) {
 		/*
 		 * we just wrote the 60. bit (at index 59).
@@ -190,13 +184,32 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			dcf77_proc_process_telegrams(ctx);
 		} else if(ctx->in_val == DCF77_BIT_0 &&
 				ctx->private_leap_second_expected > 0) {
-			/*
-			 * this was possibly the expected leap second
-			 * which is marked by an additional 0-bit.
-			 * In this very case, the cursor position 60
-			 * becomes available for processing.
-			 */
-			ctx->private_line_cursor++;
+			if(ctx->private_leap_in_line ==
+						DCF77_SECONDLAYER_NOLEAP) {
+				/*
+				 * No leap second recorded yet --
+				 * this could be it
+				 */
+				ctx->private_leap_in_line =
+						ctx->private_line_current;
+				dcf77_proc_process_telegrams(ctx);
+				/*
+				 * In this special case, cursor position 60
+				 * becomes avaailalle. The actual in_val will
+				 * not be written, though.
+				 */
+				ctx->private_line_cursor++;
+			} else {
+				/*
+				 * Leap second was already detected before.
+				 * Another leap second within the same 10 minute
+				 * interval means error. While we could somehow
+				 * reorganize, there is little confidence that
+				 * it would work. Hence force reset.
+				 */
+				/* TODO z may re-think in the end whether to do some additional steps here... */
+				dcf77_secondlayer_reset(ctx);
+			}
 		} else {
 			/*
 			 * A signal was received but in this specific
@@ -206,7 +219,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * to align to the "reality".
 			 */
 			printf("    recompute_eom because: NO_SIGNAL expected, leapexp=%d.\n", ctx->private_leap_second_expected);
-			dcf77_proc_recompute_eom(ctx);
+			dcf77_secondlayer_recompute_eom(ctx);
 		}
 	} else if(ctx->private_line_cursor == 60) {
 		/*
@@ -219,6 +232,12 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			printf("    process_telegrams (2)\n");
 			dcf77_proc_process_telegrams(ctx);
 		} else {
+			/*
+			 * fails to identify as leap second.
+			 * This basically means the assumption
+			 * of ending on a leap second was wrong.
+			 * Trigger `complex_reogranization`.
+			 */
 			complex_reorganization(ctx);
 		}
 	} else {
@@ -245,21 +264,17 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
  */
 static void complex_reorganization(struct dcf77_secondlayer* ctx)
 {
-	/* clear the bit in memory under consideration */
-	ctx->private_telegram_data[ctx->private_line_current *
-					DCF77_SECONDLAYER_LINE_BYTES + 15] = 0;
-
 	/* move the cursor */
 	ctx->private_line_cursor--;
+	ctx->private_leap_in_line = DCF77_SECONDLAYER_NOLEAP;
 
 	/* call recompute_eom() */
 	printf("    recompute_eom because NO_SINGAL expected complex reorganization!\n"); /* TODO DEBUG ONLY */
-	dcf77_proc_recompute_eom(ctx);
+	dcf77_secondlayer_recompute_eom(ctx);
 
 	/*
 	 * Process the misplaced bit.
 	 * Does not decrease the leap second expectation again.
 	 */
-	dcf77_secondlayer_write_new_input(ctx);
 	dcf77_secondlayer_automaton_case_specific_handling(ctx);
 }

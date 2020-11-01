@@ -1,7 +1,6 @@
-/* TODO use this exensively (mainly xeliminate does not use it yet) */
-
 #define DCF77_OFFSET_BEGIN_OF_MINUTE      0  /*     0 */
 #define DCF77_OFFSET_DAYLIGHT_SAVING_TIME 17 /* 17-18 */
+#define DCF77_OFFSET_LEAP_SEC_ANNOUNCE    19
 #define DCF77_OFFSET_BEGIN_TIME           20
 #define DCF77_OFFSET_MINUTE_ONES          21
 #define DCF77_OFFSET_MINUTE_TENS          25
