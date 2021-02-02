@@ -6,7 +6,7 @@
 #define DCF77_OFFSET_MINUTE_TENS          25
 #define DCF77_OFFSET_PARITY_MINUTE        28
 #define DCF77_OFFSET_HOUR_ONES            29
-#define DCF77_OFFSET_HOER_TENS            33
+#define DCF77_OFFSET_HOUR_TENS            33
 #define DCF77_OFFSET_PARITY_HOUR          35
 #define DCF77_OFFSET_DAY_ONES             36
 #define DCF77_OFFSET_DAY_TENS             40

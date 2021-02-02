@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "dcf77_bitlayer.h"
-#include "dcf77_proc_xeliminate.h"
+#include "dcf77_secondlayer_xeliminate.h"
 #include "xeliminate_testcases.h"
 
 static void run_xeliminate_testcases();
@@ -55,9 +55,9 @@ static void run_xeliminate_testcases()
 		rv = 1;
 		for(i = 1; rv == 1 && i < xeliminate_testcases[curtest].
 								num_lines; i++)
-			rv = dcf77_proc_xeliminate(
-				xeliminate_testcases[curtest].line_len[i - 1],
-				xeliminate_testcases[curtest].line_len[i],
+			rv = dcf77_secondlayer_xeliminate(
+				xeliminate_testcases[curtest].line_len[i - 1]
+									== 61,
 				telegram[i - 1],
 				telegram[i]
 			);

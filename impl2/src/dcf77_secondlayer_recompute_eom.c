@@ -1,15 +1,19 @@
+#include <stdio.h> /* TODO DEBUG ONLY */
+#include <stdlib.h> /* TODO DEBUG ONLY */
+
 #include "dcf77_bitlayer.h"
 #include "dcf77_telegram.h"
 #include "dcf77_offsets.h"
 #include "dcf77_secondlayer.h"
 #include "dcf77_line.h"
-#include "dcf77_proc_moventries.h"
+#include "dcf77_secondlayer_moventries.h"
+#include "dcf77_secondlayer_check_bcd_correct_telegram.h"
 
 /*
- * Precondition: Current line is "full", but does not end on eom.
+ * Precondition: Current line is "full", but does not end on EOM.
  *
  * Needs to
- * (1) forward-identify a new eom marker starting from the end of the current
+ * (1) forward-identify a new EOM marker starting from the end of the current
  *     first entry [which effectively means current+1 w/ skip empty]
  * (2) once identified, move all bits backwards the difference between the old
  *     EOM and the newly identified EOM. This way, some bits get shifted off at

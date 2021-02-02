@@ -1,3 +1,4 @@
+#include "dcf77_offsets.h"
 #include "dcf77_bitlayer.h"
 #include "dcf77_secondlayer_xeliminate.h"
 #include "dcf77_telegram.h"

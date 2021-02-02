@@ -4,7 +4,7 @@
 
 #include "dcf77_bitlayer.h"
 #include "dcf77_secondlayer.h"
-#include "dcf77_proc_moventries.h"
+#include "dcf77_secondlayer_moventries.h"
 
 #define MAXIN 256
 
@@ -140,7 +140,7 @@ static const struct test_case_moventries TESTS[] = {
 		},
 		.callproc = PROC_MOVE_LEFTWARDS,
 		.arg0 = 40, /* move 40 places s.t. ends on 0x7a */
-		.arg1 = 9, /* noleap */
+		/* .arg1 = 9, noleap | no longer evaluated? */
 		/* NB: When this test was created, cursor ended at x=5, y=1; seems strange that it would not go to x=0? */
 	},
 	{
@@ -596,8 +596,8 @@ int main(int argc, char** argv)
 		/* invoke post-procedure */
 		switch(TESTS[test_id].callproc) {
 		case PROC_MOVE_LEFTWARDS:
-			dcf77_proc_move_entries_backwards(&test_ctx,
-				TESTS[test_id].arg0, TESTS[test_id].arg1);
+			dcf77_secondlayer_move_entries_backwards(&test_ctx,
+							TESTS[test_id].arg0);
 			break;
 		default: /* pass */
 			break;

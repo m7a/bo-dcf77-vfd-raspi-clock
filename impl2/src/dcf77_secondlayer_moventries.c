@@ -3,8 +3,8 @@
 #include "dcf77_secondlayer.h"
 #include "dcf77_telegram.h"
 #include "dcf77_offsets.h"
-#include "dcf77_line_next.h"
-#include "dcf77_proc_moventries.h"
+#include "dcf77_line.h"
+#include "dcf77_secondlayer_moventries.h"
 
 void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 							unsigned char mov)
@@ -26,6 +26,9 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 	unsigned char mov_bytes_initial = (mov / 4);
 
 	unsigned char shf;
+
+	unsigned char bytes_proc = 0;
+	unsigned char wrpos;
 	
 	/* -- Bestimme l0 -- */
 	/*
@@ -34,7 +37,7 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 	 * empty.
 	 */
 	for(il0 = dcf77_line_next(ctx->private_line_current);
-		dcf77_line_is_empty(dcf77_line_pointer(il0)) &&
+		dcf77_line_is_empty(dcf77_line_pointer(ctx, il0)) &&
 		il0 != ctx->private_line_current; il0 = dcf77_line_next(il0));
 
 	ol = il0 * DCF77_SECONDLAYER_LINE_BYTES;
@@ -43,7 +46,7 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 	il = il0;
 	do {
 		/* skip empty input lines */
-		if(dcf77_line_is_empty(dcf77_line_pointer(il)))
+		if(dcf77_line_is_empty(dcf77_line_pointer(ctx, il)))
 			continue;
 
 		for(pil = 0; pil < DCF77_SECONDLAYER_LINE_BYTES; pil++) {

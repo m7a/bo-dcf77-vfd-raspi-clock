@@ -9,11 +9,12 @@ static inline unsigned char dcf77_line_next(unsigned char inl)
 
 static inline char dcf77_line_is_empty(unsigned char* ptr_to_line)
 {
-	return dcf77_telegram_read_bit(0, ptr_to_line,
-			DCF77_OFFSET_ENDMARKER_REGULAR) == DCF77_BIT_NO_UPDATE;
+	return dcf77_telegram_read_bit(0, ptr_to_line) == DCF77_BIT_NO_UPDATE;
 }
 
-static unsigned char* dcf77_line_pointer(struct dcf77_secondlayer* ctx, unsigned char line)
+static unsigned char* dcf77_line_pointer(struct dcf77_secondlayer* ctx,
+							unsigned char line)
 {
-	return ctx->private_line_data + (line * DCF77_SECONDLAYER_LINE_BYTES);
+	return ctx->private_telegram_data +
+					(line * DCF77_SECONDLAYER_LINE_BYTES);
 }

@@ -74,7 +74,7 @@ class AppWnd {
 	// 44    VAL     Wochentag
 	private final PartialField field15dow = new PartialField("DOW", 3);
 	// 45    VAL     Monat Einer
-	// 46    VAL     Monat EIner
+	// 46    VAL     Monat Einer
 	// 47    VAL     Monat Einer
 	// 48    VAL     Monat Einer
 	private final PartialField field16moneiner = new PartialField(

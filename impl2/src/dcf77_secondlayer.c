@@ -1,10 +1,12 @@
 #include <string.h>
 
+#include <stdio.h> /* TODO DEBUG ONLY */
+
 #include "dcf77_bitlayer.h"
 #include "dcf77_telegram.h"
 #include "dcf77_secondlayer.h"
-#include "dcf77_proc_recompute_eom.h"
-#include "dcf77_proc_process_telegrams.h"
+#include "dcf77_secondlayer_recompute_eom.h"
+#include "dcf77_secondlayer_process_telegrams.h"
 
 #include "inc_sat.h"
 
@@ -96,7 +98,7 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 			 * in our memory. Process it!
 			 */
 			printf("    process_telegrams (3)\n"); /* DEBUG ONLY */
-			dcf77_proc_process_telegrams(ctx);
+			dcf77_secondlayer_process_telegrams(ctx);
 			if(ctx->out_telegram_1_len != 60) {
 				/*
 				 * Somehow the data received was not valid.
@@ -181,7 +183,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * end-of-minute marker
 			 */
 			printf("    process_telegrams (1)\n"); /* DEBUG ONLY */
-			dcf77_proc_process_telegrams(ctx);
+			dcf77_secondlayer_process_telegrams(ctx);
 		} else if(ctx->in_val == DCF77_BIT_0 &&
 				ctx->private_leap_second_expected > 0) {
 			if(ctx->private_leap_in_line ==
@@ -192,7 +194,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 				 */
 				ctx->private_leap_in_line =
 						ctx->private_line_current;
-				dcf77_proc_process_telegrams(ctx);
+				dcf77_secondlayer_process_telegrams(ctx);
 				/*
 				 * In this special case, cursor position 60
 				 * becomes avaailalle. The actual in_val will
@@ -230,7 +232,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 		if(ctx->in_val == DCF77_BIT_NO_SIGNAL) {
 			/* ok, process this longer telegram */
 			printf("    process_telegrams (2)\n");
-			dcf77_proc_process_telegrams(ctx);
+			dcf77_secondlayer_process_telegrams(ctx);
 		} else {
 			/*
 			 * fails to identify as leap second.
