@@ -67,8 +67,9 @@ void dcf77_secondlayer_recompute_eom(struct dcf77_secondlayer* ctx)
 		/*
 		 * Everyone needs to move telegram_start_offset_in_line steps to
 		 * the left. This honors the length of lines and considers the
-		 * case of a reduction of the* total number of lines.
+		 * case of a reduction of the total number of lines.
 		 */
+		printf("    recompute_eom: telegram_start_offset_in_line=%d\n", telegram_start_offset_in_line); /* TODO DEBUG ONLY */
 		dcf77_secondlayer_move_entries_backwards(ctx,
 						telegram_start_offset_in_line);
 	} else {

@@ -44,7 +44,8 @@ void dcf77_secondlayer_reset(struct dcf77_secondlayer* ctx)
 	ctx->out_telegram_1_len           = 0;
 	ctx->out_telegram_2_len           = 0;
 	INC_SATURATED(ctx->fault_reset); /* track number of resets */
-	memset(ctx->private_telegram_data, 0, DCF77_SECONDLAYER_MEM); /* eps */
+	/* Initialize the buffer to all NO_UPDATE/empty (00) */
+	memset(ctx->private_telegram_data , 0, DCF77_SECONDLAYER_MEM); /* eps */
 }
 
 void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx)
@@ -109,6 +110,25 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 				dcf77_secondlayer_reset(ctx);
 				return;
 			}
+		} else {
+			/*
+			 * general case: line ended early. In this case set all
+			 * the leading NO_UPDATE/00-bits to NO_SIGNAL/01 in
+			 * order to mark the line as non-empty. It is important
+			 * to not only mark the first item as non-empty because
+			 * moves may cut off that first item non-empty marker!
+			 *
+			 * To do this, we go backwards from the cursor's
+			 * current position until the very beginning (0) and
+			 * write one bit each
+			 */
+			do {
+				dcf77_telegram_write_bit(
+					ctx->private_line_cursor,
+					ctx->private_telegram_data,
+					DCF77_BIT_NO_SIGNAL
+				);
+			} while(ctx->private_line_cursor-- > 0);
 		}
 		ctx->private_inmode       = IN_FORWARD;
 		ctx->private_line_current = 1;

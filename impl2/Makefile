@@ -17,7 +17,7 @@ MAIN        = main.o
 
 CC_TEST     = gcc
 CC_PROD     = avr-gcc
-CFLAGS_DEBG = -Wall -I../interface -O0 -fprofile-arcs -ftest-coverage -DDEBUG
+CFLAGS_DEBG = -Wall -I../interface -O0 -fprofile-arcs -ftest-coverage -g -DDEBUG
 CFLAGS_TEST = -Wall -I../interface -O2 -fprofile-arcs -ftest-coverage -DTEST
 CFLAGS_PROD = -Wall -I../interface -O2 -DF_CPU=16000000UL -mmcu=atmega328p
 LDFLAGS_TEST = -lgcov --coverage

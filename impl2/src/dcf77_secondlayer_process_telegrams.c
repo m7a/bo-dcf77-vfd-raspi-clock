@@ -98,23 +98,23 @@ void dcf77_secondlayer_process_telegrams(struct dcf77_secondlayer* ctx)
 }
 
 static struct dcf77_secondlayer_process_telegrams_merge_result
-	dcf77_secondlayer_process_telegrams_try_merge(
+		dcf77_secondlayer_process_telegrams_try_merge(
 		struct dcf77_secondlayer* ctx, unsigned char line_current,
 		char backup_before_eliminate)
 {
-	unsigned char match = 1;
-	unsigned char line = line_current;
-	/* init to 0 to avoid warning of uninitialized */
-	unsigned char is_leap_in_line = 0;
-	unsigned char* ptr_to_line;
-	struct dcf77_secondlayer_process_telegrams_merge_result rv;
+	struct dcf77_secondlayer_process_telegrams_merge_result rv = {
+		.match           = 1,
+		.line            = line_current,
+		/* init to 0 to avoid warning of uninitialized */
+		.is_leap_in_line = 0,
+	};
 
 	do {
-		line = dcf77_line_next(line);
-		ptr_to_line = dcf77_line_pointer(ctx, line);
+		rv.line = dcf77_line_next(rv.line);
+		rv.ptr_to_line = dcf77_line_pointer(ctx, rv.line);
 
 		/* ignore empty lines */
-		if(dcf77_line_is_empty(ptr_to_line))
+		if(dcf77_line_is_empty(rv.ptr_to_line))
 			continue;
 
 		/* backup contents before processing */
@@ -122,15 +122,12 @@ static struct dcf77_secondlayer_process_telegrams_merge_result
 			memcpy(ctx->out_telegram_2, ctx->out_telegram_1,
 						DCF77_SECONDLAYER_LINE_BYTES);
 
-		rv.is_leap_in_line = (line == ctx->private_leap_in_line);
-		match = dcf77_secondlayer_xeliminate(rv.is_leap_in_line,
-					ptr_to_line, ctx->out_telegram_1);
+		rv.is_leap_in_line = (rv.line == ctx->private_leap_in_line);
+		rv.match = dcf77_secondlayer_xeliminate(rv.is_leap_in_line,
+					rv.ptr_to_line, ctx->out_telegram_1);
 
-	} while((line != ctx->private_line_current) && match);
+	} while((rv.line != ctx->private_line_current) && rv.match);
 
-	rv.match           = match;
-	rv.is_leap_in_line = is_leap_in_line;
-	rv.line            = line;
 	return rv;
 }
 
