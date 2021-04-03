@@ -1,3 +1,5 @@
+/* depends dcf77_bitlayer.h for enum dcf77_bitlayer_reading */
+
 #define DCF77_SECONDLAYER_LINES       9
 #define DCF77_SECONDLAYER_NOLEAP      9
 #define DCF77_SECONDLAYER_LINE_BYTES 15

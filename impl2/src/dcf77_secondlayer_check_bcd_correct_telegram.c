@@ -4,6 +4,8 @@
 #include "dcf77_offsets.h"
 #include "dcf77_line.h"
 
+#include "debugprintf.h"
+
 struct check_state {
 	struct dcf77_secondlayer* ctx;
 	unsigned char tel_start_line;
@@ -23,13 +25,16 @@ static unsigned char read_multiple(struct check_state* s,
 static unsigned char read_byte(struct check_state* s, unsigned char bit_offset);
 static void update_parity(enum parity_state* par, unsigned char by);
 
-/* TODO CSTAT WRITE A TEST FOR THIS AND TEST THIS PROCEDURE THOROUGHLY! */
-
 /*
  * Leapsec EOMs are not allowed!
  *
  * Returns 1 if telegram is correct/OK.
  * Returns 0 if telegram is incorrect/WRONG.
+ *
+ * TODO CSTAT A LOT OF "INTERACTION" CASES ARE NOT CHECKED. NOTE THAT TO DETECT
+ *      NEQ 0 IT NEEDS TO BE ESTABLISHED THAT NO NO_SIGNAL/NO_CHANGE VALUES ARE
+ *      RESPONSIBLE (need to get "true" 0s)
+ *      -> currently, the test cases do not properly take these things into consideration. Add more, as the features are added.
  */
 char dcf77_secondlayer_check_bcd_correct_telegram(struct dcf77_secondlayer* ctx,
 				unsigned char tel_start_line,
@@ -46,13 +51,15 @@ char dcf77_secondlayer_check_bcd_correct_telegram(struct dcf77_secondlayer* ctx,
 
 	enum parity_state parity_minute = PARITY_SUM_EVEN_PASS;
 	enum parity_state parity_hour   = PARITY_SUM_EVEN_PASS;
-	enum parity_state parity_whole  = PARITY_SUM_EVEN_PASS;
+	enum parity_state parity_date   = PARITY_SUM_EVEN_PASS;
 
 	unsigned char entry;
 
 	/*     0 -- begin of minute is constant 0 */
-	if(read_multiple(&s, tel_start_offset_in_line + 0, 1) == DCF77_BIT_1)
+	if(read_multiple(&s, tel_start_offset_in_line + 0, 1) == DCF77_BIT_1) {
+		DEBUGPRINTF("bcdcorrect,ERROR1\n");
 		return 0;
+	}
 
 	/*
 	 * 17-18 -- CET (01) / CEST (10) => 11 invalid, 00 invalid
@@ -62,78 +69,93 @@ char dcf77_secondlayer_check_bcd_correct_telegram(struct dcf77_secondlayer* ctx,
 				DCF77_OFFSET_DAYLIGHT_SAVING_TIME, 2)) {
 	case 0x0a:
 	case 0x0f:
+		DEBUGPRINTF("bcdcorrect,ERROR2,%02x\n",
+			read_multiple(&s, tel_start_offset_in_line +
+				DCF77_OFFSET_DAYLIGHT_SAVING_TIME, 2));
 		return 0;
 	}
 
 	/*    20 -- Begin Time needs to be constant 1 */
 	if(read_multiple(&s, tel_start_offset_in_line +
-				DCF77_OFFSET_BEGIN_TIME, 1) == DCF77_BIT_0)
+				DCF77_OFFSET_BEGIN_TIME, 1) == DCF77_BIT_0) {
+		DEBUGPRINTF("bcdcorrect,ERROR3\n");
 		return 0;
+	}
 
 	/* 21-24 -- minute ones range from 0..9 */
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_MINUTE_ONES, 4);
-	if(to_bcd(entry) > 9)
+	if(to_bcd(entry) > 9) {
+		DEBUGPRINTF("bcdcorrect,ERROR4,%d\n", to_bcd(entry));
 		return 0;
+	}
 
 	update_parity(&parity_minute, entry);
-	update_parity(&parity_whole,  entry);
 
-	/* 25-27 -- minute tens range from 0..6 */
+	/* 25-27 -- minute tens range from 0..5 */
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_MINUTE_TENS, 3);
-	if(to_bcd(entry) > 6)
+	if(to_bcd(entry) > 5) {
+		DEBUGPRINTF("bcdcorrect,ERROR5,%d\n", to_bcd(entry));
 		return 0;
+	}
 
 	update_parity(&parity_minute, entry);
-	update_parity(&parity_whole,  entry);
 
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_PARITY_MINUTE, 1);
 	update_parity(&parity_minute, entry);
-	update_parity(&parity_whole,  entry);
 
 	/* telegram failing minute parity is invalid */
-	if(parity_minute == PARITY_SUM_ODD_MISM)
+	if(parity_minute == PARITY_SUM_ODD_MISM) {
+		DEBUGPRINTF("bcdcorrect,ERROR6\n");
 		return 0;
+	}
 
 	/* 29-32 -- hour ones range from 0..9 */
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_HOUR_ONES, 4);
-	if(to_bcd(entry) > 9)
+	if(to_bcd(entry) > 9) {
+		DEBUGPRINTF("bcdcorrect,ERROR7,%d\n", to_bcd(entry));
 		return 0;
+	}
 
-	update_parity(&parity_hour,  entry);
-	update_parity(&parity_whole, entry);
+	update_parity(&parity_hour, entry);
 
+	/* TODO IF hour tens = 2, then hour ones is at max 3! */
 	/* 33-34 -- hour tens range from 0..2 (anything but 11 = 3 is valid) */
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_HOUR_TENS, 2);
-	if(entry == 0x0f)
+	if(entry == 0x0f) {
+		DEBUGPRINTF("bcdcorrect,ERROR8\n");
 		return 0;
+	}
 
-	update_parity(&parity_hour,  entry);
-	update_parity(&parity_whole, entry);
+	update_parity(&parity_hour, entry);
 
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_PARITY_HOUR, 1);
-	update_parity(&parity_hour,  entry);
-	update_parity(&parity_whole, entry);
+	update_parity(&parity_hour, entry);
 
 	/* telegram failing hour parity is invalid */
-	if(parity_hour == PARITY_SUM_ODD_MISM)
+	if(parity_hour == PARITY_SUM_ODD_MISM) {
+		DEBUGPRINTF("bcdcorrect,ERROR9\n");
 		return 0;
+	}
 
 	/* 36-39 -- day ones ranges from 0..9 */
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_DAY_ONES, 4);
-	if(to_bcd(entry) > 9)
+	if(to_bcd(entry) > 9) {
+		DEBUGPRINTF("bcdcorrect,ERROR10,%d\n", to_bcd(entry));
 		return 0;
+	}
 
-	update_parity(&parity_whole, entry);
+	update_parity(&parity_date, entry);
 	
 	/* 40-41 -- all day tens are valid (0..3) -- nothing to check here */
-	update_parity(&parity_whole, read_multiple(&s,
+	/* TODO IF day tens eq 0 then day ones neq 0 */
+	update_parity(&parity_date, read_multiple(&s,
 			tel_start_offset_in_line + DCF77_OFFSET_DAY_TENS, 1));
 
 	/*
@@ -142,43 +164,55 @@ char dcf77_secondlayer_check_bcd_correct_telegram(struct dcf77_secondlayer* ctx,
 	 */
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_DAY_OF_WEEK, 3);
-	if(entry == 0x2a)
+	if(entry == 0x2a) {
+		DEBUGPRINTF("bcdcorrect,ERROR11\n");
 		return 0;
+	}
 
-	update_parity(&parity_whole, entry);
+	update_parity(&parity_date, entry);
 
+	/* TODO WHAT ABOUT MONTH ONES? ALSO, IF month tens eq 1 then month ones is at most 2 */
 	/* 49    -- month tens are all valid (0..1) -- nothing to check */
-	update_parity(&parity_whole, read_multiple(&s,
+	update_parity(&parity_date, read_multiple(&s,
 			tel_start_offset_in_line + DCF77_OFFSET_MONTH_TENS, 1));
 
 	/* 50-53 -- year ones are valid from 0..9 */
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_YEAR_ONES, 4);
-	if(to_bcd(entry) > 9)
+	if(to_bcd(entry) > 9) {
+		DEBUGPRINTF("bcdcorrect,ERROR12,%d\n", to_bcd(entry));
 		return 0;
+	}
 
-	update_parity(&parity_whole, entry);
+	update_parity(&parity_date, entry);
 
 	/* 54-57 -- year tens are valid from 0..9 */
 	entry = read_multiple(&s, tel_start_offset_in_line +
 						DCF77_OFFSET_YEAR_TENS, 4);
-	if(to_bcd(entry) > 9)
+	if(to_bcd(entry) > 9) {
+		DEBUGPRINTF("bcdcorrect,ERROR13,%d\n", to_bcd(entry));
 		return 0;
+	}
 
-	update_parity(&parity_whole, entry);
+	update_parity(&parity_date, entry);
 
-	update_parity(&parity_whole, read_multiple(&s,
+	update_parity(&parity_date, read_multiple(&s,
 		tel_start_offset_in_line + DCF77_OFFSET_PARITY_DATE, 1));
 
 	/* date parity failed */
-	if(parity_whole == PARITY_SUM_ODD_MISM)
+	if(parity_date == PARITY_SUM_ODD_MISM) {
+		DEBUGPRINTF("bcdcorrect,ERROR14\n");
 		return 0;
+	}
 
 	/*    59 -- End of minute (only regular ones accepted) */
 	switch(read_multiple(&s, tel_start_offset_in_line +
 					DCF77_OFFSET_ENDMARKER_REGULAR, 1)) {
 	case DCF77_BIT_0:
 	case DCF77_BIT_1:
+		DEBUGPRINTF("bcdcorrect,ERROR15,%d\n", read_multiple(&s,
+					tel_start_offset_in_line +
+					DCF77_OFFSET_ENDMARKER_REGULAR, 1));
 		return 0;
 	}
 
@@ -190,7 +224,7 @@ char dcf77_secondlayer_check_bcd_correct_telegram(struct dcf77_secondlayer* ctx,
  * Takes up to four "bit" of internally represented data and transforms them to
  * unsinged C byte where 0 is BCD-0, 1 is BCD-1 etc.
  *
- * "&" adjacnet bits returns 1 exactly if it is DCF77_BIT_1.
+ * "&" adjacent bits returns 1 exactly if it is DCF77_BIT_1.
  * move the obtained ones to the lower output parts s.t. output values range
  * from 0-15.
  */
