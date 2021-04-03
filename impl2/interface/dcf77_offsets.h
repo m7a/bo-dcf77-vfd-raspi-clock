@@ -14,6 +14,6 @@
 #define DCF77_OFFSET_MONTH_ONES           45
 #define DCF77_OFFSET_MONTH_TENS           49
 #define DCF77_OFFSET_YEAR_ONES            50
-#define DCF77_OFFSET_YEAR_TENS            57
+#define DCF77_OFFSET_YEAR_TENS            54
 #define DCF77_OFFSET_PARITY_DATE          58
 #define DCF77_OFFSET_ENDMARKER_REGULAR    59

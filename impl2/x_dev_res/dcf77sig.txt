@@ -49,7 +49,7 @@
 44    VAL     Wochentag
 
 45    VAL     Monat Einer
-46    VAL     Monat EIner
+46    VAL     Monat Einer
 47    VAL     Monat Einer
 48    VAL     Monat Einer
 
