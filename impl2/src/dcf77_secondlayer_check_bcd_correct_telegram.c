@@ -96,7 +96,8 @@ static unsigned char read_byte(struct check_state* s, unsigned char bit_offset)
 	else if(s->is_next_empty)
 		return 0xaa; /* all set to no_signal */
 	else
-		return s->next_line_ptr[byte_offset];
+		return s->next_line_ptr[byte_offset -
+						DCF77_SECONDLAYER_LINE_BYTES];
 }
 
 

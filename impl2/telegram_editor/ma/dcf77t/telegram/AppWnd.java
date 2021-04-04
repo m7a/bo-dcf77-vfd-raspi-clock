@@ -511,7 +511,8 @@ class AppWnd {
 			// maximum simplicity atm.
 			int val = 0;
 			for(int i = offset + length - 1; i >= offset; i--)
-				val = (val << 1) | ((chr[i] - '0') & 0xff);
+				val = (val << 1) |
+						((chr[i] == '1'? 1: 0) & 0xff);
 			return String.valueOf(val);
 		}
 	}

@@ -144,7 +144,7 @@ static const struct test_case_moventries TESTS[] = {
 		/* NB: When this test was created, cursor ended at x=5, y=1; seems strange that it would not go to x=0? */
 	},
 	{
-		/* TODO CSTAT: WRONG RESULT. FIRST TELEGRAM STORED HAS INVALID PARITY. HENCE SHOULD NOT PRODUCE THIS STAT. PREVIOUSLY IT MOVED BY 16 NOW IT SEEMS TO HAVE CHANGED TO 15. ANALYZE WHY THIS IS THE CASE THEN FIX IT! */
+		/* moves by 40 */
 		.title = "First telegram part. bit mistaken for end: auto mov 03.01.2016 21:05+21:06.",
 		.in_length = 80,
 		.in = {
@@ -159,15 +159,9 @@ static const struct test_case_moventries TESTS[] = {
 			3, 2, 3, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
 		},
 		.out = {
-			0x55,0x55,0x55,0x55,0x55,0x55,0xaa,0xaa,0xaa,0xaa,0x7a,0xef,0xaa,0xae,0xba,
-			/*             |-> from here on old data that can be ignored */
-			0xaf,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0xba,0xaa,0xaa,0xaa,0xba
-			/* -- Old Test Results --
-			 * Matches the telegram for 03.01.2016 21:05:00 except for broken part 0x7a in place of 0xba *
 			0xaa,0xaa,0xaa,0xaa,0x7a,0xef,0xaa,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,
-			 *        | This data is not needed/will be overriden but that's how the memory looks like after the move *
+			/*    |-> from here on old data that can be ignored */
 			0xaa,0xaa,0xaa,0xaa,0xba,0xfa,0xaf,0xea,0xbb,0x7a,0xaa,0xaa,0xaa,0xaa,0xba,
-			 */
 		},
 	},
 	{
@@ -192,6 +186,7 @@ static const struct test_case_moventries TESTS[] = {
 			0xaa,0xaa,0xaa,0xaa,0xba,0x0b,0xaa,0xbe,0xab,0xa7,0xaa,0xaa,0xaa,0xaa,0xbb,
 		},
 	},
+	/* TODO CSTAT LEAPSEC TESTS. THIS ONE CURRENTLY FAILS WITH NOT IMPLEMENTED ERROR -- ANALYZING */
 	{
 		.title     = "Leapsec single tel: pre, in. Announce predef. Noproc",
 		.callproc  = PROC_SET_LEAPSEC_ANNOUNCE,
@@ -320,7 +315,7 @@ static const struct test_case_moventries TESTS[] = {
 	},
 	{
 		/*
-		 * Preliminary test that checks if this distorte data can
+		 * Preliminary test that checks if this distorted data can
 		 * actually be loaded without being processed. It mainly aids as
 		 * an intermediate step to the next test. Should it already
 		 * behave strangely here, there is no need to check the
