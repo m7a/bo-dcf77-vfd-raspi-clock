@@ -25,8 +25,6 @@ struct dcf77_secondlayer_process_telegrams_merge_result {
 static struct dcf77_secondlayer_process_telegrams_merge_result
 dcf77_secondlayer_process_telegrams_try_merge(struct dcf77_secondlayer* ctx,
 		unsigned char line_current, char backup_before_eliminate);
-static void dcf77_secondlayer_process_telegrams_advance_to_next_line(
-						struct dcf77_secondlayer* ctx);
 static void dcf77_secondlayer_process_telegrams_postprocess(
 		struct dcf77_secondlayer* ctx, unsigned char* in_out_telegram,
 		unsigned char* in_telegram);
@@ -43,6 +41,14 @@ void dcf77_secondlayer_process_telegrams(struct dcf77_secondlayer* ctx)
 
 	/* Input situation: cursor is at the end of the current minute. */
 
+	/*
+	TODO CSTAT SUBSTAT DOES IT MAKE SENSE TO VALIDATE CURRENT TELEGRAM HERE? COULD CAUSE A RECOMPUTE EOM JUST BECAUSE THE CURRENT ONE IS INVALID? DOES THAT MAKE SENSE? MAYBE YES? SMALL PROBLEM: LEAPSEC EOMS NOT ALLOWED FOR CHECKBCD
+
+	char dcf77_secondlayer_check_bcd_correct_telegram(struct dcf77_secondlayer* ctx,
+				unsigned char tel_start_line,
+				unsigned char tel_start_offset_in_line)
+	*/
+
 	/* first clear buffers to no signal */
 	memset(ctx->out_telegram_1, 0x55, DCF77_SECONDLAYER_LINE_BYTES);
 	memset(ctx->out_telegram_2, 0x55, DCF77_SECONDLAYER_LINE_BYTES);
@@ -52,15 +58,38 @@ void dcf77_secondlayer_process_telegrams(struct dcf77_secondlayer* ctx)
 						ctx->private_line_current, 1);
 
 	if(rv.match) {
+		/*
+		 * No mismatch at all means: No minute tens change in buffer.
+		 * E.g. 13:00, 13:01, 13:02, 13:03, 13:04, ... 13:08
+		 */
 		dcf77_secondlayer_process_telegrams_postprocess(ctx,
 					ctx->out_telegram_1, rv.ptr_to_line);
 		/* that is already the actual output */
 		ctx->out_telegram_1_len = (rv.is_leap_in_line? 61: 60);
 		ctx->out_telegram_2_len = 0;
-		dcf77_secondlayer_process_telegrams_advance_to_next_line(ctx);
+		if(!rv.is_leap_in_line)
+			dcf77_secondlayer_process_telegrams_advance_to_next_line
+									(ctx);
 		/* return */
 	} else {
-		ctx->out_telegram_2_len = 60; /* generically write 60... */
+		/*
+		 * Single mismatch means: Minute tens change in buffer. This
+		 * may at most happen once.
+		 * E.g.: 13:05, 13:06, 13:07, 13:08, 13:09, 13:10, ... 13:13
+		 */
+
+		/*
+		 * Second telegram now contains previous minute (the data from
+		 * begin of buffer up until mismatch exclusive)
+		 * generically write 60...
+		 */
+		ctx->out_telegram_2_len = 60;
+
+		/*
+		 * clear mismatching out_telegram_1, otherwise the xeliminates
+		 * in try_merge might fail.
+		 */
+		memset(ctx->out_telegram_1, 0x55, DCF77_SECONDLAYER_LINE_BYTES);
 
 		/*
 		 * repeat and write to actual output
@@ -68,9 +97,7 @@ void dcf77_secondlayer_process_telegrams(struct dcf77_secondlayer* ctx)
 		 * reprocess.
 		 */
 		rv = dcf77_secondlayer_process_telegrams_try_merge(
-					ctx, ((rv.line == 0)?
-						(DCF77_SECONDLAYER_LINES - 1):
-						(rv.line - 1)), 0);
+					ctx, dcf77_line_prev(rv.line), 0);
 
 		if(rv.match) {
 			/*
@@ -80,8 +107,18 @@ void dcf77_secondlayer_process_telegrams(struct dcf77_secondlayer* ctx)
 			ctx->out_telegram_1_len = (rv.is_leap_in_line? 61: 60);
 			dcf77_secondlayer_process_telegrams_postprocess(ctx,
 					ctx->out_telegram_1, rv.ptr_to_line);
+			
+			/*
+			 * Do not advance cursor if we have a leap second
+			 * because cursor will stay in same line and reach index
+			 * 60 next second.
+			 *
+			 * Indentation levels exceeded...
+			 */
+			if(!rv.is_leap_in_line)
 			dcf77_secondlayer_process_telegrams_advance_to_next_line
-									(ctx);
+			(ctx);
+
 			/* return */
 		} else {
 			/*
@@ -132,12 +169,13 @@ static struct dcf77_secondlayer_process_telegrams_merge_result
 }
 
 /* includes clearing the next line's contents */
-static void dcf77_secondlayer_process_telegrams_advance_to_next_line(
+void dcf77_secondlayer_process_telegrams_advance_to_next_line(
 						struct dcf77_secondlayer* ctx)
 {
 	ctx->private_line_cursor = 0;
 	ctx->private_line_current = dcf77_line_next(ctx->private_line_current);
 	/* clear line by setting last bit to unset */
+	/* TODO z DOES THAT ACTUALLY WORK GIVEN THAT is_empty CHECKS THE _FIRST_ BIT AND NOT THE LAST ONE? */
 	dcf77_telegram_write_bit(DCF77_OFFSET_ENDMARKER_REGULAR,
 		ctx->private_telegram_data + (ctx->private_line_current *
 			DCF77_SECONDLAYER_LINE_BYTES), DCF77_BIT_NO_UPDATE);

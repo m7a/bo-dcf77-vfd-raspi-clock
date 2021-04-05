@@ -217,7 +217,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 				dcf77_secondlayer_process_telegrams(ctx);
 				/*
 				 * In this special case, cursor position 60
-				 * becomes avaailalle. The actual in_val will
+				 * becomes available. The actual in_val will
 				 * not be written, though.
 				 */
 				ctx->private_line_cursor++;
@@ -250,9 +250,16 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 		 * the leap sec counter is > 0)
 		 */
 		if(ctx->in_val == DCF77_BIT_NO_SIGNAL) {
-			/* ok, process this longer telegram */
-			printf("    process_telegrams (2)\n");
-			dcf77_secondlayer_process_telegrams(ctx);
+			/*
+			 * OK; this telegram was already processed in the
+			 * second before and our "past" assumption that it
+			 * would be a leap second turned out to be right.
+			 * Now no need to process the newly received bit, but
+			 * need to advance cursor, hence invoke that procedure.
+			 */
+			printf("    process_telegrams advance_to_nextl\n");
+			dcf77_secondlayer_process_telegrams_advance_to_next_line
+									(ctx);
 		} else {
 			/*
 			 * fails to identify as leap second.

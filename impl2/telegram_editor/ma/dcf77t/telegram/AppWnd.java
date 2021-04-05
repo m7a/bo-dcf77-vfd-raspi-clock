@@ -524,15 +524,19 @@ class AppWnd {
 	}
 
 	private void processHex(ActionEvent ev) {
+		int i;
 		String[] hexTokens = rawInOutHex.getText().split(",");
-		int[] decodedTokens = new int[hexTokens.length];
-		for(int i = 0; i < hexTokens.length; i++) {
+		int[] decodedTokens = new int[16];
+		for(i = 0; i < hexTokens.length; i++) {
 			decodedTokens[i] = Integer.parseInt((hexTokens[i].
 				startsWith("0x")? hexTokens[i].substring(2):
 				hexTokens[i]).trim(), 16);
 		}
+		for(; i < decodedTokens.length; i++) {
+			decodedTokens[i] = 0;
+		}
 		StringBuilder out = new StringBuilder();
-		for(int i = 0; i < 61; i++) {
+		for(i = 0; i < 61; i++) {
 			switch(readEntry(decodedTokens[i / 4], i % 4)) {
 			case 0: out.append("2"); break;
 			case 1: out.append("3"); break;
