@@ -373,12 +373,13 @@ static const struct test_case_moventries TESTS[] = {
 		.out_telegram_1 = { 0x56,0x55,0x55,0x55,0xae,0xaf,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a, },
 		.out_telegram_2 = { 0x56,0x55,0x55,0x55,0x6e,0x57,0xed,0xad,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a, },
 	},
-	/* TODO REVISE THIS TEST */
+	/* TODO CSTAT REVISE/DEBUG THIS TEST | SMALL PROBLEM: SOME INPUTS SEEM TO BE SKIPPED! */
 	{
 		.title = "Leapsec 2 miasligned distorted: pre, in. Preparatory.",
-		.in_length = 121,
+		.in_length = 119, /* TODO WAS 121 */
 		.in = {
 			/* 01.07.2012 01:59:00, ankuend  | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 */
+			/*                 eq 011101000101101001011100130101000001100000133111000300300333 */
 			2, 3, 3, 3, 2, 3, 2, 2, 2, 3, 2, 3, 3, 2, 3, 2, 2, 3, 2, 3,
 			/*             v */
 			3, 3, 2, 2, 3, 1, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
@@ -389,8 +390,8 @@ static const struct test_case_moventries TESTS[] = {
 			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
 		},
 		.out = {
-			0x55,0x55,0x55,0x55,0x55,0x55,0xe5,0xae,0xea,0xab,0x7a,0xfd,0x6a,0x9a,0x56,
-			0xa6,0x65,0xd5,0xbf,0xba,0xae,0x6e,0xba,0xea,0xab,0xfa,0xba,0xea,0xab,0xfa,
+			0xfe,0xae,0xee,0xbb,0xee,0xaf,0xe7,0xae,0xea,0xab,0x7a,0xfd,0x6a,0x9a,0x56,
+			0xaa,0xef,0xff,0xbb,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea, /* +2xTBD */
 		},
 		.out_telegram_1_len = 60,
 		/* distorted telegram from first processing */
@@ -464,7 +465,7 @@ int main(int argc, char** argv)
 		for(i = 0; i < TESTS[test_id].in_length; i++) {
 			test_ctx.in_val = TESTS[test_id].in[i];
 			dcf77_secondlayer_process(&test_ctx);
-			if(test_id == 150)
+			if(test_id == 16)
 				dumpmem(&test_ctx); /* -- large debug output */
 		}
 		/* invoke post-procedure */

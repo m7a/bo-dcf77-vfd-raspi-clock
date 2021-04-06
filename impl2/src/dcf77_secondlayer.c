@@ -136,15 +136,12 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 		 */
 		dcf77_secondlayer_process_telegrams(ctx);
 
-		if(ctx->out_telegram_1_len != 60)
-			/*
-			 * Somehow the data received was not valid. This is
-			 * expected to happen only in case of bytes recevied by
-			 * wrong value. Existent data becomes untrustworthy.
-			 * Force reset.
-			 */
-			dcf77_secondlayer_reset(ctx);
-
+		/*
+		 * If nothing is output that is not an error.
+		 * It just means the data was misaligned and now moved.
+		 * Will perform another attempt to process the data after some
+		 * more seconds have arrived.
+		 */
 	} else if(current_line_is_full) {
 		/*
 		 * we processed 59 bits before, this is the 60. without
@@ -196,13 +193,16 @@ static void shift_existing_bits_to_the_left(struct dcf77_secondlayer* ctx)
 static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 {
 	/* variable cursor */
-	if(ctx->private_line_cursor < 60)
+	if(ctx->private_line_cursor < 60) {
 		dcf77_telegram_write_bit(ctx->private_line_cursor,
 				ctx->private_telegram_data +
 				(ctx->private_line_current *
 				DCF77_SECONDLAYER_LINE_BYTES), ctx->in_val);
+	}
 
 	if(ctx->private_line_cursor == 59) {
+		ctx->private_line_cursor++;
+
 		/*
 		 * we just wrote the 60. bit (at index 59).
 		 * this means we are at the end of a minute.
@@ -226,13 +226,12 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 				 */
 				ctx->private_leap_in_line =
 						ctx->private_line_current;
-				dcf77_secondlayer_process_telegrams(ctx);
 				/*
 				 * In this special case, cursor position 60
 				 * becomes available. The actual in_val will
 				 * not be written, though.
 				 */
-				ctx->private_line_cursor++;
+				dcf77_secondlayer_process_telegrams(ctx);
 			} else {
 				/*
 				 * Leap second was already detected before.
@@ -253,7 +252,6 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * to align to the "reality".
 			 */
 			printf("    recompute_eom because: NO_SIGNAL expected, leapexp=%d.\n", ctx->private_leap_second_expected);
-			ctx->private_line_cursor++;
 			dcf77_secondlayer_recompute_eom(ctx);
 		}
 	} else if(ctx->private_line_cursor == 60) {
@@ -284,9 +282,9 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 		}
 	} else {
 		/*
-		 * If we are not near the end, just quietly append
-		 * received bits, i.e. advance cursor (the rest of
-		 * that is already implemented above).
+		 * If we are not near the end, just quietly append received
+		 * bits, i.e. advance cursor (the rest of that is already
+		 * implemented above).
 		 */
 		ctx->private_line_cursor++;
 	}
