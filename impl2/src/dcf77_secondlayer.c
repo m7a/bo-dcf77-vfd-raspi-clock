@@ -1,11 +1,13 @@
 #include <string.h>
 
 #include <stdio.h> /* TODO DEBUG ONLY */
+#include <stdlib.h> /* TODO DEBUG ONLY */
 
 #include "dcf77_bitlayer.h"
 #include "dcf77_telegram.h"
 #include "dcf77_secondlayer.h"
 #include "dcf77_secondlayer_recompute_eom.h"
+#include "dcf77_secondlayer_check_bcd_correct_telegram.h"
 #include "dcf77_secondlayer_process_telegrams.h"
 
 #include "inc_sat.h"
@@ -89,28 +91,9 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 	if(ctx->in_val == DCF77_BIT_NO_SIGNAL) {
 		/*
 		 * no signal might indicate: end of minute.
-		 * let us thus start a new line and switch to aligned
-		 * mode without moving bits.
+		 * let us thus start a new line and switch to aligned mode.
 		 */
-		if(current_line_is_full) {
-			/*
-			 * special case: The first telegram started with its
-			 * first bit. Hence, we already have a full minute
-			 * in our memory. Process it!
-			 */
-			printf("    process_telegrams (3)\n"); /* DEBUG ONLY */
-			dcf77_secondlayer_process_telegrams(ctx);
-			if(ctx->out_telegram_1_len != 60) {
-				/*
-				 * Somehow the data received was not valid.
-				 * This is expected to happen only in case of
-				 * bytes recevied by wrong value. Existent data
-				 * becomes untrustworthy. Force reset.
-				 */
-				dcf77_secondlayer_reset(ctx);
-				return;
-			}
-		} else {
+		if(!current_line_is_full) {
 			/*
 			 * general case: line ended early. In this case set all
 			 * the leading NO_UPDATE/00-bits to NO_SIGNAL/01 in
@@ -129,10 +112,39 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 					DCF77_BIT_NO_SIGNAL
 				);
 			} while(ctx->private_line_cursor-- > 0);
+			/*
+			 * else: special case: The first telegram started with
+			 * its first bit. Hence, we already have a full minute
+			 * in our memory. This does not make as much difference
+			 * as previously thought, see below.
+			 */
 		}
-		ctx->private_inmode       = IN_FORWARD;
-		ctx->private_line_current = 1;
-		ctx->private_line_cursor  = 0;
+		/*
+		 * Switch to forward mode
+		 * Change of cursor position is up to process_telegrams()
+		 */
+		ctx->private_inmode = IN_FORWARD;
+		ctx->private_line_cursor = 59;
+
+		/*
+		 * Newly always process telegrams. This mainly serves to
+		 * validate the current partial telegram but additionaly
+		 * outputs the partial data received so far.
+		 * Whether the upper layer can do something sensible with a
+		 * “very incomplete” telegram need not be thought of here
+		 * yet.
+		 */
+		dcf77_secondlayer_process_telegrams(ctx);
+
+		if(ctx->out_telegram_1_len != 60)
+			/*
+			 * Somehow the data received was not valid. This is
+			 * expected to happen only in case of bytes recevied by
+			 * wrong value. Existent data becomes untrustworthy.
+			 * Force reset.
+			 */
+			dcf77_secondlayer_reset(ctx);
+
 	} else if(current_line_is_full) {
 		/*
 		 * we processed 59 bits before, this is the 60. without
@@ -241,6 +253,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * to align to the "reality".
 			 */
 			printf("    recompute_eom because: NO_SIGNAL expected, leapexp=%d.\n", ctx->private_leap_second_expected);
+			ctx->private_line_cursor++;
 			dcf77_secondlayer_recompute_eom(ctx);
 		}
 	} else if(ctx->private_line_cursor == 60) {

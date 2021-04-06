@@ -20,6 +20,9 @@ enum parity_state {
 	PARITY_SUM_UNDEFINED = 2,
 };
 
+static inline struct check_state to_check_state(struct dcf77_secondlayer* ctx,
+	unsigned char tel_start_line, unsigned char tel_start_offset_in_line);
+static char check_bcd_correct_telegram_ignore_eom_inner(struct check_state* s);
 static char check_begin_of_minute(struct check_state* s);
 static unsigned char read_multiple(struct check_state* s,
 			unsigned char bit_offset_in_tel, unsigned char length);
@@ -33,32 +36,48 @@ static char check_hour(struct check_state* s);
 static char check_date(struct check_state* s);
 static char check_end_of_minute(struct check_state* s);
 
-/*
- * Leapsec EOMs are not allowed! NO_UPDATE contents are not allowed!
- *
- * Returns 1 if telegram is correct/OK.
- * Returns 0 if telegram is incorrect/WRONG.
- */
 char dcf77_secondlayer_check_bcd_correct_telegram(struct dcf77_secondlayer* ctx,
 				unsigned char tel_start_line,
 				unsigned char tel_start_offset_in_line)
 {
+	struct check_state s = to_check_state(ctx, tel_start_line,
+						tel_start_offset_in_line);
+	return  check_bcd_correct_telegram_ignore_eom_inner(&s) &&
+		check_end_of_minute(&s);
+}
+
+static inline struct check_state to_check_state(struct dcf77_secondlayer* ctx,
+	unsigned char tel_start_line, unsigned char tel_start_offset_in_line)
+{
 	unsigned char* next_line_ptr = dcf77_line_pointer(ctx,
 					dcf77_line_next(tel_start_line));
-	struct check_state s = {
+	struct check_state rv = {
 		.ctx                      = ctx,
 		.tel_start_line           = tel_start_line,
 		.tel_start_offset_in_line = tel_start_offset_in_line,
 		.next_line_ptr            = next_line_ptr,
 		.is_next_empty            = dcf77_line_is_empty(next_line_ptr),
 	};
-	return  check_begin_of_minute(&s) &&
-		check_dst(&s)             &&
-		check_begin_of_time(&s)   &&
-		check_minute(&s)          &&
-		check_hour(&s)            &&
-		check_date(&s)            &&
-		check_end_of_minute(&s);
+	return rv;
+}
+
+char dcf77_secondlayer_check_bcd_correct_telegram_ignore_eom(
+		struct dcf77_secondlayer* ctx, unsigned char tel_start_line,
+		unsigned char tel_start_offset_in_line)
+{
+	struct check_state s = to_check_state(ctx, tel_start_line,
+						tel_start_offset_in_line);
+	return check_bcd_correct_telegram_ignore_eom_inner(&s);
+}
+
+static char check_bcd_correct_telegram_ignore_eom_inner(struct check_state* s)
+{
+	return  check_begin_of_minute(s) &&
+		check_dst(s)             &&
+		check_begin_of_time(s)   &&
+		check_minute(s)          &&
+		check_hour(s)            &&
+		check_date(s);
 }
 
 static char check_begin_of_minute(struct check_state* s)

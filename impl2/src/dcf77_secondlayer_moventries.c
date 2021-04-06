@@ -56,7 +56,7 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 
 		/* printf(" IS NOT EMPTY\n"); TODO */
 		for(pil = 0; pil < DCF77_SECONDLAYER_LINE_BYTES; pil++) {
-			/* printf(" iinner pil=%d pol=%d\n", pil, pol); TODO */
+			/* printf(" iinner pil=%d pol=%d\n", pil, pol); * TODO */
 			/* -- Verwerfen der allerersten Eingaben */
 			if(bytes_proc < mov_bytes_initial) {
 				INC_SATURATED(bytes_proc);
@@ -81,7 +81,7 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 			/*
 			 * Seit 24.10.2020 hier = statt |=, denn: Die Bytes
 			 * müssen ja einmal im Zuge des Verschiebens auf 0
-			 * gesetzt werden undd as scheint ein angemessener
+			 * gesetzt werden und das scheint ein angemessener
 			 * Zeitpunkt zu sein. Nachfolgend "nach hinten"
 			 * verschobene Bytes (send_back_offset] |= lower_up)
 			 * dürfen natürlich dann nicht auf 0 setzten, da sie
@@ -101,18 +101,18 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 	} while((il = dcf77_line_next(il)) != il0);
 	
 	/* -- Abschließende Aktualisierungen -- */
-	ctx->private_line_cursor = pol;
-	if(ctx->private_line_current != ol) {
+	if(ctx->private_line_cursor >= mov) {
+		ctx->private_line_cursor -= mov;
+	} else {
 		/* set previous current line's length to 0 */
+		/* TODO z MIGHT BE WRONG */
 		dcf77_telegram_write_bit(DCF77_OFFSET_ENDMARKER_REGULAR,
 			dcf77_line_pointer(ctx, ctx->private_line_current),
 			DCF77_BIT_NO_UPDATE);
+
 		ctx->private_line_current = ol;
+		/* TODO z MIGHT BE OFF BY ONE */
+		ctx->private_line_cursor = (60 - ctx->private_line_cursor);
 	}
-	/* TODO z IDEA IF FILL WITH NO SIGNAL DOES NOT WORK
-	if(dcf77_line_is_empty(dcf77_line_pointer(ctx, il0))) {
-		* we overwrote the begin of line marker there 
-	}
-	*/
-	
+
 }
