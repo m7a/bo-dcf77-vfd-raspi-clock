@@ -422,6 +422,38 @@ static const struct test_case_moventries TESTS[] = {
 		.out_telegram_2_len = 60,
 		.out_telegram_2 = { 0x56,0x55,0x55,0x55,0x6e,0x57,0xe5,0xad,0xea,0xab,0x7a,0xfd,0x6a,0x9a,0x56, },
 	},
+	{
+		.title = "03.01.2016 21:05, special in-telegram mov which does not fit byte",
+		.in_length = 31,
+		.in = {
+			/* 03.01.2016 21:05:00 | aa,aa,aa,aa,ba,ef,aa,ae,ba,af,fa,af,ea,bb,7a,55 */
+			/*       |-- replaced --| */
+			2, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2,
+			/* v defunct, cause NL */
+			3, 1, 2, 3, 2, 2, 2, 2, 2, 3, 2,
+		},
+		/* even more importantly, cursor has to be at 31 */
+		.out = {
+			0xea,0xff,0xab,0xaa,0xba,0xe7,0xaa,0x2e
+		},
+		/*
+		 * unintelligble outputs 20.03.2014 00:00:00 but that is to be
+		 * expected as no process_telegrams are called after the move
+		 */
+		.out_telegram_1 = { 0x56,0x55,0x55,0x55,0x55,0x57,0x55,0x55,0x55,0xa5,0xfe,0xbf,0xaa,0xaa,0x7b, },
+		.out_telegram_2 = { 0x56,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, },
+		/*
+		 * Test move across line ending
+		 * (dcf77_seondlayer_moventries.c last case of postprocessing)
+		 */
+		.callproc = PROC_MOVE_LEFTWARDS,
+		.arg0 = 38,
+	},
+	/*
+	 * TODO CSTAT NEXT DEVELOP SOME TESTS TO:
+         * (1) trigger case of complex reorganization
+         * (2) trigger the reset cases [implement them in case they are only exit64]
+	 */
 };
 #define NUMCASES (sizeof(TESTS)/sizeof(struct test_case_moventries))
 
@@ -489,7 +521,7 @@ int main(int argc, char** argv)
 		for(i = 0; i < TESTS[test_id].in_length; i++) {
 			test_ctx.in_val = TESTS[test_id].in[i];
 			dcf77_secondlayer_process(&test_ctx);
-			if(test_id == 160)
+			if(test_id == 180)
 				dumpmem(&test_ctx); /* -- large debug output */
 		}
 		/* invoke post-procedure */

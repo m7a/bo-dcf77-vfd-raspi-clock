@@ -17,9 +17,14 @@ static inline char dcf77_line_is_empty(unsigned char* ptr_to_line)
 	return dcf77_telegram_read_bit(0, ptr_to_line) == DCF77_BIT_NO_UPDATE;
 }
 
-static unsigned char* dcf77_line_pointer(struct dcf77_secondlayer* ctx,
+static inline unsigned char* dcf77_line_pointer(struct dcf77_secondlayer* ctx,
 							unsigned char line)
 {
 	return ctx->private_telegram_data +
 					(line * DCF77_SECONDLAYER_LINE_BYTES);
+}
+
+static inline void dcf77_line_mark_as_empty(unsigned char* ptr_to_line)
+{
+	dcf77_telegram_write_bit(0, ptr_to_line, DCF77_BIT_NO_UPDATE);
 }

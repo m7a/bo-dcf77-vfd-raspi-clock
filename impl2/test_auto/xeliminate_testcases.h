@@ -204,20 +204,4 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 		.recovery_ok = 1,
 		.recovers_to = {0xbe,0xef,0xef,0xbf,0xae,0xab,0xee,0xba,0xba,0xae,0xbe,0xea,0xba,0xbe,0x7a,0x55,},
 	},
-	/*
-	 * Unclear, if this test should work or not...
-	{
-		.description = "Invalid telegram on empty fails to eliminate.",
-		.num_lines = 2,
-		.line_len = { 60, 60 },
-		.data = {
-			* empty *
-			{3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
-			* invalid *
-			{0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 1, 3, 3, 3, 3, 3, 0, 0, 3, 0, 0, 3, 3, 3, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 3, 3},
-		},
-		.secondlayer_required = 0,
-		.recovery_ok = 0,
-	},
-	*/
 };

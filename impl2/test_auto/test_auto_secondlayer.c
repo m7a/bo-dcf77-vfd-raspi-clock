@@ -2,8 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* TODO NOTE THERE IS AN ONGOING EFFORT TO MOVE SOME CODE TO FILE dcf77_secondlayer.c AS TO SEPARATE THE TEST, IMPLEMENTATION AND INTERFACE BECAUSE EVEN FOR DEVELOPMENT IT IS GETTING TOO COMPLEX */
-
 #include "dcf77_bitlayer.h"
 #include "dcf77_secondlayer.h"
 #include "dcf77_secondlayer_xeliminate.h"
@@ -24,12 +22,6 @@ static void dumpmem(struct dcf77_secondlayer* ctx);
 
 static const unsigned char CMPMASK[16] = {
 0x03,0x00,0x00,0x00,0x00,0x03,0x00,0xfc,0xff,0xff,0xff,0xff,0xff,0xff,0xff
-/*
-0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a,
-0x56,0x55,0x55,0x55,0x55,0x57,0x55,0xfd,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a,
-0101 1101 1010 1110 0100 1100 1010 1111 0100 1100 1001 1001 0010 0110 0013 2
-0333 3333 3333 3333 3333 1333 3333 3111 0100 1100 1001 1001 0010 0110 0013 2
-*/
 };
 
 int main(int argc, char** argv)
@@ -48,9 +40,6 @@ int main(int argc, char** argv)
 			(sizeof(xeliminate_testcases) /
 			sizeof(struct xeliminate_testcase)); curtest++) {
 
-		if(curtest != 7)
-			continue; /* for now skip all tests except 7 TODO DEBUG ONLY */
-
 		/* for now skip tests which fail recovery */
 		if(!xeliminate_testcases[curtest].secondlayer_required &&
 				xeliminate_testcases[curtest].recovery_ok == 0)
@@ -62,8 +51,8 @@ int main(int argc, char** argv)
 				xeliminate_testcases[curtest].description);
 		/*
 		 * we initialize everything to 0 to avoid data from the previous
-		 * tests to be present. disable this once the test runs
-		 * automatically TODO z
+		 * tests to be present. TODO z might want to try to disable this
+		 * once the test runs automatically 
 		 */
 		memset(&uut, 0, sizeof(struct dcf77_secondlayer));
 		dcf77_secondlayer_init(&uut);
@@ -82,11 +71,6 @@ int main(int argc, char** argv)
 				default: puts("    *** ERROR1 ***"); exit(64);
 				}
 
-				/*
-				printf("    > %d (%d)\n", bitval,
-						xeliminate_testcases[curtest].
-						data[i][j]);
-				*/
 				uut.in_val = bitval;
 				dcf77_secondlayer_process(&uut);
 				if(0 == 1) /* currently disabled */
@@ -100,10 +84,7 @@ int main(int argc, char** argv)
 					printtel(uut.out_telegram_2,
 							uut.out_telegram_2_len);
 
-					memcpy(cmpbuf,
-						uut.out_telegram_2_len != 0?
-							uut.out_telegram_2:
-							uut.out_telegram_1,
+					memcpy(cmpbuf, uut.out_telegram_1,
 						DCF77_SECONDLAYER_LINE_BYTES);
 
 					uut.out_telegram_1_len = 0;

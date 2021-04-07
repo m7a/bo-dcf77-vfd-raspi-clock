@@ -29,11 +29,6 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 
 	unsigned char bytes_proc = 0;
 	unsigned char wrpos;
-
-	/* TODO DEBUG ONLY / ISEMPTY(0)=1 BUT SHOULD BE 0! / MIGHT BE FIXED NOW */
-	/*for(il0 = 0; il0 < DCF77_SECONDLAYER_LINES; il0++) {
-		printf(" HELLOLINE %d isempty=%d\n", il0, dcf77_line_is_empty(dcf77_line_pointer(ctx, il0)));
-	}*/
 	
 	/* -- Bestimme l0 -- */
 	/*
@@ -49,21 +44,16 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 	ol = il0;
 	il = il0;
 	do {
-		/* TODO printf("DEBUG INNER ol=%d, il=%d, plc=%d\n", ol, il, ctx->private_line_current); */
 		/* skip empty input lines */
 		if(dcf77_line_is_empty(dcf77_line_pointer(ctx, il)))
 			continue;
 
-		/* printf(" IS NOT EMPTY\n"); TODO */
 		for(pil = 0; pil < DCF77_SECONDLAYER_LINE_BYTES; pil++) {
-			/* printf(" iinner pil=%d pol=%d\n", pil, pol); * TODO */
 			/* -- Verwerfen der allerersten Eingaben */
 			if(bytes_proc < mov_bytes_initial) {
 				INC_SATURATED(bytes_proc);
 				continue;
 			}
-
-			/* printf(" IS NOT DISCARDED\n", pil, pol); TODO */
 
 			/* -- Verarbeiteprozedur: Lies Eingabe -- */
 			readib = pil + il * DCF77_SECONDLAYER_LINE_BYTES;
@@ -88,7 +78,6 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 			 * sonst bereits vorhandene Daten überschreiben.
 			 */
 			ctx->private_telegram_data[wrpos] = upper_low;
-			/* printf(" upper_low [%d]=%d\n", wrpos, upper_low); TODO */
 			INC_SATURATED(bytes_proc);
 
 			if(pol == (DCF77_SECONDLAYER_LINE_BYTES - 1)) {
@@ -104,15 +93,12 @@ void dcf77_secondlayer_move_entries_backwards(struct dcf77_secondlayer* ctx,
 	if(ctx->private_line_cursor >= mov) {
 		ctx->private_line_cursor -= mov;
 	} else {
-		/* set previous current line's length to 0 */
-		/* TODO z MIGHT BE WRONG */
-		dcf77_telegram_write_bit(DCF77_OFFSET_ENDMARKER_REGULAR,
-			dcf77_line_pointer(ctx, ctx->private_line_current),
-			DCF77_BIT_NO_UPDATE);
-
-		ctx->private_line_current = ol;
-		/* TODO z MIGHT BE OFF BY ONE */
-		ctx->private_line_cursor = (60 - ctx->private_line_cursor);
+		dcf77_line_mark_as_empty(dcf77_line_pointer(ctx,
+						ctx->private_line_current));
+		ctx->private_line_current = dcf77_line_prev(
+						ctx->private_line_current);
+		ctx->private_line_cursor = (60 - (mov -
+						ctx->private_line_cursor));
 	}
 
 }

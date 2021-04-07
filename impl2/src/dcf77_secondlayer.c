@@ -273,10 +273,9 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 									(ctx);
 		} else {
 			/*
-			 * fails to identify as leap second.
-			 * This basically means the assumption
-			 * of ending on a leap second was wrong.
-			 * Trigger `complex_reogranization`.
+			 * fails to identify as leap second. This means the
+			 * assumption of ending on a leap second was wrong.
+			 * Trigger `complex_reorganization`.
 			 */
 			complex_reorganization(ctx);
 		}
@@ -297,7 +296,7 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
  * although a leap-second was announced for around this time.
  *
  * Action: We rewrite the data to step back one position such that the case is
- * equivalent ot cursor = 59 and NO_SIGNAL expected. Then, we call
+ * equivalent to cursor = 59 and NO_SIGNAL expected. Then, we call
  * recompute_eom() to fix up the situation so far. Unlike in the case of the
  * actual cursor = 59 we still need to process that one misplaced bit. We do
  * this by repeating part of the computation.
