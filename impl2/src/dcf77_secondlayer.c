@@ -124,7 +124,7 @@ void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx)
 		 * Change of cursor position is up to process_telegrams()
 		 */
 		ctx->private_inmode = IN_FORWARD;
-		ctx->private_line_cursor = 59;
+		ctx->private_line_cursor = 60;
 
 		/*
 		 * Newly always process telegrams. This mainly serves to
