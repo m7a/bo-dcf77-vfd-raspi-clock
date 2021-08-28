@@ -80,15 +80,16 @@ struct dcf77_secondlayer {
 	unsigned char out_telegram_2[DCF77_SECONDLAYER_LINE_BYTES];
 
 	/* Number of resets performed (read-only output variable) */
-	unsigned char fault_reset;
+	unsigned char out_fault_reset;
 };
 
 void dcf77_secondlayer_init(struct dcf77_secondlayer* ctx);
 void dcf77_secondlayer_process(struct dcf77_secondlayer* ctx);
 
+/* Exported for use by other dcf77_secondlayer-procedures only! */
+void dcf77_secondlayer_reset(struct dcf77_secondlayer* ctx);
+
 /* Exported symbols for testing purposes. Static for production. */
 #ifdef TEST
-void dcf77_secondlayer_reset(struct dcf77_secondlayer* ctx);
-void dcf77_secondlayer_write_new_input(struct dcf77_secondlayer* ctx);
 void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx);
 #endif

@@ -41,9 +41,9 @@ void dcf77_secondlayer_recompute_eom(struct dcf77_secondlayer* ctx)
 		 * mid-data-interposition of leap sec bit. For the rarity of
 		 * this case, ignore this and perform a reset.
 		 */
-		/* TODO RESET DISABLED FOR DEBUG ONLY */
-		printf("reset(ctx)\n");
-		exit(64);
+		printf("    reset(ctx) private_leap_in_line != DCF77_SECONDLAYER_NOLEAP -- implemented!\n");
+		dcf77_secondlayer_reset(ctx);
+		return;
 	}
 
 	all_checked = 0;
@@ -77,8 +77,7 @@ void dcf77_secondlayer_recompute_eom(struct dcf77_secondlayer* ctx)
 		 * no suitable position found, data corruption or advanced
 		 * leap sec case. requires reset
 		 */
-		/* TODO RESET DISABLED FOR DEBUG ONLY */
-		printf("reset(ctx)\n");
-		exit(64);
+		printf("    reset(ctx) data corruption or advanced leapsec -- implemented!\n");
+		dcf77_secondlayer_reset(ctx);
 	}
 }

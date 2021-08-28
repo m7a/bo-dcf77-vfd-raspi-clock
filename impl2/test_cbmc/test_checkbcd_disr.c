@@ -39,7 +39,7 @@ void main()
 		ctx.out_telegram_1[i] = 0x00;
 		ctx.out_telegram_2[i] = 0x00;
 	}
-	ctx.fault_reset = 0;
+	ctx.out_fault_reset = 0;
 
 	for(i = 0; i < DCF77_SECONDLAYER_LINE_BYTES; i++)
 		firsttel[i] = ctx.private_telegram_data[i];

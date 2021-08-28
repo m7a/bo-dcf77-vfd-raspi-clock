@@ -51,8 +51,7 @@ int main(int argc, char** argv)
 				xeliminate_testcases[curtest].description);
 		/*
 		 * we initialize everything to 0 to avoid data from the previous
-		 * tests to be present. TODO z might want to try to disable this
-		 * once the test runs automatically 
+		 * tests to be present.
 		 */
 		memset(&uut, 0, sizeof(struct dcf77_secondlayer));
 		dcf77_secondlayer_init(&uut);
@@ -102,6 +101,15 @@ int main(int argc, char** argv)
 				pass = 0;
 				break;
 			}
+		}
+		if(uut.out_fault_reset != xeliminate_testcases[curtest].
+						fault_reset_num_allowed) {
+			printf("  [FAIL] Mismatch expected number of resets. "
+				"Expected %d, Got %d\n",
+				xeliminate_testcases[curtest].
+						fault_reset_num_allowed,
+				uut.out_fault_reset);
+			pass = 0;
 		}
 		/*
 		 * Note that this test is not very prcise, but if it fails, it

@@ -16,7 +16,6 @@
 #define EXPORTED_FOR_TESTING
 #else
 #define EXPORTED_FOR_TESTING static
-static void dcf77_secondlayer_reset(struct dcf77_secondlayer* ctx);
 static void dcf77_secondlayer_in_backward(struct dcf77_secondlayer* ctx);
 #endif
 
@@ -32,10 +31,10 @@ static void complex_reorganization(struct dcf77_secondlayer* ctx);
 void dcf77_secondlayer_init(struct dcf77_secondlayer* ctx)
 {
 	dcf77_secondlayer_reset(ctx);
-	ctx->fault_reset = 0; /* reset number of resets "the first is free" */
+	/* reset number of resets "the first is free" */
+	ctx->out_fault_reset = 0;
 }
 
-EXPORTED_FOR_TESTING
 void dcf77_secondlayer_reset(struct dcf77_secondlayer* ctx)
 {
 	ctx->private_inmode               = IN_BACKWARD;
@@ -45,7 +44,7 @@ void dcf77_secondlayer_reset(struct dcf77_secondlayer* ctx)
 	ctx->private_leap_second_expected = 0; /* no leap second expected */
 	ctx->out_telegram_1_len           = 0;
 	ctx->out_telegram_2_len           = 0;
-	INC_SATURATED(ctx->fault_reset); /* track number of resets */
+	INC_SATURATED(ctx->out_fault_reset); /* track number of resets */
 	/* Initialize the buffer to all NO_UPDATE/empty (00) */
 	memset(ctx->private_telegram_data , 0, DCF77_SECONDLAYER_MEM); /* eps */
 }
