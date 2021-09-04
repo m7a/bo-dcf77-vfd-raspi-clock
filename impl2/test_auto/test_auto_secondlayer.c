@@ -12,8 +12,6 @@
 #include "inc_sat.h"
 #include "xeliminate_testcases.h"
 
-/* TODO z once we have reorganization: do a test with a leap second (like test case 9) but "miss" the leap second in the sense that just a 3/NO_SIGNAL is output for the 0-marker in the leap second. It will be interesting to see how long it takes to recover from that! */
-
 /* -------------------------------------------------[ Test Implementation ]-- */
 
 static void printtel(unsigned char* data, unsigned char bitlen);

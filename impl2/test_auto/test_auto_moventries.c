@@ -104,6 +104,7 @@ static const struct test_case_moventries TESTS[] = {
 		.out_telegram_1_len = 60,
 		.out_telegram_1 = {0x56,0x55,0x55,0x55,0xba,0xaf,0xab,0xae,0xba,0xaf,0xfa,0xaf,0xea,0xbb,0x7a,},
 	},
+	/* test case 9 */
 	{
 		.title = "First telegram part. bit mistaken for end: before mov 03.01.2016 21:05+21:06.",
 		.in_length = 78,
@@ -449,11 +450,63 @@ static const struct test_case_moventries TESTS[] = {
 		.callproc = PROC_MOVE_LEFTWARDS,
 		.arg0 = 38,
 	},
-	/*
-	 * TODO CSTAT NEXT DEVELOP SOME TESTS TO:
-         * (1) trigger case of complex reorganization
-         * (2) trigger the reset cases [implement them in case they are only exit64]
-	 */
+	{
+		/* Unclear if this test could occur in reality, but it invokes the complex reorganization procedure! */
+		.title     = "Unrealistic Leapsec single tel: pre, in MISS. Announce predef. Shallproc.",
+		.callproc  = PROC_SET_LEAPSEC_ANNOUNCE,
+		.arg0      = 3, /* should happen within next three minutes */
+		.in_length = 101,
+		.in        = {
+			/* 01.07.2012 01:59:00, ankuend | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 (last 40 bits) */
+			3, 3, 2, 2, 3, 3, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+			/* 01.07.2012 02:00:00, hasl    | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55 */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 3 /* <- leap here but miss due to invalid sequence 2/3 */
+		},
+		.out = {
+			/* Only the last `3` is in memory */
+			0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x30,
+		},
+		/* no output expected */
+		.out_telegram_1_len = 0,
+		.out_telegram_2_len = 0,
+		.out_telegram_1 = { 0x56,0x55,0x55,0x55,0xee,0xab,0xaa,0xba,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a, },
+		.out_telegram_2 = { 0x56,0x55,0x55,0x55,0x55,0x57,0xed,0xad,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a, },
+	},
+	{
+		.title     = "Leapsec single tel: pre, MISS. Announced/Shallproc/Complete. Recover after 2min.",
+		.callproc  = PROC_SET_LEAPSEC_ANNOUNCE,
+		.arg0      = 3, /* should happen within next three minutes */
+		.in_length = 221,
+		.in        = {
+			/* 01.07.2012 01:59:00, ankuend  | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 (last 40 bits) */
+			3, 3, 2, 2, 3, 3, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+			/* 01.07.2012 02:00:00, hasl     | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55 */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1, 1, /* <- leap here but miss due to double 1! */
+			/* 01.07.2012 02:01:00, postleap | ba,ee,fe,bb,ae,af,aa,bb,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 2, 3, 2, 2, 3, 2, 3, 2, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 2,
+			3, 3, 2, 2, 2, 2, 2, 2, 3, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+			/* 01.07.2012 02:02:00  postleap | ba,fe,fa,bb,ae,bb,aa,bb,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 2, 3, 2, 2, 3, 3, 3, 2, 2, 3, 3, 3, 2, 3, 2, 2, 3, 2, 2,
+			3, 2, 3, 2, 2, 2, 2, 2, 3, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+		},
+		.out = {
+			0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,
+			0xba,0xfe,0xfa,0xbb,0xae,0xbb,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,
+		},
+		.out_telegram_1_len = 60,
+		.out_telegram_2_len = 0,
+		.out_telegram_1 = { 0x56,0x55,0x55,0x55,0xae,0xbb,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a, },
+		.out_telegram_2 = { 0x56,0x55,0x55,0x55,0x55,0x57,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, },
+	},
+	/* TODO CSTAT NEXT DEVELOP SOME TESTS TO trigger the reset cases [implement them in case they are only exit64] */
 };
 #define NUMCASES (sizeof(TESTS)/sizeof(struct test_case_moventries))
 

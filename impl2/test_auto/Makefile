@@ -28,3 +28,9 @@ cov:
 dist-clean: clean
 	rm test_auto_xeliminate test_auto_secondlayer decode_telegram_bin \
 		test_auto_moventries test_auto_checkbcd > /dev/null 2>&1 || true
+
+run-all-tests:
+	./test_auto_xeliminate
+	./test_auto_moventries
+	./test_auto_secondlayer
+	./test_auto_checkbcd
