@@ -1,8 +1,5 @@
 #include <string.h>
 
-#include <stdio.h> /* TODO DEBUG ONLY */
-#include <stdlib.h> /* TODO DEBUG ONLY */
-
 #include "dcf77_bitlayer.h"
 #include "dcf77_telegram.h"
 #include "dcf77_secondlayer.h"
@@ -213,7 +210,6 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * no signal in any case means this is our
 			 * end-of-minute marker
 			 */
-			printf("    process_telegrams (1)\n"); /* DEBUG ONLY */
 			dcf77_secondlayer_process_telegrams(ctx);
 		} else if(ctx->in_val == DCF77_BIT_0 &&
 				ctx->private_leap_second_expected > 0) {
@@ -239,7 +235,6 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 				 * reorganize, there is little confidence that
 				 * it would work. Hence force reset.
 				 */
-				/* TODO z may re-think in the end whether to do some additional steps here... */
 				dcf77_secondlayer_reset(ctx);
 			}
 		} else {
@@ -250,7 +245,6 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * We need to reorganize the datastructure
 			 * to align to the "reality".
 			 */
-			printf("    recompute_eom because: NO_SIGNAL expected, leapexp=%d.\n", ctx->private_leap_second_expected);
 			dcf77_secondlayer_recompute_eom(ctx);
 		}
 	} else if(ctx->private_line_cursor == 60) {
@@ -267,7 +261,6 @@ static void dcf77_secondlayer_in_forward(struct dcf77_secondlayer* ctx)
 			 * Now no need to process the newly received bit, but
 			 * need to advance cursor, hence invoke that procedure.
 			 */
-			printf("    process_telegrams advance_to_nextl\n");
 			dcf77_secondlayer_process_telegrams_advance_to_next_line
 									(ctx);
 		} else {
@@ -307,7 +300,6 @@ static void complex_reorganization(struct dcf77_secondlayer* ctx)
 	ctx->private_leap_in_line = DCF77_SECONDLAYER_NOLEAP;
 
 	/* call recompute_eom() */
-	printf("    recompute_eom because NO_SINGAL expected complex reorganization!\n"); /* TODO DEBUG ONLY */
 	dcf77_secondlayer_recompute_eom(ctx);
 
 	/*

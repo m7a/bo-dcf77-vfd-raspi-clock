@@ -1,6 +1,3 @@
-#include <stdio.h> /* TODO DEBUG ONLY */
-#include <stdlib.h> /* TODO DEBUG ONLY */
-
 #include "dcf77_bitlayer.h"
 #include "dcf77_telegram.h"
 #include "dcf77_offsets.h"
@@ -41,7 +38,6 @@ void dcf77_secondlayer_recompute_eom(struct dcf77_secondlayer* ctx)
 		 * mid-data-interposition of leap sec bit. For the rarity of
 		 * this case, ignore this and perform a reset.
 		 */
-		printf("    reset(ctx) private_leap_in_line != DCF77_SECONDLAYER_NOLEAP -- implemented!\n");
 		dcf77_secondlayer_reset(ctx);
 		return;
 	}
@@ -68,7 +64,7 @@ void dcf77_secondlayer_recompute_eom(struct dcf77_secondlayer* ctx)
 		 * the left. This honors the length of lines and considers the
 		 * case of a reduction of the total number of lines.
 		 */
-		printf("    recompute_eom: telegram_start_offset_in_line=%d\n", telegram_start_offset_in_line - 1); /* TODO DEBUG ONLY */
+
 		/* increment is once more than the actual offset of interest */
 		dcf77_secondlayer_move_entries_backwards(ctx,
 					telegram_start_offset_in_line - 1);
@@ -77,7 +73,6 @@ void dcf77_secondlayer_recompute_eom(struct dcf77_secondlayer* ctx)
 		 * no suitable position found, data corruption or advanced
 		 * leap sec case. requires reset
 		 */
-		printf("    reset(ctx) data corruption or advanced leapsec -- implemented!\n");
 		dcf77_secondlayer_reset(ctx);
 	}
 }

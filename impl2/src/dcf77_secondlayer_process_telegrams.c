@@ -1,7 +1,5 @@
 #include <string.h>
 
-#include <stdio.h> /* TODO DEBUG ONLY */
-
 #include "dcf77_bitlayer.h"
 #include "dcf77_offsets.h"
 #include "dcf77_telegram.h"
@@ -53,7 +51,6 @@ void dcf77_secondlayer_process_telegrams(struct dcf77_secondlayer* ctx)
 		 * received data is invalid. This requires us to perform a
 		 * recompute_eom()
 		 */
-		printf("    recompute_eom because: telegram is invalid. private_line_current=%d\n", ctx->private_line_current); /* TODO DEBUG ONLY */
 		ctx->out_telegram_1_len = 0;
 		ctx->out_telegram_2_len = 0;
 		dcf77_secondlayer_recompute_eom(ctx);
@@ -233,7 +230,6 @@ static void process_telegrams_single_mismatch(struct dcf77_secondlayer* ctx,
 		 */
 		ctx->out_telegram_1_len = 0;
 		ctx->out_telegram_2_len = 0;
-		puts("    recompute_eom because: telegram processing mismatch."); /* TODO DEBUG ONLY */
 		dcf77_secondlayer_recompute_eom(ctx);
 	}
 }

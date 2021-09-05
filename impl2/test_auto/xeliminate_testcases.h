@@ -235,4 +235,20 @@ struct xeliminate_testcase xeliminate_testcases[] = {
 		.fault_reset_num_allowed = 1,
 		.recovers_to = {0x56,0x55,0x55,0x55,0xae,0xbb,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x54},
 	},
+	{
+		.description = "01:49, 01:57, 02:01, 02:02 - minutes that do not come immediately after each other. invalid data.",
+		.num_lines = 4,
+		.line_len = { 60, 60, 60, 60 },
+		.data = {
+			{0,0,1,0,0,1,0,0,0,1,1,1,0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 6  So, 01.07.12 01:49:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,1,1,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,0,1,1,1,1,1,0,1,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 14 So, 01.07.12 01:57:00, SZ   Einfügen einer Schaltsekunde angekündigt */
+			{0,0,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,1,0,0,1,1,0,0,0,0,0,0,1,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 18 So, 01.07.12 02:01:00, SZ */
+			{0,0,1,0,0,1,1,1,0,0,1,1,1,0,1,0,0,1,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,0,1,0,0,0,1,3}, /* 19 So, 01.07.12 02:02:00, SZ */
+		},
+		/* We expect a reset and afterwards recovery. */
+		.recovery_ok = 1,
+		.secondlayer_required = 1,
+		.fault_reset_num_allowed = 1,
+		.recovers_to = {0x56,0x55,0x55,0x55,0xae,0xbb,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a,0x54},
+	},
 };

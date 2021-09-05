@@ -506,7 +506,75 @@ static const struct test_case_moventries TESTS[] = {
 		.out_telegram_1 = { 0x56,0x55,0x55,0x55,0xae,0xbb,0xaa,0xbb,0xea,0xab,0xfa,0xff,0xea,0xba,0x7a, },
 		.out_telegram_2 = { 0x56,0x55,0x55,0x55,0x55,0x57,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, },
 	},
-	/* TODO CSTAT NEXT DEVELOP SOME TESTS TO trigger the reset cases [implement them in case they are only exit64] */
+	{
+		.title = "Leapsec 2 full telegram w/ 2nd repeated INVALID/reset!",
+		.in_length = 182,
+		.in = {
+			/* 01.07.2012 01:59:00, ankuend | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 3, 3, 3, 2, 3, 2, 2, 2, 3, 2, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 3, 2, 2, 3, 3, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+			/* 01.07.2012 02:00:00, hasl    | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55  */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
+			/* Now comes the same one again, This is clearly invalid! */
+			/* 01.07.2012 02:00:00, hasl    | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55  */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
+		},
+		.out = {
+			/* The last `1` is kept and it marks an end of line which yields an empty line */
+			0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,
+		},
+		.out_telegram_1_len = 60,
+		.out_telegram_2_len = 0,
+		/* almost meaningless telegram output... */
+		.out_telegram_1 = { 0x56,0x55,0x55,0x55,0x55,0x57,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, },
+		.out_telegram_2 = { 0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, },
+	},
+	{
+		.title = "Clock turned on during leap sec. Cornercase/reset.",
+		.in_length = 61,
+		.in = {
+			/* 01.07.2012 02:00:00, hasl    | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55  */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
+		},
+		.out = {
+			/* The last `1` is kept and it marks an end of line which yields an empty line */
+			0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,
+		},
+		.out_telegram_1_len = 60,
+		.out_telegram_2_len = 0,
+		/* almost meaningless telegram output... */
+		.out_telegram_1 = { 0x56,0x55,0x55,0x55,0x55,0x57,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, },
+		.out_telegram_2 = { 0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, },
+	},
+	{
+		.title = "Leapsec 2 full telegram w/ 2nd invalid INVALID/reset!",
+		.in_length = 181,
+		.in = {
+			/* 01.07.2012 01:59:00, ankuend | fe,ae,ee,bb,ee,af,ef,ae,ea,ab,fa,ff,ea,ba,7a,55 */
+			2, 3, 3, 3, 2, 3, 2, 2, 2, 3, 2, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 3, 2, 2, 3, 3, 2, 3, 2, 3, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 1,
+			/* 01.07.2012 02:00:00, hasl    | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55  */
+			2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2, 1, /* <- leap here */
+			/* Now comes the same one again, This is clearly invalid! */
+			/* 01.07.2012 02:00:00, hasl    | aa,ef,ff,bb,ee,ab,aa,ba,ea,ab,fa,ff,ea,ba,ba,55  */
+			1, 2, 2, 2, 2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 3, 2, 2, 3, 2, 3,
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2,
+			2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, /* missing EOM will recompute/fail! */
+		},
+		/* We do not supply enough data for an output to be generated */
+		.out_telegram_1_len = 0,
+		.out_telegram_2_len = 0,
+	},
 };
 #define NUMCASES (sizeof(TESTS)/sizeof(struct test_case_moventries))
 
