@@ -10,16 +10,18 @@
 #
 # 	make clean
 
-#MAIN        = test_display.o
+MAIN        = test_display.o
 #MAIN        = test_input.o
 #MAIN        = test_alarm.o
-MAIN        = main.o
+#MAIN        = main.o
 
-CC_TEST     = gcc
-CC_PROD     = avr-gcc
-CFLAGS_DEBG = -Wall -I../interface -O0 -fprofile-arcs -ftest-coverage -g -DDEBUG
-CFLAGS_TEST = -Wall -I../interface -O2 -fprofile-arcs -ftest-coverage -DTEST
-CFLAGS_PROD = -Wall -I../interface -O2 -DF_CPU=16000000UL -mmcu=atmega328p
+CC_TEST      = gcc
+CC_PROD      = avr-gcc
+CFLAGS_ALL   = -Wall -I../interface -DDCF77_TIMELAYER_T_COMPILATION=$(shell \
+			date "+{.y=%Y,.m=%-m,.d=%-d,.h=%-H,.i=%-M,.s=%-S}")
+CFLAGS_DEBG  = $(CFLAGS_ALL) -O0 -fprofile-arcs -ftest-coverage -g -DDEBUG
+CFLAGS_TEST  = $(CFLAGS_ALL) -O2 -fprofile-arcs -ftest-coverage -DTEST
+CFLAGS_PROD  = $(CFLAGS_ALL) -O2 -DF_CPU=16000000UL -mmcu=atmega328p
 LDFLAGS_TEST = -lgcov --coverage
 
 compile-test:

@@ -3,7 +3,8 @@ DEPS = display.o interrupt.o dcf77_bitlayer.o mainloop_timing.o \
 	dcf77_secondlayer_moventries.o \
 	dcf77_secondlayer_recompute_eom.o dcf77_secondlayer.o \
 	dcf77_secondlayer_process_telegrams.o \
-	dcf77_secondlayer_check_bcd_correct_telegram.o
+	dcf77_secondlayer_check_bcd_correct_telegram.o \
+	dcf77_timelayer.o
 
 compile: $(DEPS)
 
