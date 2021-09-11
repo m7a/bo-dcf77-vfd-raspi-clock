@@ -18,7 +18,7 @@ struct dcf77_timelayer_tm {
 #define DCF77_TIMELAYER_T_COMPILATION {.y=2021,.m=9,.d=11,.h=0,.i=24,.s=43}
 #endif
 
-struct dcf77_timelayer_ctx {
+struct dcf77_timelayer {
 	/* ======================================================= private == */
 
 	/*
@@ -39,7 +39,7 @@ struct dcf77_timelayer_ctx {
 	struct dcf77_timelayer_tm out_current;
 };
 
-void dcf77_timelayer_init(struct dcf77_timelayer_ctx* ctx);
-void dcf77_timelayer_process(struct dcf77_timelayer_ctx* ctx,
+void dcf77_timelayer_init(struct dcf77_timelayer* ctx);
+void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 					struct dcf77_bitlayer* bitlayer,
 					struct dcf77_secondlayer* secondlayer);
