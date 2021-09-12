@@ -30,7 +30,7 @@ static unsigned char read_byte(struct check_state* s, unsigned char bit_offset);
 static char check_dst(struct check_state* s);
 static char check_begin_of_time(struct check_state* s);
 static char check_minute(struct check_state* s);
-static unsigned char to_bcd(unsigned char by);
+static unsigned char from_bcd(unsigned char by);
 static void update_parity(enum parity_state* par, unsigned char by);
 static char check_hour(struct check_state* s);
 static char check_date(struct check_state* s);
@@ -98,12 +98,8 @@ static unsigned char read_multiple(struct check_state* s,
 							bit_offset_in_tel;
 	unsigned char upper_low  = read_byte(s, bit_offset);
 	unsigned char lower_up   = read_byte(s, bit_offset + length - 1);
-	unsigned char shf_ulow   =     2 * (bit_offset % 4);
-	unsigned char shf_loup   = 8 - 2 * (bit_offset % 4);
-	unsigned char shfl       = 8 - 2 * length;
-	return (((upper_low & (0xff << shf_ulow)) >> shf_ulow) |
-		((lower_up  & (0xff >> shf_loup)) << shf_loup)) &
-		(0xff >> shfl);
+	return dcf77_telegram_read_multiple_inner(upper_low, lower_up,
+							bit_offset, length);
 }
 
 static unsigned char read_byte(struct check_state* s, unsigned char bit_offset)
@@ -152,16 +148,16 @@ static char check_minute(struct check_state* s)
 
 	/* 21-24 -- minute ones range from 0..9 */
 	entry = read_multiple(s, DCF77_OFFSET_MINUTE_ONES, 4);
-	if(to_bcd(entry) > 9) {
-		DEBUGPRINTF("bcdcorrect,ERROR4,%d\n", to_bcd(entry));
+	if(from_bcd(entry) > 9) {
+		DEBUGPRINTF("bcdcorrect,ERROR4,%d\n", from_bcd(entry));
 		return 0;
 	}
 	update_parity(&parity_minute, entry);
 
 	/* 25-27 -- minute tens range from 0..5 */
 	entry = read_multiple(s, DCF77_OFFSET_MINUTE_TENS, 3);
-	if(to_bcd(entry) > 5) {
-		DEBUGPRINTF("bcdcorrect,ERROR5,%d\n", to_bcd(entry));
+	if(from_bcd(entry) > 5) {
+		DEBUGPRINTF("bcdcorrect,ERROR5,%d\n", from_bcd(entry));
 		return 0;
 	}
 
@@ -187,7 +183,7 @@ static char check_minute(struct check_state* s)
  * move the obtained ones to the lower output parts s.t. output values range
  * from 0-15.
  */
-static unsigned char to_bcd(unsigned char by)
+static unsigned char from_bcd(unsigned char by)
 {
 	return  (((by & 0x01) & (by & 0x02) >> 1) >> 0) |
 		(((by & 0x04) & (by & 0x08) >> 1) >> 1) |
@@ -220,7 +216,7 @@ static char check_hour(struct check_state* s)
 
 	/* 29-32 -- hour ones range from 0..9 */
 	hour_ones_entry = read_multiple(s, DCF77_OFFSET_HOUR_ONES, 4);
-	hour_ones_bcd   = to_bcd(hour_ones_entry);
+	hour_ones_bcd   = from_bcd(hour_ones_entry);
 	if(hour_ones_bcd > 9) {
 		DEBUGPRINTF("bcdcorrect,ERROR7,%d\n", hour_ones_bcd);
 		return 0;
@@ -262,8 +258,9 @@ static char check_date(struct check_state* s)
 
 	/* 36-39 -- day ones ranges from 0..9 */
 	day_ones_entry = read_multiple(s, DCF77_OFFSET_DAY_ONES, 4);
-	if(to_bcd(day_ones_entry) > 9) {
-		DEBUGPRINTF("bcdcorrect,ERROR10,%d\n", to_bcd(day_ones_entry));
+	if(from_bcd(day_ones_entry) > 9) {
+		DEBUGPRINTF("bcdcorrect,ERROR10,%d\n",
+						from_bcd(day_ones_entry));
 		return 0;
 	}
 	update_parity(&parity_date, day_ones_entry);
@@ -301,26 +298,26 @@ static char check_date(struct check_state* s)
 	 * If month tens is 1 then month ones is at most 2 or
 	 * If month tens is 0 then month ones must not be 0
 	 */
-	if((entry == DCF77_BIT_1 && to_bcd(month_ones_entry) > 2) ||
+	if((entry == DCF77_BIT_1 && from_bcd(month_ones_entry) > 2) ||
 			(entry == DCF77_BIT_0 && month_ones_entry == 0xaa)) {
 		DEBUGPRINTF("bcdcorrect,ERROR11b,%x,%x,%d\n",
-			entry, month_ones_entry, to_bcd(month_ones_entry));
+			entry, month_ones_entry, from_bcd(month_ones_entry));
 		return 0;
 	}
 	update_parity(&parity_date, entry);
 
 	/* 50-53 -- year ones are valid from 0..9 */
 	entry = read_multiple(s, DCF77_OFFSET_YEAR_ONES, 4);
-	if(to_bcd(entry) > 9) {
-		DEBUGPRINTF("bcdcorrect,ERROR12,%d\n", to_bcd(entry));
+	if(from_bcd(entry) > 9) {
+		DEBUGPRINTF("bcdcorrect,ERROR12,%d\n", from_bcd(entry));
 		return 0;
 	}
 	update_parity(&parity_date, entry);
 
 	/* 54-57 -- year tens are valid from 0..9 */
 	entry = read_multiple(s, DCF77_OFFSET_YEAR_TENS, 4);
-	if(to_bcd(entry) > 9) {
-		DEBUGPRINTF("bcdcorrect,ERROR13,%d\n", to_bcd(entry));
+	if(from_bcd(entry) > 9) {
+		DEBUGPRINTF("bcdcorrect,ERROR13,%d\n", from_bcd(entry));
 		return 0;
 	}
 	update_parity(&parity_date, entry);

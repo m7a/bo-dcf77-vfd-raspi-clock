@@ -3,7 +3,7 @@
 #define DCF77_OFFSET_LEAP_SEC_ANNOUNCE    19
 #define DCF77_OFFSET_BEGIN_TIME           20
 #define DCF77_OFFSET_MINUTE_ONES          21
-#define DCF77_OFFSET_MINUTE_TENS          25
+#define DCF77_OFFSET_MINUTE_TENS          25 /* 25-27 */
 #define DCF77_OFFSET_PARITY_MINUTE        28
 #define DCF77_OFFSET_HOUR_ONES            29
 #define DCF77_OFFSET_HOUR_TENS            33
