@@ -5,6 +5,7 @@
 #include "dcf77_telegram.h"
 #include "dcf77_secondlayer.h"
 #include "dcf77_timelayer.h"
+#include "dcf77_bcd.h"
 
 static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 					struct dcf77_secondlayer* secondlayer);
@@ -44,16 +45,25 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 					struct dcf77_secondlayer* secondlayer)
 {
+	/* char xeliminate_prev; * 2a. */
+
 	/* 1. */
 	char has_out_2 = (secondlayer->out_telegram_2_len != 0);
-	dcf77_timelayer_recover_bcd(secondlayer->out_telegram_1);
+	char out_1_is_complete =
+		dcf77_timelayer_recover_bcd(secondlayer->out_telegram_1);
 	if(has_out_2)
 		dcf77_timelayer_recover_bcd(secondlayer->out_telegram_2);
 	dcf77_timelayer_add_minute_ones_to_buffer(ctx,
 						secondlayer->out_telegram_1);
 	ctx->seconds_left_in_minute = secondlayer->out_telegram_1_len;
 
-	/* 2. TODO ... */
+	/* 2. */
+	if(out_1_is_complete) {
+		/* TODO set current time = decode(secondlayer->out_telegram_1) and adjust prev structure, return; -> QOS1 TODO CSTAT EITHER THIS OR ADD 1 SEC DATETIME MODEL FUNCTION NEEDS TO BE IMPLEMENTED. */
+	}
+
+	/* 3. */
+	/* TODO if recover ones() ... */
 }
 
 /*
@@ -112,10 +122,14 @@ static char dcf77_timelayer_recover_bcd(unsigned char* telegram)
 	/*
 	 * - We know that if month ones are > 2 then month tens must be = 0.
 	 *   I.e. if month ones has 4-bit or higher set OR both lower bits set
-	 *        then recover month ones to 0.
-	 *
-	 * TODO CSTAT SUBSTAT month tens recovery GOES HERE. CAN re-use from_bcd function from dcf77_secondlayer_check_bcd_correct_telgram.c. Do we store it in a header for inline inclusion or do we export it as a symbol from some source code.
+	 *        then recover month tens to 0.
 	 */
+	if(dcf77_telegram_read_bit(DCF77_OFFSET_MONTH_TENS, telegram) ==
+							DCF77_BIT_NO_SIGNAL &&
+			dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+					DCF77_OFFSET_MONTH_ONES, 4)) > 2)
+		dcf77_telegram_write_bit(DCF77_OFFSET_MONTH_TENS, telegram,
+								DCF77_BIT_0);
 	/* - After that, recover single bit errors... */
 	rv &= dcf77_timelayer_recover_bit(telegram, DCF77_OFFSET_DAY_ONES, 23);
 	return rv;
@@ -124,10 +138,10 @@ static char dcf77_timelayer_recover_bcd(unsigned char* telegram)
 static unsigned char dcf77_timelayer_read_multiple(unsigned char* telegram,
 				unsigned char bit_offset, unsigned char length)
 {
-	unsigned char upper_low  = telegram[bit_offset / 4];
-	unsigned char lower_up   = telegram[(bit_offset + length - 1) / 4];
+	unsigned char upper_low = telegram[bit_offset / 4];
+	unsigned char lower_up  = telegram[(bit_offset + length - 1) / 4];
 	return dcf77_telegram_read_multiple_inner(upper_low, lower_up,
-					bit_offset, length);
+							bit_offset, length);
 }
 
 /*
@@ -141,8 +155,63 @@ static unsigned char dcf77_timelayer_read_multiple(unsigned char* telegram,
 static char dcf77_timelayer_recover_bit(unsigned char* telegram,
 				unsigned char bit_offset, unsigned char length)
 {
-	/* TODO N_IMPL */
-	return 0;
+	char known_missing = -1;
+	unsigned char i;
+	unsigned char last_excl = bit_offset + length;
+	unsigned char parity = 0; /* counts number of ones in sequence */
+
+	for(i = bit_offset; i < last_excl; i++) {
+		switch(dcf77_telegram_read_bit(i, telegram)) {
+		case DCF77_BIT_NO_SIGNAL:
+			if(known_missing == -1)
+				/* It's the first no signal. Store position. */
+				known_missing = (char)i;
+			else
+				/* More than one bit missing. Cannot recover. */
+				return 0;
+			break;
+		case DCF77_BIT_1:
+			parity++;
+			break;
+		default:
+			/*
+			 * pass, do not update parity
+			 *
+			 * Having NO_UPDATE here would be an error but it is not
+			 * handled here!
+			 */
+			break;
+		}
+	}
+	if((parity % 2) == 0) {
+		/*
+		 * Even parity is accepted hence recover potential missing bit
+		 * to 0.
+		 */
+		if(known_missing != -1)
+			dcf77_telegram_write_bit(known_missing, telegram,
+								DCF77_BIT_0);
+		/* In any case this means parity passed! */
+		return 1;
+	} else if(known_missing == -1) {
+		/*
+		 * Odd number of ones means there must be missing something.
+		 * However, if we do not have an index for this it means the
+		 * data is bad. This is an error case!
+		 *
+		 * Say "recovery failed" to indicate that something is fishy
+		 * and the data better not be trusted from the segment of
+		 * interest.
+		 */
+		return 0;
+	} else {
+		/*
+		 * Odd number of ones and missing index exists means we recover
+		 * the missing bit to 1.
+		 */
+		dcf77_telegram_write_bit(known_missing, telegram, DCF77_BIT_1);
+		return 1;
+	}
 }
 
 static void dcf77_timelayer_add_minute_ones_to_buffer(
@@ -150,6 +219,7 @@ static void dcf77_timelayer_add_minute_ones_to_buffer(
 {
 	ctx->private_last_minute_idx = ((ctx->private_last_minute_idx + 1) %
 					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN);
-	/* ctx->private_last_minute_ones[ctx->private_last_minute_idx] = */
-	/* TODO CSTAT could use read_multiple but it would be overkill. instead hardcode how to read data! */
+	ctx->private_last_minute_ones[ctx->private_last_minute_idx] =
+					dcf77_timelayer_read_multiple(telegram,
+					DCF77_OFFSET_MINUTE_ONES, 4);
 }
