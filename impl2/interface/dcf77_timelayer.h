@@ -10,7 +10,7 @@ struct dcf77_timelayer_tm {
 	unsigned char d; /* Day     1..31                      */
 	unsigned char h; /* Hour    0..23                      */
 	unsigned char i; /* Minute  0..59                      */
-	unsigned char s; /* Second  0..60 (60 = leapsec case)  */
+	short         s; /* Second  0..60 (60 = leapsec case)  */
 };
 
 #ifndef DCF77_TIMELAYER_T_COMPILATION

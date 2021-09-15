@@ -7,6 +7,25 @@
 #include "dcf77_timelayer.h"
 #include "dcf77_bcd.h"
 
+static const unsigned char MONTH_LENGTHS[] = {
+	29, /*  0: leap year February */
+	31, /*  1: January            */
+	28, /*  2: February           */
+	31, /*  3: March              */
+	30, /*  4: April              */
+	31, /*  5: May                */
+	30, /*  6: June               */
+	31, /*  7: July               */
+	31, /*  8: August             */
+	30, /*  9: September          */
+	31, /* 10: October            */
+	30, /* 11: November           */
+	31, /* 12: December           */
+};
+
+static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
+								short seconds);
+static char dcf77_timelayer_is_leap_year(short y);
 static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 					struct dcf77_secondlayer* secondlayer);
 static char dcf77_timelayer_recover_bcd(unsigned char* telegram);
@@ -36,10 +55,56 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 {
 	/* Always handle second if detected */
 	if(bitlayer->out_reading != DCF77_BIT_NO_UPDATE) {
-		/* TODO add 1 sec to current time! */
+		/* TODO add 1 sec to current time! The thing is: It seems to make sense to handle leap seconds here by referring to seconds_left_in_minute? It might alternatively make sense to use a different encoding than seconds_left_in_minute but the idea is to bypass the datetime model such as long as we are within a correctly received minute telegram! */
+		dcf77_timelayer_advance_tm_by_sec(&ctx->out_current, 1);
 	}
 	if(secondlayer->out_telegram_1_len != 0)
 		dcf77_timelayer_process_new_telegram(ctx, secondlayer);
+}
+
+/* Not leap-second aware for now */
+static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
+								short seconds)
+{
+	unsigned char midx;
+
+	tm->s += seconds;
+	if(tm->s >= 60) {
+		tm->i += tm->s / 60;
+		tm->s  = tm->s % 60;
+
+		if(tm->i >= 60) {
+			tm->h += tm->i / 60;
+			tm->i  = tm->i % 60;
+
+			if(tm->h >= 24) {
+				tm->d += tm->h / 24;
+				tm->h  = tm->h % 24;
+
+				midx = dcf77_timelayer_is_leap_year(tm->y)?
+								0: tm->m;
+				if(tm->d > MONTH_LENGTHS[midx]) {
+					tm->d -= MONTH_LENGTHS[midx];
+					tm->m++;
+
+					if(tm->m > 12) {
+						tm->m = 1;
+						tm->y++;
+					}
+				}
+			}
+		}
+	}
+}
+
+/* https://en.wikipedia.org/wiki/Leap_year */
+static char dcf77_timelayer_is_leap_year(short y)
+{
+	/* TODO z MAKE AN EXECUTABLE TEST FOR THIS! */
+	/* Test cases: 2020, 2024, 2028 -> 1 */
+	/*             2000             -> 1 */
+	/*             1900             -> 0 */
+	return (y % 4) == 0 && (((y % 100) != 0) || (y % 400 == 0));
 }
 
 static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
