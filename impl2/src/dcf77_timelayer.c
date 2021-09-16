@@ -55,8 +55,32 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 {
 	/* Always handle second if detected */
 	if(bitlayer->out_reading != DCF77_BIT_NO_UPDATE) {
-		/* TODO add 1 sec to current time! The thing is: It seems to make sense to handle leap seconds here by referring to seconds_left_in_minute? It might alternatively make sense to use a different encoding than seconds_left_in_minute but the idea is to bypass the datetime model such as long as we are within a correctly received minute telegram! */
-		dcf77_timelayer_advance_tm_by_sec(&ctx->out_current, 1);
+		/*
+		 * Add one sec to current time handling leap seconds and prev
+		 * management.
+		 *
+		 * TODO CSTAT SMALL PROBLEM: HOW IS A CASE HANDLED WHERE WE ARE IN PERFECT SYNC. BY CURRENT IMPLEMENTATION WE WOULD SET PREV HERE TO A "COMPUTED" VALUE ONLY TO UPDATE IT FURTHER DOWNWARDS TO THE ACTUAL VALUE? NEED TO SOMEHOW INVERT THE HANDLING HERE S.T. SYNCED BEHAVIOUR OVERRIDES/PRECEDES THE GENERIC +1 SEC COMPUTATION!
+		 */
+		if(ctx->private_num_seconds_since_prev < 0x7fff)
+			ctx->private_num_seconds_since_prev++;
+
+		if(ctx->seconds_left_in_minute > 0)
+			ctx->seconds_left_in_minute--;
+		if(ctx->seconds_left_in_minute == 1 &&
+						ctx->out_current.s == 59) {
+			/* special leap second case */
+			ctx->out_current.s = 60;
+		} else {
+			if(ctx->out_current.s >= 59) {
+				/*
+				 * We now have to store the out_current as prev.
+				 */
+				ctx->private_prev = ctx->out_current;
+				ctx->private_num_seconds_since_prev = 0;
+				/* TODO x UPDATE PRIVATE PREV TELEGRAM */
+			}
+			dcf77_timelayer_advance_tm_by_sec(&ctx->out_current, 1);
+		}
 	}
 	if(secondlayer->out_telegram_1_len != 0)
 		dcf77_timelayer_process_new_telegram(ctx, secondlayer);
