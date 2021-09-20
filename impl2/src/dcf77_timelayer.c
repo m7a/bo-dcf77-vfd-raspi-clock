@@ -23,6 +23,27 @@ static const unsigned char MONTH_LENGTHS[] = {
 	31, /* 12: December           */
 };
 
+static const struct dcf77_timelayer_tm TM0 = DCF77_TIMELAYER_T_COMPILATION;
+
+static const unsigned char DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE[] = {
+	/* Decimal - Binary  - Internal    -    Hex  */
+	/* 0       - 0 0 0 0 - 10 10 10 10 - */ 0xaa,
+	/* 1       - 0 0 0 1 - 10 10 10 11 - */ 0xab,
+	/* 2       - 0 0 1 0 - 10 10 11 10 - */ 0xae,
+	/* 3       - 0 0 1 1 - 10 10 11 11 - */ 0xaf,
+	/* 4       - 0 1 0 0 - 10 11 10 10 - */ 0xba,
+	/* 5       - 0 1 0 1 - 10 11 10 11 - */ 0xbb,
+	/* 6       - 0 1 1 0 - 10 11 11 10 - */ 0xbe,
+	/* 7       - 0 1 1 1 - 10 11 11 11 - */ 0xbf,
+	/* 8       - 1 0 0 0 - 11 10 10 10 - */ 0xea,
+	/* 9       - 1 0 0 1 - 11 10 10 11 - */ 0xeb,
+};
+
+static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
+						unsigned char* out_telegram);
+static void dcf77_timelayer_write_multiple_bits_converting(
+			unsigned char* out_telegram, unsigned char from_bit,
+			unsigned char num_bits, unsigned char in_bits);
 static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
 								short seconds);
 static char dcf77_timelayer_is_leap_year(short y);
@@ -35,14 +56,18 @@ static char dcf77_timelayer_recover_bit(unsigned char* telegram,
 				unsigned char bit_offset, unsigned char length);
 static void dcf77_timelayer_add_minute_ones_to_buffer(
 			struct dcf77_timelayer* ctx, unsigned char* telegram);
+static char dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
+						unsigned char* telegram);
+static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
+					unsigned char* out_recovered_ones);
 
 void dcf77_timelayer_init(struct dcf77_timelayer* ctx)
 {
-	const struct dcf77_timelayer_tm tm0 = DCF77_TIMELAYER_T_COMPILATION;
 	ctx->private_last_minute_idx = DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN - 1;
 	ctx->private_num_seconds_since_prev = DCF77_TIMELAYER_PREV_UNKNOWN;
 	ctx->seconds_left_in_minute = 60;
-	ctx->out_current = tm0;
+	ctx->out_current = TM0;
+	ctx->qos = DCF77_TIMELAYER_QOS7;
 	memset(ctx->private_last_minute_ones, 0, sizeof(unsigned char) *
 					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN);
 	memset(ctx->private_prev_telegram, 0, sizeof(unsigned char) *
@@ -59,7 +84,18 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 		 * Add one sec to current time handling leap seconds and prev
 		 * management.
 		 *
-		 * TODO CSTAT SMALL PROBLEM: HOW IS A CASE HANDLED WHERE WE ARE IN PERFECT SYNC. BY CURRENT IMPLEMENTATION WE WOULD SET PREV HERE TO A "COMPUTED" VALUE ONLY TO UPDATE IT FURTHER DOWNWARDS TO THE ACTUAL VALUE? NEED TO SOMEHOW INVERT THE HANDLING HERE S.T. SYNCED BEHAVIOUR OVERRIDES/PRECEDES THE GENERIC +1 SEC COMPUTATION!
+		 * Two options:
+		 * (a) double compute i.e. first +1sec then see if telegram
+		 *     processing is compatible if not update.
+		 * (b) only compute +1sec if we are within a minute. if we are
+		 *     at the beginning of a new minute then _first_ try to
+		 *     process telegram and only revert to +1 routine if that
+		 *     does not successfully yield the current time to display.
+		 *
+		 * CURSEL: (a) double compute to allow setting prev minute from
+		 *     the model for cases where secondlayer does not provide
+		 *     us with one. This allows using the model without the
+		 *     necessity to generate previous date values.
 		 */
 		if(ctx->private_num_seconds_since_prev < 0x7fff)
 			ctx->private_num_seconds_since_prev++;
@@ -71,19 +107,74 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 			/* special leap second case */
 			ctx->out_current.s = 60;
 		} else {
+			/*
+			 * Store out_current as prev if +1 yields a new minute
+			 * and our current minute is X9 i.e. next minute will
+			 * be Y0 with Y = X+1 (or more fields changed...)
+			 */
 			if(ctx->out_current.s >= 59) {
 				/*
-				 * We now have to store the out_current as prev.
+				 * If this is the only opinion we get here, it
+				 * essentially means that we are not in sync!
 				 */
-				ctx->private_prev = ctx->out_current;
-				ctx->private_num_seconds_since_prev = 0;
-				/* TODO x UPDATE PRIVATE PREV TELEGRAM */
+				ctx->qos = DCF77_TIMELAYER_QOS7;
+
+				if((ctx->out_current.i % 10) == 9) {
+					ctx->private_prev = ctx->out_current;
+					ctx->private_num_seconds_since_prev = 0;
+					dcf77_timelayer_tm_to_telegram(
+						&ctx->private_prev,
+						ctx->private_prev_telegram);
+				}
 			}
 			dcf77_timelayer_advance_tm_by_sec(&ctx->out_current, 1);
 		}
 	}
 	if(secondlayer->out_telegram_1_len != 0)
 		dcf77_timelayer_process_new_telegram(ctx, secondlayer);
+}
+
+/*
+ * Currently needed to store "prev" values if +1sec yields a new minute tens.
+ * Currently only stores tm to ten minute precision.
+ */
+static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
+						unsigned char* out_telegram)
+{
+	unsigned char y_val  = tm->y % 100;
+	memset(out_telegram, 0x55, sizeof(unsigned char) *
+						DCF77_SECONDLAYER_LINE_BYTES);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_YEAR_ONES, DCF77_LENGTH_YEAR_ONES, y_val % 10);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_YEAR_TENS, DCF77_LENGTH_YEAR_TENS, y_val / 10);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_DAY_ONES, DCF77_LENGTH_DAY_ONES, tm->d % 10);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_DAY_TENS, DCF77_LENGTH_DAY_TENS, tm->d / 10);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_HOUR_ONES, DCF77_LENGTH_HOUR_ONES, tm->h % 10);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_HOUR_TENS, DCF77_LENGTH_HOUR_TENS, tm->h / 10);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_MINUTE_ONES, DCF77_LENGTH_MINUTE_ONES, tm->i % 10);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_MINUTE_TENS, DCF77_LENGTH_MINUTE_TENS, tm->i / 10);
+}
+
+/* TODO z PERFORMANCE OF THIS ROUTINE MIGHT BE OPTIMIZABLE... */
+static void dcf77_timelayer_write_multiple_bits_converting(
+			unsigned char* out_telegram, unsigned char from_bit,
+			unsigned char num_bits, unsigned char in_bits)
+{
+	/* write lowest bit first */
+	unsigned char bits_processed;
+	unsigned char val_to_write;
+	for(bits_processed = 0; bits_processed < num_bits; bits_processed++) {
+		val_to_write = (in_bits & 1)? DCF77_BIT_1: DCF77_BIT_0;
+		dcf77_telegram_write_bit(from_bit + bits_processed,
+						out_telegram, val_to_write);
+	}
 }
 
 /* Not leap-second aware for now */
@@ -131,32 +222,58 @@ static char dcf77_timelayer_is_leap_year(short y)
 	return (y % 4) == 0 && (((y % 100) != 0) || (y % 400 == 0));
 }
 
+/* TODO z acceptability check and prev handling is overly complex. externalize function(s) */
 static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 					struct dcf77_secondlayer* secondlayer)
 {
 	/* char xeliminate_prev; * 2a. */
+	unsigned char recovered_ones;
 
 	/* 1. */
 	char has_out_2 = (secondlayer->out_telegram_2_len != 0);
-	char out_1_is_complete =
-		dcf77_timelayer_recover_bcd(secondlayer->out_telegram_1);
+	char out_1_is_complete = dcf77_timelayer_recover_bcd(
+					secondlayer->out_telegram_1) == 1;
+	char out_2_is_acceptable = 0;
 	if(has_out_2)
-		dcf77_timelayer_recover_bcd(secondlayer->out_telegram_2);
+		out_2_is_acceptable = (dcf77_timelayer_recover_bcd(
+					secondlayer->out_telegram_2) <= 2);
 	dcf77_timelayer_add_minute_ones_to_buffer(ctx,
 						secondlayer->out_telegram_1);
 	ctx->seconds_left_in_minute = secondlayer->out_telegram_1_len;
 
 	/* 2. */
 	if(out_1_is_complete) {
-		/* TODO set current time = decode(secondlayer->out_telegram_1) and adjust prev structure, return; -> QOS1 TODO CSTAT EITHER THIS OR ADD 1 SEC DATETIME MODEL FUNCTION NEEDS TO BE IMPLEMENTED. */
+		if(out_2_is_acceptable) {
+			dcf77_timelayer_decode(&ctx->private_prev,
+						secondlayer->out_telegram_2);
+			memcpy(ctx->private_prev_telegram,
+						secondlayer->out_telegram_2,
+						DCF77_SECONDLAYER_LINE_BYTES *
+						sizeof(unsigned char));
+			ctx->private_num_seconds_since_prev = 0;
+		}
+		if(!dcf77_timelayer_decode(&ctx->out_current,
+						secondlayer->out_telegram_1) &&
+						!out_2_is_acceptable) {
+			/* computed previous can not be accepted */
+			ctx->private_num_seconds_since_prev =
+						DCF77_TIMELAYER_PREV_UNKNOWN;
+		}
+		ctx->qos = DCF77_TIMELAYER_QOS1;
+		return;
 	}
 
 	/* 3. */
-	/* TODO if recover ones() ... */
+	if(dcf77_timelayer_recover_ones(ctx, &recovered_ones)) {
+		/* TODO if recover ones() ... */
+	}
 }
 
 /*
- * @return 0 if recovery incomplete and 1 if data is complete.
+ * @return
+ * 	1 if data is complete,
+ *      2 if data is incomplete for minute,
+ *      3 if data is missing more than the minute (incomplete prev!)
  */
 static char dcf77_timelayer_recover_bcd(unsigned char* telegram)
 {
@@ -171,13 +288,13 @@ static char dcf77_timelayer_recover_bcd(unsigned char* telegram)
 	 *   _11X = _ 3 3 1 = 00 11 11 01 = 0x3d
 	 *   _110 = _ 3 3 2 = 00 11 11 10 = 0x3e
 	 */
-	if(dcf77_timelayer_read_multiple(telegram, DCF77_OFFSET_MINUTE_TENS, 3)
-									== 0x3d)
+	if(dcf77_timelayer_read_multiple(telegram, DCF77_OFFSET_MINUTE_TENS,
+					DCF77_LENGTH_MINUTE_TENS) == 0x3d)
 		dcf77_telegram_write_bit(DCF77_OFFSET_MINUTE_TENS, telegram,
 								DCF77_BIT_0);
 	/* - After that, recover single bit errors if exactly one remains. */
-	rv &= dcf77_timelayer_recover_bit(telegram,
-						DCF77_OFFSET_MINUTE_ONES, 8);
+	if(!dcf77_timelayer_recover_bit(telegram, DCF77_OFFSET_MINUTE_ONES, 8))
+		rv = 2;
 
 	/*
 	 * 29-35: Hour recovery
@@ -188,12 +305,13 @@ static char dcf77_timelayer_recover_bcd(unsigned char* telegram)
 	 *   __1X = _ _ 3 1 = 00 00 11 01 = 0x0d
 	 *   __10 = _ _ 3 2 = 00 00 11 10 = 0x0e
 	 */
-	if(dcf77_timelayer_read_multiple(telegram, DCF77_OFFSET_HOUR_TENS, 2)
-									== 0x0d)
+	if(dcf77_timelayer_read_multiple(telegram, DCF77_OFFSET_HOUR_TENS,
+						DCF77_LENGTH_HOUR_TENS) == 0x0d)
 		dcf77_telegram_write_bit(DCF77_OFFSET_HOUR_TENS, telegram,
 								DCF77_BIT_0);
 	/* - After that, recover single bit errors... */
-	rv &= dcf77_timelayer_recover_bit(telegram, DCF77_OFFSET_HOUR_ONES, 7);
+	if(!dcf77_timelayer_recover_bit(telegram, DCF77_OFFSET_HOUR_ONES, 7))
+		rv = 3;
 
 	/*
 	 * 36-58: Date recovery
@@ -204,8 +322,8 @@ static char dcf77_timelayer_recover_bcd(unsigned char* telegram)
 	 *   _00X = _ 2 2 1 = 00 10 10 01 = 0x29
 	 *   _001 = _ 2 2 3 = 00 10 10 11 = 0x2b
 	 */
-	if(dcf77_timelayer_read_multiple(telegram, DCF77_OFFSET_DAY_OF_WEEK, 3)
-									== 0x29)
+	if(dcf77_timelayer_read_multiple(telegram, DCF77_OFFSET_DAY_OF_WEEK,
+					DCF77_LENGTH_DAY_OF_WEEK) == 0x29)
 		dcf77_telegram_write_bit(DCF77_OFFSET_DAY_OF_WEEK, telegram,
 								DCF77_BIT_1);
 	/*
@@ -216,11 +334,13 @@ static char dcf77_timelayer_recover_bcd(unsigned char* telegram)
 	if(dcf77_telegram_read_bit(DCF77_OFFSET_MONTH_TENS, telegram) ==
 							DCF77_BIT_NO_SIGNAL &&
 			dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
-					DCF77_OFFSET_MONTH_ONES, 4)) > 2)
+						DCF77_OFFSET_MONTH_ONES,
+						DCF77_LENGTH_MONTH_ONES)) > 2)
 		dcf77_telegram_write_bit(DCF77_OFFSET_MONTH_TENS, telegram,
 								DCF77_BIT_0);
 	/* - After that, recover single bit errors... */
-	rv &= dcf77_timelayer_recover_bit(telegram, DCF77_OFFSET_DAY_ONES, 23);
+	if(!dcf77_timelayer_recover_bit(telegram, DCF77_OFFSET_DAY_ONES, 23))
+		rv = 3;
 	return rv;
 }
 
@@ -311,4 +431,46 @@ static void dcf77_timelayer_add_minute_ones_to_buffer(
 	ctx->private_last_minute_ones[ctx->private_last_minute_idx] =
 					dcf77_timelayer_read_multiple(telegram,
 					DCF77_OFFSET_MINUTE_ONES, 4);
+}
+
+/* @return 1 if no differences were detected */
+static char dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
+							unsigned char* telegram)
+{
+	unsigned char rv;
+	/* intermediate new timestamp to allow comparison */
+	struct dcf77_timelayer_tm tmn;
+	tmn.y = (TM0.y / 100) * 100
+		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_YEAR_TENS, DCF77_LENGTH_YEAR_TENS)) * 10
+		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_YEAR_ONES, DCF77_LENGTH_YEAR_ONES));
+	tmn.m = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_MONTH_TENS, DCF77_LENGTH_MONTH_TENS)) * 10
+		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_MONTH_ONES, DCF77_LENGTH_MONTH_ONES));
+	tmn.d = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_DAY_TENS, DCF77_LENGTH_DAY_TENS)) * 10
+		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_DAY_ONES, DCF77_LENGTH_DAY_ONES));
+	tmn.h = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_HOUR_TENS, DCF77_LENGTH_HOUR_TENS)) * 10
+		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_HOUR_ONES, DCF77_LENGTH_HOUR_ONES));
+	tmn.i = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_MINUTE_TENS, DCF77_LENGTH_MINUTE_TENS))*10
+		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_MINUTE_ONES, DCF77_LENGTH_MINUTE_ONES));
+	tmn.s = 0;
+	rv = (memcmp(&tmn, tm, sizeof(struct dcf77_timelayer_tm)) == 0);
+	*tm = tmn;
+	return rv;
+}
+
+/* @return 1 if ones were recovered successfully, 0 if not. */
+static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
+					unsigned char* out_recovered_ones)
+{
+	/* TODO N_IMPL / USE DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE ACCORDING TO NOTES */
+	return 0;
 }

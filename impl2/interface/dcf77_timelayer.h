@@ -13,6 +13,16 @@ struct dcf77_timelayer_tm {
 	short         s; /* Second  0..60 (60 = leapsec case)  */
 };
 
+enum dcf77_timelayer_qos {
+	DCF77_TIMELAYER_QOS1 = 1, /* +1 -- perfectly synchronized */
+	DCF77_TIMELAYER_QOS2 = 2, /* +2 -- synchronized minor disturbance */
+	DCF77_TIMELAYER_QOS3 = 3, /* +3 -- synchronized from prev data */
+	DCF77_TIMELAYER_QOS4 = 4, /* o4 -- recovered from prev */
+	DCF77_TIMELAYER_QOS5 = 5, /* o5 -- async telegram match */
+	DCF77_TIMELAYER_QOS6 = 6, /* o6 -- count from prev */
+	DCF77_TIMELAYER_QOS7 = 7, /* -7 -- async count from last */
+};
+
 #ifndef DCF77_TIMELAYER_T_COMPILATION
 #warning "DCF77_TIMELAYER_T_COMPILATION not set. Using 2021-09-11 00:24:43!"
 #define DCF77_TIMELAYER_T_COMPILATION {.y=2021,.m=9,.d=11,.h=0,.i=24,.s=43}
@@ -37,6 +47,7 @@ struct dcf77_timelayer {
 	/* ======================================================== output == */
 
 	struct dcf77_timelayer_tm out_current;
+	enum dcf77_timelayer_qos qos;
 };
 
 void dcf77_timelayer_init(struct dcf77_timelayer* ctx);
