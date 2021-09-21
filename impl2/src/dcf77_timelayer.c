@@ -38,6 +38,8 @@ static const unsigned char DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE[] = {
 	/* 8       - 1 0 0 0 - 11 10 10 10 - */ 0xea,
 	/* 9       - 1 0 0 1 - 11 10 10 11 - */ 0xeb,
 };
+static const unsigned char DCF77_TIMELAYER_BCD_CMP_LEN =
+	sizeof(DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE) / sizeof(unsigned char);
 
 static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
 						unsigned char* out_telegram);
@@ -60,15 +62,18 @@ static char dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
 static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
 					unsigned char* out_recovered_ones);
+static char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
+							unsigned char ones1);
 
 void dcf77_timelayer_init(struct dcf77_timelayer* ctx)
 {
-	ctx->private_last_minute_idx = DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN - 1;
+	ctx->private_preceding_minute_idx =
+					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN - 1;
 	ctx->private_num_seconds_since_prev = DCF77_TIMELAYER_PREV_UNKNOWN;
 	ctx->seconds_left_in_minute = 60;
 	ctx->out_current = TM0;
 	ctx->qos = DCF77_TIMELAYER_QOS7;
-	memset(ctx->private_last_minute_ones, 0, sizeof(unsigned char) *
+	memset(ctx->private_preceding_minute_ones, 0, sizeof(unsigned char) *
 					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN);
 	memset(ctx->private_prev_telegram, 0, sizeof(unsigned char) *
 					DCF77_SECONDLAYER_LINE_BYTES);
@@ -265,7 +270,7 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 
 	/* 3. */
 	if(dcf77_timelayer_recover_ones(ctx, &recovered_ones)) {
-		/* TODO if recover ones() ... */
+		/* TODO ASTAT CONTINUE HERE if recover ones() ... */
 	}
 }
 
@@ -426,11 +431,11 @@ static char dcf77_timelayer_recover_bit(unsigned char* telegram,
 static void dcf77_timelayer_add_minute_ones_to_buffer(
 			struct dcf77_timelayer* ctx, unsigned char* telegram)
 {
-	ctx->private_last_minute_idx = ((ctx->private_last_minute_idx + 1) %
-					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN);
-	ctx->private_last_minute_ones[ctx->private_last_minute_idx] =
-					dcf77_timelayer_read_multiple(telegram,
-					DCF77_OFFSET_MINUTE_ONES, 4);
+	ctx->private_preceding_minute_idx = ((ctx->private_preceding_minute_idx
+			+ 1) % DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN);
+	ctx->private_preceding_minute_ones[ctx->private_preceding_minute_idx] =
+			dcf77_timelayer_read_multiple(telegram,
+			DCF77_OFFSET_MINUTE_ONES, DCF77_LENGTH_MINUTE_ONES);
 }
 
 /* @return 1 if no differences were detected */
@@ -467,10 +472,83 @@ static char dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 	return rv;
 }
 
-/* @return 1 if ones were recovered successfully, 0 if not. */
+/* @return value if ones were recovered successfully, -1 if not. */
+/* TODO z TEST THIS PROCEDURE INDIVIDUALLY */
 static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
 					unsigned char* out_recovered_ones)
 {
-	/* TODO N_IMPL / USE DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE ACCORDING TO NOTES */
-	return 0;
+	unsigned char idx_compare;
+	unsigned char idx_preceding = ctx->private_preceding_minute_idx;
+
+	/* TODO z not memory efficient, could use bit fiddling if needed */
+	unsigned char idx_pass[DCF77_TIMELAYER_BCD_CMP_LEN];
+
+	char found_idx = -1;
+
+	memset(idx_pass, 1, sizeof(idx_pass) / sizeof(unsigned char));
+
+	do {
+		for(idx_compare = 0; idx_compare < DCF77_TIMELAYER_BCD_CMP_LEN;
+								idx_compare++) {
+			if(!dcf77_timelayer_are_ones_compatible(
+			DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE[idx_compare],
+			ctx->private_preceding_minute_ones[idx_preceding])) {
+				idx_pass[idx_compare] = 0;
+			}
+		}
+		idx_preceding = (idx_preceding + 1) %
+					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN;
+	} while(idx_preceding != ctx->private_preceding_minute_idx);
+
+	for(idx_compare = 0; idx_compare < DCF77_TIMELAYER_BCD_CMP_LEN;
+								idx_compare++) {
+		if(idx_pass[idx_compare]) {
+			if(found_idx == -1)
+				found_idx = idx_compare;
+			else
+				return 0; /* another match => not unique */
+		}
+	}
+
+	if(found_idx == -1) {
+		return 0;
+	} else {
+		*out_recovered_ones = found_idx;
+		return 1;
+	}
+}
+
+/*
+ * Like xeliminate but without changing the values:
+ * Returns 1 if ones0 and ones1 could denote the same number.
+ * Returns 0 if they must represent different numbers.
+ */
+static char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
+							unsigned char ones1)
+{
+	/*
+	 * Now we make use of the specific encoding
+	 * A leading 0 means the value is an epsilon/no signal.
+	 * A leading 1 means the value is a detected signal value.
+	 *
+	 * ones0 & ones1 has leading "1" set if both values were detected values
+	 *               by doing & 0b10101010 (0xaa) we get only the ones
+	 *               which indicate "dected value set".
+	 *               In case all values weere detected this would be
+	 *               10101010. Now shift one rightwards to 01010101 to
+	 *               create a pattern that can be compared against the next
+	 *               step.
+	 *
+	 * ones0 ^ ones1 has trailing "1" if both values differed there.
+	 *               by ding & 0b01010101 (0x55) we extract only the
+	 *               value-relevant parts.
+	 *
+	 * Now by &-ing together the first and the second ones we get a value
+	 * that is 0 if differences only occurred in places where one of the
+	 * values was not detected i.e. 0 means they are compatible. Do a
+	 * logical inversion to return 1 if compatible.
+	 *
+	 * TODO complicated function: Test it individually!
+	 */
+	return !((((ones0 & ones1) & 0xaa) >> 1) & ((ones0 ^ ones1) & 0x55));
 }

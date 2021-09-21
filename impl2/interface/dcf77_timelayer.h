@@ -34,9 +34,9 @@ struct dcf77_timelayer {
 	/*
 	 * Ring buffer of last minute ones bits.
 	 */
-	unsigned char private_last_minute_ones[
+	unsigned char private_preceding_minute_ones[
 					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN];
-	unsigned char private_last_minute_idx;
+	unsigned char private_preceding_minute_idx;
 
 	struct dcf77_timelayer_tm private_prev;
 	unsigned char private_prev_telegram[DCF77_SECONDLAYER_LINE_BYTES];
