@@ -4,6 +4,7 @@
 #include "dcf77_bitlayer.h"
 #include "dcf77_telegram.h"
 #include "dcf77_secondlayer.h"
+#include "dcf77_secondlayer_xeliminate.h"
 #include "dcf77_timelayer.h"
 #include "dcf77_bcd.h"
 
@@ -47,6 +48,15 @@ static const unsigned char DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE[] = {
 static const unsigned char DCF77_TIMELAYER_BCD_CMP_LEN =
 	sizeof(DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE) / sizeof(unsigned char);
 
+#ifdef TEST
+#define EXPORTED_FOR_TESTING
+#else
+#define EXPORTED_FOR_TESTING static
+static char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
+							unsigned char ones1);
+static char dcf77_timelayer_is_leap_year(short y);
+#endif
+
 static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
 						unsigned char* out_telegram);
 static void dcf77_timelayer_write_multiple_bits_converting(
@@ -54,7 +64,6 @@ static void dcf77_timelayer_write_multiple_bits_converting(
 			unsigned char num_bits, unsigned char in_bits);
 static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
 								short seconds);
-static char dcf77_timelayer_is_leap_year(short y);
 static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 					struct dcf77_secondlayer* secondlayer);
 static enum dcf77_timelayer_recovery dcf77_timelayer_recover_bcd(
@@ -69,8 +78,6 @@ static char dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
 static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
 					unsigned char* out_recovered_ones);
-static char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
-							unsigned char ones1);
 static char dcf77_timelayer_has_minute_tens(unsigned char* telegram);
 static char dcf77_timelayer_decode_tens(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
@@ -230,12 +237,8 @@ static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
 }
 
 /* https://en.wikipedia.org/wiki/Leap_year */
-static char dcf77_timelayer_is_leap_year(short y)
+EXPORTED_FOR_TESTING char dcf77_timelayer_is_leap_year(short y)
 {
-	/* TODO z MAKE AN EXECUTABLE TEST FOR THIS! */
-	/* Test cases: 2020, 2024, 2028 -> 1 */
-	/*             2000             -> 1 */
-	/*             1900             -> 0 */
 	return (y % 4) == 0 && (((y % 100) != 0) || (y % 400 == 0));
 }
 
@@ -245,6 +248,7 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 	/* char xeliminate_prev; * 2a. */
 	unsigned char recovered_ones;
 	struct dcf77_timelayer_tm intermediate;
+	char xeliminate_prev = 0;
 
 	/* 1. */
 	char has_out_2 = (secondlayer->out_telegram_2_len != 0);
@@ -323,12 +327,27 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 			ctx->qos = DCF77_TIMELAYER_QOS3;
 			return;
 		}
-		/* TODO ASTAT
-		3.3 xeliminate_prev = xeliminate(secondlayer.prev,prev)
-			set current time = prev tens + 10min + recoveredOnes
-			adjust
-			QOS4
-			return */
+		/*
+		 * 3.3 xeliminate_prev = xeliminate(secondlayer.prev,prev)
+		 *
+		 * NB: Writes to private_prev_telegram in order to make it
+		 *     as precise as possible. Need to consider this when
+		 *     handling subsequent QOS5 case.
+		 *
+		 * Extra parens to silence compiler warning.
+		 */
+		if((xeliminate_prev = dcf77_secondlayer_xeliminate(0, 
+					secondlayer->out_telegram_2,
+					ctx->private_prev_telegram))) {
+			ctx->out_current = ctx->private_prev;
+			ctx->out_current.i = 0; /* use prev tens ignore ones */
+			/* current = prev tens + 10min + recoveredOnes */
+			dcf77_timelayer_advance_tm_by_sec(&ctx->out_current,
+						recovered_ones * 60 + 600);
+			ctx->qos = DCF77_TIMELAYER_QOS4;
+			return;
+		}
+		/* TODO ASTAT QOS5 onwards */
 	}
 }
 
@@ -527,7 +546,7 @@ static char dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 }
 
 /* @return value if ones were recovered successfully, -1 if not. */
-/* TODO z TEST THIS PROCEDURE INDIVIDUALLY */
+/* TODO RC: TEST THIS PROCEDURE INDIVIDUALLY */
 static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
 					unsigned char* out_recovered_ones)
 {
@@ -577,8 +596,8 @@ static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
  * Returns 1 if ones0 and ones1 could denote the same number.
  * Returns 0 if they must represent different numbers.
  */
-static char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
-							unsigned char ones1)
+EXPORTED_FOR_TESTING char dcf77_timelayer_are_ones_compatible(
+				unsigned char ones0, unsigned char ones1)
 {
 	/*
 	 * Now we make use of the specific encoding
@@ -601,8 +620,6 @@ static char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
 	 * that is 0 if differences only occurred in places where one of the
 	 * values was not detected i.e. 0 means they are compatible. Do a
 	 * logical inversion to return 1 if compatible.
-	 *
-	 * TODO complicated function: Test it individually!
 	 */
 	return !((((ones0 & ones1) & 0xaa) >> 1) & ((ones0 ^ ones1) & 0x55));
 }

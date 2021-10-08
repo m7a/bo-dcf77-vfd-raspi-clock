@@ -54,3 +54,10 @@ void dcf77_timelayer_init(struct dcf77_timelayer* ctx);
 void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 					struct dcf77_bitlayer* bitlayer,
 					struct dcf77_secondlayer* secondlayer);
+
+#ifdef TEST
+/* exported symbols for testing purposes */
+char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
+							unsigned char ones1);
+char dcf77_timelayer_is_leap_year(short y);
+#endif
