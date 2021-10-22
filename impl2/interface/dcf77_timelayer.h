@@ -14,13 +14,15 @@ struct dcf77_timelayer_tm {
 };
 
 enum dcf77_timelayer_qos {
-	DCF77_TIMELAYER_QOS1 = 1, /* +1 -- perfectly synchronized */
-	DCF77_TIMELAYER_QOS2 = 2, /* +2 -- synchronized minor disturbance */
-	DCF77_TIMELAYER_QOS3 = 3, /* +3 -- synchronized from prev data */
-	DCF77_TIMELAYER_QOS4 = 4, /* o4 -- recovered from prev */
-	DCF77_TIMELAYER_QOS5 = 5, /* o5 -- async telegram match */
-	DCF77_TIMELAYER_QOS6 = 6, /* o6 -- count from prev */
-	DCF77_TIMELAYER_QOS7 = 7, /* -7 -- async count from last */
+	DCF77_TIMELAYER_QOS1       = 1, /* +1 -- perfectly synchronized */
+	DCF77_TIMELAYER_QOS2       = 2, /* +2 -- synchr. w/ minor disturbance */
+	DCF77_TIMELAYER_QOS3       = 3, /* +3 -- synchronized from prev data */
+	DCF77_TIMELAYER_QOS4       = 4, /* o4 -- recovered from prev */
+	DCF77_TIMELAYER_QOS5       = 5, /* o5 -- async telegram match */
+	DCF77_TIMELAYER_QOS6       = 6, /* o6 -- count from prev */
+	DCF77_TIMELAYER_QOS7       = 7, /* -7 -- async might match -1 */
+	DCF77_TIMELAYER_QOS8       = 8, /* -7 -- async might match +1 */
+	DCF77_TIMELAYER_QOS9_ASYNC = 9, /* -9 -- async count from last */
 };
 
 #ifndef DCF77_TIMELAYER_T_COMPILATION
@@ -47,7 +49,7 @@ struct dcf77_timelayer {
 	/* ======================================================== output == */
 
 	struct dcf77_timelayer_tm out_current;
-	enum dcf77_timelayer_qos qos;
+	enum dcf77_timelayer_qos out_qos;
 };
 
 void dcf77_timelayer_init(struct dcf77_timelayer* ctx);

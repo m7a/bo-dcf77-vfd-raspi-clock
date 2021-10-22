@@ -57,7 +57,7 @@ static char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
 static char dcf77_timelayer_is_leap_year(short y);
 #endif
 
-static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
+static void dcf77_timelayer_tm_to_telegram_10min(struct dcf77_timelayer_tm* tm,
 						unsigned char* out_telegram);
 static void dcf77_timelayer_write_multiple_bits_converting(
 			unsigned char* out_telegram, unsigned char from_bit,
@@ -83,6 +83,12 @@ static char dcf77_timelayer_decode_tens(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
 static char dcf77_timelayer_tm_eq(struct dcf77_timelayer_tm* a,
 						struct dcf77_timelayer_tm* b);
+static char dcf77_timelayer_check_if_current_compat_by_xeliminate(
+	struct dcf77_timelayer* ctx, struct dcf77_secondlayer* secondlayer);
+static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
+						unsigned char* out_telegram);
+static char dcf77_timelayer_cross_check_by_xeliminate(
+	struct dcf77_timelayer* ctx, struct dcf77_secondlayer* secondlayer);
 
 void dcf77_timelayer_init(struct dcf77_timelayer* ctx)
 {
@@ -91,7 +97,7 @@ void dcf77_timelayer_init(struct dcf77_timelayer* ctx)
 	ctx->private_num_seconds_since_prev = DCF77_TIMELAYER_PREV_UNKNOWN;
 	ctx->seconds_left_in_minute = 60;
 	ctx->out_current = TM0;
-	ctx->qos = DCF77_TIMELAYER_QOS7;
+	ctx->out_qos = DCF77_TIMELAYER_QOS9_ASYNC;
 	memset(ctx->private_preceding_minute_ones, 0, sizeof(unsigned char) *
 					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN);
 	memset(ctx->private_prev_telegram, 0, sizeof(unsigned char) *
@@ -141,12 +147,12 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 				 * If this is the only opinion we get here, it
 				 * essentially means that we are not in sync!
 				 */
-				ctx->qos = DCF77_TIMELAYER_QOS7;
+				ctx->out_qos = DCF77_TIMELAYER_QOS9_ASYNC;
 
 				if((ctx->out_current.i % 10) == 9) {
 					ctx->private_prev = ctx->out_current;
 					ctx->private_num_seconds_since_prev = 0;
-					dcf77_timelayer_tm_to_telegram(
+					dcf77_timelayer_tm_to_telegram_10min(
 						&ctx->private_prev,
 						ctx->private_prev_telegram);
 				}
@@ -162,10 +168,10 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
  * Currently needed to store "prev" values if +1sec yields a new minute tens.
  * Currently only stores tm to ten minute precision.
  */
-static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
+static void dcf77_timelayer_tm_to_telegram_10min(struct dcf77_timelayer_tm* tm,
 						unsigned char* out_telegram)
 {
-	unsigned char y_val  = tm->y % 100;
+	unsigned char y_val = tm->y % 100;
 	memset(out_telegram, 0x55, sizeof(unsigned char) *
 						DCF77_SECONDLAYER_LINE_BYTES);
 	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
@@ -180,8 +186,6 @@ static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
 		DCF77_OFFSET_HOUR_ONES, DCF77_LENGTH_HOUR_ONES, tm->h % 10);
 	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
 		DCF77_OFFSET_HOUR_TENS, DCF77_LENGTH_HOUR_TENS, tm->h / 10);
-	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
-		DCF77_OFFSET_MINUTE_ONES, DCF77_LENGTH_MINUTE_ONES, tm->i % 10);
 	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
 		DCF77_OFFSET_MINUTE_TENS, DCF77_LENGTH_MINUTE_TENS, tm->i / 10);
 }
@@ -202,6 +206,7 @@ static void dcf77_timelayer_write_multiple_bits_converting(
 }
 
 /* Not leap-second aware for now */
+/* TODO z TEST THIS PROCEDURE INDIVIDUALLY! */
 static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
 								short seconds)
 {
@@ -248,7 +253,11 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 	/* char xeliminate_prev; * 2a. */
 	unsigned char recovered_ones;
 	struct dcf77_timelayer_tm intermediate;
-	char xeliminate_prev = 0;
+	/*
+	 * Initialize to "true" value in order to later use this to detect
+	 * that xeliminate was not performed yet.
+	 */
+	char xeliminate_prev = 2;
 
 	/* 1. */
 	char has_out_2 = (secondlayer->out_telegram_2_len != 0);
@@ -286,7 +295,7 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 			/* computed previous can not be accepted */
 			ctx->private_num_seconds_since_prev =
 						DCF77_TIMELAYER_PREV_UNKNOWN;
-		ctx->qos = DCF77_TIMELAYER_QOS1;
+		ctx->out_qos = DCF77_TIMELAYER_QOS1;
 		return;
 	}
 
@@ -312,7 +321,7 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 					ctx->private_num_seconds_since_prev =
 						DCF77_TIMELAYER_PREV_UNKNOWN;
 			} /* else is equal and prev remains valid! */
-			ctx->qos = DCF77_TIMELAYER_QOS2;
+			ctx->out_qos = DCF77_TIMELAYER_QOS2;
 			return;
 		}
 		/* 3.2 if has ymdhi tens (prev) */
@@ -324,7 +333,7 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 						recovered_ones * 60 + 600);
 			ctx->private_num_seconds_since_prev =
 							recovered_ones * 60;
-			ctx->qos = DCF77_TIMELAYER_QOS3;
+			ctx->out_qos = DCF77_TIMELAYER_QOS3;
 			return;
 		}
 		/*
@@ -344,11 +353,69 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 			/* current = prev tens + 10min + recoveredOnes */
 			dcf77_timelayer_advance_tm_by_sec(&ctx->out_current,
 						recovered_ones * 60 + 600);
-			ctx->qos = DCF77_TIMELAYER_QOS4;
+			ctx->out_qos = DCF77_TIMELAYER_QOS4;
+			/*
+			 * NB: In case xeliminate_prev = 1 i.e. successful,
+			 * control flow returns here. From beyond this return
+			 * onwards, xeliminate_prev is 0 iff 3.3 was reached but
+			 * its condition failed.
+			 */
 			return;
 		}
-		/* TODO ASTAT QOS5 onwards */
 	}
+
+	/* 4. */
+	if(dcf77_timelayer_check_if_current_compat_by_xeliminate(ctx,
+								secondlayer)) {
+		/*
+		 * QOS5: The automatically computed time is compatible with
+		 * the received (possibly incomplete) telegram. Hence we now
+		 * run on our own clock but know that the data is at least not
+		 * contrary to the signals received despite the fact that we
+		 * currently cannot decode them properly.
+		 */
+		ctx->out_qos = DCF77_TIMELAYER_QOS5;
+		return;
+	}
+
+	/* 5. */
+	if(ctx->private_num_seconds_since_prev
+					!= DCF77_TIMELAYER_PREV_UNKNOWN) {
+		if(xeliminate_prev == 2) {
+			/*
+			 * Means we did not do xeliminate for prev yet,
+			 * do it now.
+			 */
+			xeliminate_prev = dcf77_secondlayer_xeliminate(0, 
+						secondlayer->out_telegram_2,
+						ctx->private_prev_telegram);
+		}
+		if(xeliminate_prev) {
+			ctx->out_current = ctx->private_prev;
+			ctx->out_current.i = 0; /* use prev tens ignore ones */
+			/* current = prev tens + 10min + num seconds since */
+			dcf77_timelayer_advance_tm_by_sec(&ctx->out_current,
+				600 + ctx->private_num_seconds_since_prev);
+			ctx->private_num_seconds_since_prev += 600; /* TODO z CORRECT? */
+			ctx->out_qos = DCF77_TIMELAYER_QOS6;
+			return;
+		}
+		/*
+		 * 5ABC: Spot misalignments. If xeliminate_prev fails, then do
+		 * some cross checks
+		 */
+		if(dcf77_timelayer_cross_check_by_xeliminate(ctx,
+								secondlayer)) {
+			/*
+			 * Time adjustments performed in
+			 * cross_check_by_xeliminate
+			 */
+			return;
+		}
+	}
+
+	/* Nothing more to try, now runs async. */
+	ctx->out_qos = DCF77_TIMELAYER_QOS9_ASYNC;
 }
 
 static enum dcf77_timelayer_recovery dcf77_timelayer_recover_bcd(
@@ -512,6 +579,9 @@ static void dcf77_timelayer_add_minute_ones_to_buffer(
 }
 
 /* @return 1 if no differences were detected */
+/* TODO Z NOT ALL INVOCATIONS OF THIS PROCEDURE NEED THE COMPARISION.
+          IMPROVE PERFORMANCE BY ADDING ANOTHER VARIANT THAT DOES NOT
+          DO THE COMPARISON! */
 static char dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 							unsigned char* telegram)
 {
@@ -644,4 +714,75 @@ static char dcf77_timelayer_tm_eq(struct dcf77_timelayer_tm* a,
 					struct dcf77_timelayer_tm* b)
 {
 	return memcmp(a, b, sizeof(struct dcf77_timelayer_tm)) == 0;
+}
+
+static char dcf77_timelayer_check_if_current_compat_by_xeliminate(
+	struct dcf77_timelayer* ctx, struct dcf77_secondlayer* secondlayer)
+{
+	unsigned char virtual_telegram[DCF77_SECONDLAYER_LINE_BYTES];
+	dcf77_timelayer_tm_to_telegram(&ctx->out_current, virtual_telegram);
+	return dcf77_secondlayer_xeliminate(0, secondlayer->out_telegram_2,
+							virtual_telegram);
+}
+
+/* Variant with one minute precision! */
+static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
+						unsigned char* out_telegram)
+{
+	dcf77_timelayer_tm_to_telegram_10min(tm, out_telegram);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_MINUTE_ONES, DCF77_LENGTH_MINUTE_ONES, tm->i % 10);
+}
+
+/*
+ * 5A: xeliminate(secondlayer current, ctx prev) if matches
+ *     then let time = ctx prev.
+ * 5B: xeliminate(secondlayer current, ctx current + 1min) if matches
+ *     then let time = ctx current + 1min
+ * 5C: if both are true than DO NOT DO ANYTHING because this means
+ *     xeliminates might just consist of "anything" telegrams that
+ *     do not specify enough data to conclude anything from it!
+ */
+static char dcf77_timelayer_cross_check_by_xeliminate(
+	struct dcf77_timelayer* ctx, struct dcf77_secondlayer* secondlayer)
+{
+	struct dcf77_timelayer_tm current_plus_one; 
+	unsigned char virtual_telegram_plus_1_min[DCF77_SECONDLAYER_LINE_BYTES];
+	char eliminates_for_one_minute_back;
+	char eliminates_for_one_minute_forward;
+
+	current_plus_one = ctx->out_current;
+	dcf77_timelayer_advance_tm_by_sec(&current_plus_one, 60);
+	dcf77_timelayer_tm_to_telegram(&current_plus_one,
+						virtual_telegram_plus_1_min);
+
+	eliminates_for_one_minute_forward = dcf77_secondlayer_xeliminate(0,
+		secondlayer->out_telegram_1, virtual_telegram_plus_1_min);
+
+	eliminates_for_one_minute_back = dcf77_secondlayer_xeliminate(0,
+		ctx->private_prev_telegram, secondlayer->out_telegram_1);
+
+	if(eliminates_for_one_minute_forward && eliminates_for_one_minute_back)
+		/* 5C */
+		return 0;
+
+	if(eliminates_for_one_minute_back) {
+		/* 5A */
+		ctx->out_current = ctx->private_prev;
+		ctx->private_num_seconds_since_prev =
+						DCF77_TIMELAYER_PREV_UNKNOWN;
+		ctx->out_qos = DCF77_TIMELAYER_QOS7; /* backward */
+		return 1;
+	}
+	if(eliminates_for_one_minute_forward) {
+		/* 5B */
+		ctx->out_current = current_plus_one;
+		ctx->private_num_seconds_since_prev = 
+						DCF77_TIMELAYER_PREV_UNKNOWN;
+		ctx->out_qos = DCF77_TIMELAYER_QOS8; /* forward */
+		return 1;
+	}
+
+	/* else none of 5 cases matches */
+	return 0;
 }
