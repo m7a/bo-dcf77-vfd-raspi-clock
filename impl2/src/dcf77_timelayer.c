@@ -74,12 +74,14 @@ static char dcf77_timelayer_recover_bit(unsigned char* telegram,
 				unsigned char bit_offset, unsigned char length);
 static void dcf77_timelayer_add_minute_ones_to_buffer(
 			struct dcf77_timelayer* ctx, unsigned char* telegram);
-static char dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
+static char dcf77_timelayer_decode_check(struct dcf77_timelayer_tm* tm,
+						unsigned char* telegram);
+static void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
 static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
 					unsigned char* out_recovered_ones);
 static char dcf77_timelayer_has_minute_tens(unsigned char* telegram);
-static char dcf77_timelayer_decode_tens(struct dcf77_timelayer_tm* tm,
+static void dcf77_timelayer_decode_tens(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
 static char dcf77_timelayer_tm_eq(struct dcf77_timelayer_tm* a,
 						struct dcf77_timelayer_tm* b);
@@ -288,7 +290,7 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 
 	/* 2. */
 	if(out_1_recovery == DCF77_TIMELAYER_DATA_IS_COMPLETE) {
-		if(!dcf77_timelayer_decode(&ctx->out_current,
+		if(!dcf77_timelayer_decode_check(&ctx->out_current,
 						secondlayer->out_telegram_1) &&
 				out_2_recovery ==
 				DCF77_TIMELAYER_DATA_IS_INCOMPLETE_FOR_MULTIPLE)
@@ -579,40 +581,42 @@ static void dcf77_timelayer_add_minute_ones_to_buffer(
 }
 
 /* @return 1 if no differences were detected */
-/* TODO Z NOT ALL INVOCATIONS OF THIS PROCEDURE NEED THE COMPARISION.
-          IMPROVE PERFORMANCE BY ADDING ANOTHER VARIANT THAT DOES NOT
-          DO THE COMPARISON! */
-static char dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
+static char dcf77_timelayer_decode_check(struct dcf77_timelayer_tm* tm,
 							unsigned char* telegram)
 {
 	unsigned char rv;
-	/* intermediate new timestamp to allow comparison */
-	struct dcf77_timelayer_tm tmn;
-	tmn.y = (TM0.y / 100) * 100
+	struct dcf77_timelayer_tm tmn; /* intermediate new time stamp */
+	dcf77_timelayer_decode(&tmn, telegram);
+	rv = (memcmp(&tmn, tm, sizeof(struct dcf77_timelayer_tm)) == 0);
+	*tm = tmn;
+	return rv;
+}
+
+static void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
+							unsigned char* telegram)
+{
+	tm->y = (TM0.y / 100) * 100
 		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_YEAR_TENS, DCF77_LENGTH_YEAR_TENS)) * 10
 		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_YEAR_ONES, DCF77_LENGTH_YEAR_ONES));
-	tmn.m = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+	tm->m = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_MONTH_TENS, DCF77_LENGTH_MONTH_TENS)) * 10
 		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_MONTH_ONES, DCF77_LENGTH_MONTH_ONES));
-	tmn.d = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+	tm->d = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_DAY_TENS, DCF77_LENGTH_DAY_TENS)) * 10
 		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_DAY_ONES, DCF77_LENGTH_DAY_ONES));
-	tmn.h = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+	tm->h = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_HOUR_TENS, DCF77_LENGTH_HOUR_TENS)) * 10
 		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_HOUR_ONES, DCF77_LENGTH_HOUR_ONES));
-	tmn.i = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
+	tm->i = dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_MINUTE_TENS, DCF77_LENGTH_MINUTE_TENS))*10
 		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
 			DCF77_OFFSET_MINUTE_ONES, DCF77_LENGTH_MINUTE_ONES));
-	tmn.s = 0;
-	rv = (memcmp(&tmn, tm, sizeof(struct dcf77_timelayer_tm)) == 0);
-	*tm = tmn;
-	return rv;
+	tm->s = 0;
 }
 
 /* @return value if ones were recovered successfully, -1 if not. */
@@ -702,12 +706,11 @@ static char dcf77_timelayer_has_minute_tens(unsigned char* telegram)
 		== 0x2a;
 }
 
-static char dcf77_timelayer_decode_tens(struct dcf77_timelayer_tm* tm,
+static void dcf77_timelayer_decode_tens(struct dcf77_timelayer_tm* tm,
 							unsigned char* telegram)
 {
-	char rv = dcf77_timelayer_decode(tm, telegram);
+	dcf77_timelayer_decode(tm, telegram);
 	tm->i = (tm -> i / 10) * 10; /* discard unwanted ones */
-	return rv;
 }
 
 static char dcf77_timelayer_tm_eq(struct dcf77_timelayer_tm* a,
