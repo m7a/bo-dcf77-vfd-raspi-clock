@@ -55,6 +55,8 @@ static const unsigned char DCF77_TIMELAYER_BCD_CMP_LEN =
 static char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
 							unsigned char ones1);
 static char dcf77_timelayer_is_leap_year(short y);
+static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
+								short seconds);
 #endif
 
 static void dcf77_timelayer_tm_to_telegram_10min(struct dcf77_timelayer_tm* tm,
@@ -62,8 +64,6 @@ static void dcf77_timelayer_tm_to_telegram_10min(struct dcf77_timelayer_tm* tm,
 static void dcf77_timelayer_write_multiple_bits_converting(
 			unsigned char* out_telegram, unsigned char from_bit,
 			unsigned char num_bits, unsigned char in_bits);
-static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
-								short seconds);
 static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 					struct dcf77_secondlayer* secondlayer);
 static enum dcf77_timelayer_recovery dcf77_timelayer_recover_bcd(
@@ -207,12 +207,15 @@ static void dcf77_timelayer_write_multiple_bits_converting(
 	}
 }
 
-/* Not leap-second aware for now */
-/* TODO z TEST THIS PROCEDURE INDIVIDUALLY! */
-static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
-								short seconds)
+/*
+ * Not leap-second aware for now
+ * assert seconds < 12000, otherwise may output incorrect results!
+ */
+EXPORTED_FOR_TESTING void dcf77_timelayer_advance_tm_by_sec(
+				struct dcf77_timelayer_tm* tm, short seconds)
 {
 	unsigned char midx;
+
 
 	tm->s += seconds;
 	if(tm->s >= 60) {
@@ -227,8 +230,14 @@ static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
 				tm->d += tm->h / 24;
 				tm->h  = tm->h % 24;
 
-				midx = dcf77_timelayer_is_leap_year(tm->y)?
-								0: tm->m;
+				/*
+				 * In case of leap year, access index 0 to
+				 * return length of 29 days for Feburary in
+				 * leap years.
+				 */
+				midx = (tm->m == 2 &&
+					dcf77_timelayer_is_leap_year(tm->y))?
+					0: tm->m;
 				if(tm->d > MONTH_LENGTHS[midx]) {
 					tm->d -= MONTH_LENGTHS[midx];
 					tm->m++;
