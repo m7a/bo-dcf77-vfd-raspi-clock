@@ -146,6 +146,8 @@ static char test_advance_tm_by_sec()
 		{ 2021,  2, 28, 22,  0,  0 }, /* test 7: daywrap nonleap */
 		{ 2020,  2, 28, 22,  0,  0 }, /* test 8: daywrap leap */
 		{ 2020,  2, 29, 23, 17, 49 }, /* test 9: daywrap inleap */
+		/* -- procedure does not handle this -- */
+		/* { 2021, 31, 10,  2, 59,  0 }, * test y: DST + */ 
 		/* -- out of range -- */
 		/* { 2021, 10, 23, 18, 57, 13 }, * test y: inc hours */
 		/* { 2021, 10, 23, 14, 30, 21 }, * test y: inc hours */
@@ -160,6 +162,8 @@ static char test_advance_tm_by_sec()
 		7243,
 		7243,
 		2621, /* = (60-17-1)*60+(60-49)+90 */
+		/* -- procedure does not handle this -- */
+		/* -3600, */
 		/* -- out of range -- */
 		/* 12789, */
 		/* 28801, */
@@ -174,6 +178,8 @@ static char test_advance_tm_by_sec()
 		{ 2021,  3,  1,  0,  0, 43 },
 		{ 2020,  2, 29,  0,  0, 43 },
 		{ 2020,  3,  1,  0,  1, 30 },
+		/* -- procedure does not handle this -- */
+		/* { 2021, 31, 10,  1, 59,  0 }, */
 		/* -- out of range -- */
 		/* { 2021, 10, 23, 22, 30, 22 }, */
 		/* { 2021, 10, 23, 22, 30, 22 }, */

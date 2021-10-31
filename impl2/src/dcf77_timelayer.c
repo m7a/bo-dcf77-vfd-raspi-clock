@@ -73,6 +73,8 @@ static unsigned char dcf77_timelayer_read_multiple(unsigned char* telegram,
 				unsigned char bit_offset, unsigned char length);
 static char dcf77_timelayer_recover_bit(unsigned char* telegram,
 				unsigned char bit_offset, unsigned char length);
+static void dcf77_timelayer_decode_and_populate_dst_switch(
+			struct dcf77_timelayer* ctx, unsigned char* telegram);
 static void dcf77_timelayer_add_minute_ones_to_buffer(
 			struct dcf77_timelayer* ctx, unsigned char* telegram);
 static char dcf77_timelayer_decode_check(struct dcf77_timelayer_tm* tm,
@@ -96,7 +98,7 @@ void dcf77_timelayer_init(struct dcf77_timelayer* ctx)
 	ctx->private_preceding_minute_idx =
 					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN - 1;
 	ctx->private_num_seconds_since_prev = DCF77_TIMELAYER_PREV_UNKNOWN;
-	ctx->seconds_left_in_minute = 60;
+	ctx->private_seconds_left_in_minute = 60;
 	ctx->out_current = TM0;
 	ctx->out_qos = DCF77_TIMELAYER_QOS9_ASYNC;
 	memset(ctx->private_preceding_minute_ones, 0, sizeof(unsigned char) *
@@ -131,9 +133,9 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 		if(ctx->private_num_seconds_since_prev < 0x7fff)
 			ctx->private_num_seconds_since_prev++;
 
-		if(ctx->seconds_left_in_minute > 0)
-			ctx->seconds_left_in_minute--;
-		if(ctx->seconds_left_in_minute == 1 &&
+		if(ctx->private_seconds_left_in_minute > 0)
+			ctx->private_seconds_left_in_minute--;
+		if(ctx->private_seconds_left_in_minute == 1 &&
 						ctx->out_current.s == 59) {
 			/* special leap second case */
 			ctx->out_current.s = 60;
@@ -150,7 +152,33 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 				 */
 				ctx->out_qos = DCF77_TIMELAYER_QOS9_ASYNC;
 
-				if((ctx->out_current.i % 10) == 9) {
+				if(ctx->out_current.i == 59 &&
+						ctx->private_eoh_dst_switch !=
+						DCF77_TIMELAYER_DST_NO_CHANGE) {
+					/* TODO z TOO MANY LAYERS OF INDENTATION. EXTERNALIZE FUNCTION. */
+					/* TODO z MINOR HACK: ONLY SUPPORTS LEAP IF NOT ACROSS DAYS I.E. HOUR CHANGES WITHIN DAY. NO CHECKS ARE PREFORMED! THIS IS THE EXPECTED CONVENTION IN DE WHERE WE ONLY EVER SWITCH BETWEEN 02:00 (01:59) and 03:00 (02:59) times! */
+					switch(ctx->private_eoh_dst_switch) {
+					case DCF77_TIMELAYER_DST_TO_SUMMER:
+						/* summer = UTC+2, +1h */
+						ctx->out_current.h++;
+						/* dcf77_timelayer_advance_tm_by_sec(&ctx->out_current, 3600); */
+						break;
+					case DCF77_TIMELAYER_DST_TO_WINTER:
+						/* winter = UTC+1, -1h */
+						ctx->out_current.h--;
+						/* dcf77_timelayer_advance_tm_by_sec(&ctx->out_current, -3600); */
+						break;
+					default:
+						break; /* ignore */
+					}
+					/*
+					 * set prev to unknown because now we
+					 * move more than a mere ten minute
+					 * step.
+					 */
+					ctx->private_num_seconds_since_prev = DCF77_TIMELAYER_PREV_UNKNOWN;
+					ctx->private_eoh_dst_switch = DCF77_TIMELAYER_DST_SWITCH_APPLIED;
+				} else if((ctx->out_current.i % 10) == 9) {
 					ctx->private_prev = ctx->out_current;
 					ctx->private_num_seconds_since_prev = 0;
 					dcf77_timelayer_tm_to_telegram_10min(
@@ -161,8 +189,13 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 			dcf77_timelayer_advance_tm_by_sec(&ctx->out_current, 1);
 		}
 	}
-	if(secondlayer->out_telegram_1_len != 0)
+	if(secondlayer->out_telegram_1_len != 0) {
 		dcf77_timelayer_process_new_telegram(ctx, secondlayer);
+		if(ctx->private_eoh_dst_switch ==
+					DCF77_TIMELAYER_DST_SWITCH_APPLIED)
+			ctx->private_eoh_dst_switch =
+					DCF77_TIMELAYER_DST_NO_CHANGE;
+	}
 }
 
 /*
@@ -209,6 +242,7 @@ static void dcf77_timelayer_write_multiple_bits_converting(
 /*
  * Not leap-second aware for now
  * assert seconds < 12000, otherwise may output incorrect results!
+ * TODO NEEDS TO WORK WITH seconds = -3600, -3601 too!
  */
 EXPORTED_FOR_TESTING void dcf77_timelayer_advance_tm_by_sec(
 				struct dcf77_timelayer_tm* tm, short seconds)
@@ -285,7 +319,10 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 		dcf77_timelayer_has_minute_tens(secondlayer->out_telegram_2)));
 	dcf77_timelayer_add_minute_ones_to_buffer(ctx,
 						secondlayer->out_telegram_1);
-	ctx->seconds_left_in_minute = secondlayer->out_telegram_1_len;
+	ctx->private_seconds_left_in_minute = secondlayer->out_telegram_1_len;
+
+	dcf77_timelayer_decode_and_populate_dst_switch(ctx,
+						secondlayer->out_telegram_1);
 
 	/* 1a. pre-adjust previous in case we can safely decode it */
 	if(has_out_2_tens) {
@@ -576,6 +613,38 @@ static char dcf77_timelayer_recover_bit(unsigned char* telegram,
 		dcf77_telegram_write_bit(known_missing, telegram, DCF77_BIT_1);
 		return 1;
 	}
+}
+
+static void dcf77_timelayer_decode_and_populate_dst_switch(
+			struct dcf77_timelayer* ctx, unsigned char* telegram)
+{
+	
+	unsigned char announce = dcf77_telegram_read_bit(
+					DCF77_OFFSET_DST_ANNOUNCE, telegram);
+	/*
+	 * It is either 10 = 11 10 = 0x0e = currently summer time
+	 *       xor    01 = 10 11 = 0x0b = currently winter time
+	 */
+	unsigned char current_tz = dcf77_timelayer_read_multiple(telegram,
+					DCF77_OFFSET_DAYLIGHT_SAVING_TIME,
+					DCF77_LENGTH_DAYLIGHT_SAVING_TIME);
+
+	if(announce == DCF77_BIT_0) {
+		ctx->private_eoh_dst_switch = DCF77_TIMELAYER_DST_NO_CHANGE;
+	} else if(announce == DCF77_BIT_1 && ctx->private_eoh_dst_switch ==
+					DCF77_TIMELAYER_DST_SWITCH_APPLIED) {
+		/*
+		 * if we have just applied the switch, then do not propose
+		 * it for the next minute.
+		 */
+		if(current_tz == 0x0e) {
+			ctx->private_eoh_dst_switch =
+					DCF77_TIMELAYER_DST_TO_WINTER;
+		} else if(current_tz == 0x0f) {
+			ctx->private_eoh_dst_switch =
+					DCF77_TIMELAYER_DST_TO_SUMMER;
+		} /* else ignore if not specified exactly */
+	} /* else ignore if no data available */
 }
 
 static void dcf77_timelayer_add_minute_ones_to_buffer(

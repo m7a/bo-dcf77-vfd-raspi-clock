@@ -30,6 +30,19 @@ enum dcf77_timelayer_qos {
 #define DCF77_TIMELAYER_T_COMPILATION {.y=2021,.m=9,.d=11,.h=0,.i=24,.s=43}
 #endif
 
+/* private enum */
+enum dcf77_timelayer_dst_switch {
+	DCF77_TIMELAYER_DST_NO_CHANGE = 0,
+	DCF77_TIMELAYER_DST_TO_SUMMER = 1,
+	DCF77_TIMELAYER_DST_TO_WINTER = 2,
+	/*
+	 * If we have just switched betwen DST/regular then ignore announce
+	 * bit for this very minute to not switch backwards again in the next
+	 * minute.
+	 */
+	DCF77_TIMELAYER_DST_SWITCH_APPLIED = 3,
+};
+
 struct dcf77_timelayer {
 	/* ======================================================= private == */
 
@@ -44,7 +57,13 @@ struct dcf77_timelayer {
 	unsigned char private_prev_telegram[DCF77_SECONDLAYER_LINE_BYTES];
 	short private_num_seconds_since_prev;
 
-	signed char seconds_left_in_minute; /* 0 = next minute */
+	/*
+	 * Denotes if at end of hour there will be a switch between summer
+	 * and winter time.
+	 */
+	enum dcf77_timelayer_dst_switch private_eoh_dst_switch;
+
+	signed char private_seconds_left_in_minute; /* 0 = next minute */
 
 	/* ======================================================== output == */
 
