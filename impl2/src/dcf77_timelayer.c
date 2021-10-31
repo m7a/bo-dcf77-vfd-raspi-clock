@@ -57,6 +57,7 @@ static char dcf77_timelayer_are_ones_compatible(unsigned char ones0,
 static char dcf77_timelayer_is_leap_year(short y);
 static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
 								short seconds);
+static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx);
 #endif
 
 static void dcf77_timelayer_tm_to_telegram_10min(struct dcf77_timelayer_tm* tm,
@@ -78,8 +79,6 @@ static char dcf77_timelayer_decode_check(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
 static void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
-static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
-					unsigned char* out_recovered_ones);
 static char dcf77_timelayer_has_minute_tens(unsigned char* telegram);
 static void dcf77_timelayer_decode_tens(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
@@ -262,7 +261,7 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 					struct dcf77_secondlayer* secondlayer)
 {
 	/* char xeliminate_prev; * 2a. */
-	unsigned char recovered_ones;
+	char recovered_ones;
 	struct dcf77_timelayer_tm intermediate;
 	/*
 	 * Initialize to "true" value in order to later use this to detect
@@ -311,7 +310,7 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 	}
 
 	/* 3. */
-	if(dcf77_timelayer_recover_ones(ctx, &recovered_ones)) {
+	if((recovered_ones = dcf77_timelayer_recover_ones(ctx)) != -1) {
 		/*
 		 * 3.1 If has ymdhi tens (current),
 		 *     out1 recovery == complete handled above already
@@ -629,11 +628,12 @@ static void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 }
 
 /* @return value if ones were recovered successfully, -1 if not. */
-/* TODO RC: TEST THIS PROCEDURE INDIVIDUALLY */
-static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
-					unsigned char* out_recovered_ones)
+/* TODO RC: TEST THIS PROCEDURE INDIVIDUALLY / TEST PREPARED BUT NEED SOME CASE WITH DISTORTION! */
+EXPORTED_FOR_TESTING char dcf77_timelayer_recover_ones(
+						struct dcf77_timelayer* ctx)
 {
 	unsigned char idx_compare;
+	unsigned char idx_delta;
 	unsigned char idx_preceding = ctx->private_preceding_minute_idx;
 
 	/* TODO z not memory efficient, could use bit fiddling if needed */
@@ -643,18 +643,24 @@ static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
 
 	memset(idx_pass, 1, sizeof(idx_pass) / sizeof(unsigned char));
 
-	do {
-		for(idx_compare = 0; idx_compare < DCF77_TIMELAYER_BCD_CMP_LEN;
+	for(idx_compare = 0; idx_compare < DCF77_TIMELAYER_BCD_CMP_LEN;
 								idx_compare++) {
+		idx_delta = idx_compare;
+		do {
 			if(!dcf77_timelayer_are_ones_compatible(
-			DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE[idx_compare],
+			DCF77_TIMELAYER_BCD_COMPARISON_SEQUENCE[idx_delta],
 			ctx->private_preceding_minute_ones[idx_preceding])) {
 				idx_pass[idx_compare] = 0;
+				idx_preceding =
+					ctx->private_preceding_minute_idx;
+				break;
 			}
-		}
-		idx_preceding = (idx_preceding + 1) %
+			idx_preceding = (idx_preceding + 1) %
 					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN;
-	} while(idx_preceding != ctx->private_preceding_minute_idx);
+			idx_delta = (idx_delta + 1) %
+					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN;
+		} while(idx_preceding != ctx->private_preceding_minute_idx);
+	}
 
 	for(idx_compare = 0; idx_compare < DCF77_TIMELAYER_BCD_CMP_LEN;
 								idx_compare++) {
@@ -662,16 +668,11 @@ static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx,
 			if(found_idx == -1)
 				found_idx = idx_compare;
 			else
-				return 0; /* another match => not unique */
+				return -1; /* another match => not unique */
 		}
 	}
 
-	if(found_idx == -1) {
-		return 0;
-	} else {
-		*out_recovered_ones = found_idx;
-		return 1;
-	}
+	return found_idx;
 }
 
 /*

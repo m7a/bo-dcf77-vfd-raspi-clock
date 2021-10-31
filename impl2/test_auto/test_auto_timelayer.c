@@ -9,13 +9,15 @@
 static char test_are_ones_compatible();
 static char test_is_leap_year();
 static char test_advance_tm_by_sec();
+static char test_recover_ones();
 
 int main(int argc, char** argv)
 {
 	/* use bitwise or here to ensure all tests are excecuted */
 	return (test_are_ones_compatible() &
 		test_is_leap_year() &
-		test_advance_tm_by_sec())?
+		test_advance_tm_by_sec() &
+		test_recover_ones())?
 		EXIT_SUCCESS: EXIT_FAILURE;
 }
 
@@ -206,5 +208,98 @@ static char test_advance_tm_by_sec()
 		}
 	}
 	puts("end    test_advance_tm_by_sec.");
+	return test_pass;
+}
+
+static char test_recover_ones()
+{
+	puts("begin  test_recover_ones...");
+	/* see dcf77_timelayer.c declarations */
+	static const unsigned char bcd[] = {
+		0xaa, 0xab, 0xae, 0xaf, 0xba, 0xbb, 0xbe, 0xbf, 0xea, 0xeb,
+	};
+	/* test data */
+	const static unsigned char preceding_minute_idx[] = {
+		/* test 1-3: recover from all-complete BCDs */
+		0,
+		1,
+		6,
+		/* test 4: unable to recover if everything is "empty" */
+		0,
+		/* test 5: unable to recover if inconsistent data */
+		0,
+		/* test 6,7,8: recovers if at least two BCDs are complete */
+		0,
+		0,
+		0,
+		/* test 9: recovers with a single complete BCD */
+		0,
+		/* test 10: recovers 1 for offset 1 (single complete BCD) */
+		0,
+		/* test 11: recovers 0 for offset 1 + 1 (single complete BCD) */
+		1,
+		/* TODO ASTAT ONWARDS WITH TESTS OF INCOMPLETE BCDs! */
+	};
+	const static unsigned char preceding_minute_ones[][
+					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN] = {
+		{ bcd[0], bcd[1], bcd[2], bcd[3], bcd[4],
+		  bcd[5], bcd[6], bcd[7], bcd[8], bcd[9] },
+		{ bcd[0], bcd[1], bcd[2], bcd[3], bcd[4],
+		  bcd[5], bcd[6], bcd[7], bcd[8], bcd[9] },
+		{ bcd[0], bcd[1], bcd[2], bcd[3], bcd[4],
+		  bcd[5], bcd[6], bcd[7], bcd[8], bcd[9] },
+		{ 0x55,   0x55,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0x55,   0x55 },
+		{ bcd[0], bcd[0], 0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0x55,   0x55 },
+		{ bcd[0], bcd[1], 0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0x55,   0x55 },
+		{ 0x55,   0x55,   bcd[2], bcd[3], 0x55,
+		  0x55,   0x55,   0x55,   0x55,   0x55 },
+		{ 0x55,   bcd[1], 0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   bcd[8], 0x55 },
+		{ 0x55,   0x55,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   bcd[8], 0x55 },
+		{ 0x55,   0x55,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   bcd[8], 0x55,   0x55 },
+		{ 0x55,   0x55,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0x55,   bcd[0] },
+	};
+	const static char expected_minute_recovery_result[] = {
+		0,
+		1,
+		6,
+		-1,
+		-1,
+		0,
+		0,
+		0,
+		0,
+		1,
+		2,
+	};
+	/* end test data */
+	char test_pass = 1;
+	char recovery_result;
+	unsigned char i;
+	struct dcf77_timelayer ctx;
+	for(i = 0; i < sizeof(preceding_minute_idx)/sizeof(unsigned char);
+									i++) {
+		ctx.private_preceding_minute_idx = preceding_minute_idx[i];
+		memcpy(ctx.private_preceding_minute_ones,
+			preceding_minute_ones[i],
+			DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN);
+		recovery_result = dcf77_timelayer_recover_ones(&ctx);
+		if(recovery_result == expected_minute_recovery_result[i]) {
+			printf("[ OK ] test %2d: Recoverd %2d as expected.\n",
+				i + 1, recovery_result);
+		} else {
+			printf("[FAIL] test %2d: Expected %2d but got %2d.\n",
+				i + 1, expected_minute_recovery_result[i],
+				recovery_result);
+			test_pass = 0;
+		}
+	}
+	puts("end    test_recover_ones.");
 	return test_pass;
 }

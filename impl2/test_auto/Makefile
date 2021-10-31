@@ -21,7 +21,7 @@ test_auto_xeliminate.c: xeliminate_testcases.h
 	$(CC) $(CFLAGS) -c $*.c
 
 clean:
-	-rm $(DEPS) *.gcno *.gcda *.c.gcov cov.info > /dev/null 2>&1
+	-rm $(DEPS) *.gcno *.gcda *.c.gcov *.h.gcov cov.info > /dev/null 2>&1
 
 cov:
 	gcov *.c
