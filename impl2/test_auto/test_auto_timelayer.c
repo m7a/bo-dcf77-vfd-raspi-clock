@@ -244,45 +244,74 @@ static char test_recover_ones()
 		0,
 		/* test 11: recovers 0 for offset 1 + 1 (single complete BCD) */
 		1,
-		/* TODO ASTAT ONWARDS WITH TESTS OF INCOMPLETE BCDs! */
+		/* test 12: sequence 0000 7x_ ____ will not recover */
+		0,
+		/* test 13: sequence 0000 7x_ 1___ is for 0..8 */
+		0,
+		/* test 14: sequence 0000 8x_ 1___ is for 0..9 */
+		0,
+		/* test 15: sequence 0000 7x_ 1___ 1___ is for 0..9 */
+		0,
+		/* test 16: sequence 010_ ___1 is for 4..5 */
+		0,
+		/* test 17: sequence 0___ 1___ is for 7..8 */
+		0,
 	};
 	const static unsigned char preceding_minute_ones[][
 					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN] = {
 		{ bcd[0], bcd[1], bcd[2], bcd[3], bcd[4],
-		  bcd[5], bcd[6], bcd[7], bcd[8], bcd[9] },
+		  bcd[5], bcd[6], bcd[7], bcd[8], bcd[9] }, /* 1 */
 		{ bcd[0], bcd[1], bcd[2], bcd[3], bcd[4],
-		  bcd[5], bcd[6], bcd[7], bcd[8], bcd[9] },
+		  bcd[5], bcd[6], bcd[7], bcd[8], bcd[9] }, /* 2 */
 		{ bcd[0], bcd[1], bcd[2], bcd[3], bcd[4],
-		  bcd[5], bcd[6], bcd[7], bcd[8], bcd[9] },
+		  bcd[5], bcd[6], bcd[7], bcd[8], bcd[9] }, /* 3 */
 		{ 0x55,   0x55,   0x55,   0x55,   0x55,
-		  0x55,   0x55,   0x55,   0x55,   0x55 },
+		  0x55,   0x55,   0x55,   0x55,   0x55 }, /* 4 */
 		{ bcd[0], bcd[0], 0x55,   0x55,   0x55,
-		  0x55,   0x55,   0x55,   0x55,   0x55 },
+		  0x55,   0x55,   0x55,   0x55,   0x55 }, /* 5 */
 		{ bcd[0], bcd[1], 0x55,   0x55,   0x55,
-		  0x55,   0x55,   0x55,   0x55,   0x55 },
+		  0x55,   0x55,   0x55,   0x55,   0x55 }, /* 6 */
 		{ 0x55,   0x55,   bcd[2], bcd[3], 0x55,
-		  0x55,   0x55,   0x55,   0x55,   0x55 },
+		  0x55,   0x55,   0x55,   0x55,   0x55 }, /* 7 */
 		{ 0x55,   bcd[1], 0x55,   0x55,   0x55,
-		  0x55,   0x55,   0x55,   bcd[8], 0x55 },
+		  0x55,   0x55,   0x55,   bcd[8], 0x55 }, /* 8 */
 		{ 0x55,   0x55,   0x55,   0x55,   0x55,
-		  0x55,   0x55,   0x55,   bcd[8], 0x55 },
+		  0x55,   0x55,   0x55,   bcd[8], 0x55 }, /* 9 */
 		{ 0x55,   0x55,   0x55,   0x55,   0x55,
-		  0x55,   0x55,   bcd[8], 0x55,   0x55 },
+		  0x55,   0x55,   bcd[8], 0x55,   0x55 }, /* 10 */
 		{ 0x55,   0x55,   0x55,   0x55,   0x55,
-		  0x55,   0x55,   0x55,   0x55,   bcd[0] },
+		  0x55,   0x55,   0x55,   0x55,   bcd[0] }, /* 11 */
+		{ bcd[0], 0x55,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0x55,   0x55, }, /* 12 */
+		{ bcd[0], 0x55,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0xd5,   0x55, }, /* 13 */
+		{ bcd[0], 0x55,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0x55,   0xd5, }, /* 14 */
+		{ bcd[0], 0x55,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0xd5,   0xd5, }, /* 15 */
+		{ 0xb9,   0x57,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0x55,   0x55, }, /* 16 */
+		{ 0x95,   0xd5,   0x55,   0x55,   0x55,
+		  0x55,   0x55,   0x55,   0x55,   0x55, }, /* 17 */
 	};
 	const static char expected_minute_recovery_result[] = {
-		0,
-		1,
-		6,
-		-1,
-		-1,
-		0,
-		0,
-		0,
-		0,
-		1,
-		2,
+		0, /* 1 */
+		1, /* 2 */
+		6, /* 3 */
+		-1, /* 4 */
+		-1, /* 5 */
+		0, /* 6 */
+		0, /* 7 */
+		0, /* 8 */
+		0, /* 9 */
+		1, /* 10 */
+		2, /* 11 */
+		0, /* 12 */
+		0, /* 13 */
+		0, /* 14 */
+		0, /* 14 */
+		4, /* 15 */
+		7, /* 16 */
 	};
 	/* end test data */
 	char test_pass = 1;

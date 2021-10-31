@@ -101,7 +101,7 @@ void dcf77_timelayer_init(struct dcf77_timelayer* ctx)
 	ctx->private_seconds_left_in_minute = 60;
 	ctx->out_current = TM0;
 	ctx->out_qos = DCF77_TIMELAYER_QOS9_ASYNC;
-	memset(ctx->private_preceding_minute_ones, 0, sizeof(unsigned char) *
+	memset(ctx->private_preceding_minute_ones, 0x55, sizeof(unsigned char) *
 					DCF77_TIMELAYER_LAST_MINUTE_BUF_LEN);
 	memset(ctx->private_prev_telegram, 0, sizeof(unsigned char) *
 					DCF77_SECONDLAYER_LINE_BYTES);
@@ -242,7 +242,8 @@ static void dcf77_timelayer_write_multiple_bits_converting(
 /*
  * Not leap-second aware for now
  * assert seconds < 12000, otherwise may output incorrect results!
- * TODO NEEDS TO WORK WITH seconds = -3600, -3601 too!
+ * Currently does not work with negative times (implement them for special
+ * DST case by directly changing the hours `i` field).
  */
 EXPORTED_FOR_TESTING void dcf77_timelayer_advance_tm_by_sec(
 				struct dcf77_timelayer_tm* tm, short seconds)
@@ -697,7 +698,6 @@ static void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 }
 
 /* @return value if ones were recovered successfully, -1 if not. */
-/* TODO RC: TEST THIS PROCEDURE INDIVIDUALLY / TEST PREPARED BUT NEED SOME CASE WITH DISTORTION! */
 EXPORTED_FOR_TESTING char dcf77_timelayer_recover_ones(
 						struct dcf77_timelayer* ctx)
 {
