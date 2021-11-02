@@ -58,6 +58,8 @@ static char dcf77_timelayer_is_leap_year(short y);
 static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
 								short seconds);
 static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx);
+static void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
+						const unsigned char* telegram);
 #endif
 
 static void dcf77_timelayer_tm_to_telegram_10min(struct dcf77_timelayer_tm* tm,
@@ -69,8 +71,9 @@ static void dcf77_timelayer_process_new_telegram(struct dcf77_timelayer* ctx,
 					struct dcf77_secondlayer* secondlayer);
 static enum dcf77_timelayer_recovery dcf77_timelayer_recover_bcd(
 						unsigned char* telegram);
-static unsigned char dcf77_timelayer_read_multiple(unsigned char* telegram,
-				unsigned char bit_offset, unsigned char length);
+static unsigned char dcf77_timelayer_read_multiple(
+		const unsigned char* telegram, unsigned char bit_offset,
+		unsigned char length);
 static char dcf77_timelayer_recover_bit(unsigned char* telegram,
 				unsigned char bit_offset, unsigned char length);
 static void dcf77_timelayer_decode_and_populate_dst_switch(
@@ -78,8 +81,6 @@ static void dcf77_timelayer_decode_and_populate_dst_switch(
 static void dcf77_timelayer_add_minute_ones_to_buffer(
 			struct dcf77_timelayer* ctx, unsigned char* telegram);
 static char dcf77_timelayer_decode_check(struct dcf77_timelayer_tm* tm,
-						unsigned char* telegram);
-static void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 						unsigned char* telegram);
 static char dcf77_timelayer_has_minute_tens(unsigned char* telegram);
 static void dcf77_timelayer_decode_tens(struct dcf77_timelayer_tm* tm,
@@ -537,7 +538,8 @@ static enum dcf77_timelayer_recovery dcf77_timelayer_recover_bcd(
 	return rv;
 }
 
-static unsigned char dcf77_timelayer_read_multiple(unsigned char* telegram,
+static unsigned char dcf77_timelayer_read_multiple(
+				const unsigned char* telegram,
 				unsigned char bit_offset, unsigned char length)
 {
 	unsigned char upper_low = telegram[bit_offset / 4];
@@ -670,8 +672,8 @@ static char dcf77_timelayer_decode_check(struct dcf77_timelayer_tm* tm,
 	return rv;
 }
 
-static void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
-							unsigned char* telegram)
+EXPORTED_FOR_TESTING void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
+						const unsigned char* telegram)
 {
 	tm->y = (TM0.y / 100) * 100
 		+ dcf77_bcd_from(dcf77_timelayer_read_multiple(telegram,
@@ -766,7 +768,7 @@ EXPORTED_FOR_TESTING char dcf77_timelayer_are_ones_compatible(
 	 *               step.
 	 *
 	 * ones0 ^ ones1 has trailing "1" if both values differed there.
-	 *               by ding & 0b01010101 (0x55) we extract only the
+	 *               by &-ing 0b01010101 (0x55) we extract only the
 	 *               value-relevant parts.
 	 *
 	 * Now by &-ing together the first and the second ones we get a value
@@ -808,6 +810,8 @@ static char dcf77_timelayer_check_if_current_compat_by_xeliminate(
 }
 
 /* Variant with one minute precision! */
+/* TODO TEST THIS PROCEDURE INDIVIDUALLY
+ * NB: MIGHT WANT TO _VERIFY_ WITH CBMC THAT dcf77_timelayer_tm_to_telegram(tm, telegram) + decode_telegram() yields same tm! */
 static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
 						unsigned char* out_telegram)
 {

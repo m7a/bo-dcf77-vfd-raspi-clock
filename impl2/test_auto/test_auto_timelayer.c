@@ -10,6 +10,7 @@ static char test_are_ones_compatible();
 static char test_is_leap_year();
 static char test_advance_tm_by_sec();
 static char test_recover_ones();
+static char test_decode();
 
 int main(int argc, char** argv)
 {
@@ -17,7 +18,8 @@ int main(int argc, char** argv)
 	return (test_are_ones_compatible() &
 		test_is_leap_year() &
 		test_advance_tm_by_sec() &
-		test_recover_ones())?
+		test_recover_ones() &
+		test_decode())?
 		EXIT_SUCCESS: EXIT_FAILURE;
 }
 
@@ -336,5 +338,48 @@ static char test_recover_ones()
 		}
 	}
 	puts("end    test_recover_ones.");
+	return test_pass;
+}
+
+static char test_decode()
+{
+	const static struct dcf77_timelayer_tm recovered_tm[] = {
+		/* test 1: synthetic */
+		{.y=2021,.m=9,.d=11,.h=0,.i=24,.s=0,},
+		/* test 2: real */
+		{.y=2019,.m=4,.d=22,.h=22,.i=41,.s=0,},
+	};
+	const static unsigned char telegrams[][DCF77_SECONDLAYER_LINE_BYTES] = {
+		{0xaa,0xaa,0xaa,0xaa,0xae,0xeb,0xba,0xaa,0xaa,0xab,0xeb,0xaf,0xbb,0xea,0x6a,},
+		{0xaa,0xab,0xfb,0xaa,0xae,0xaf,0xea,0xba,0xba,0xae,0xbe,0xea,0xba,0xbe,0x7a,},
+	};
+	char test_pass = 1;
+	unsigned char i;
+	struct dcf77_timelayer_tm current_recover;
+	puts("begin  test_decode...");
+	for(i = 0; i < sizeof(recovered_tm)/sizeof(struct dcf77_timelayer_tm);
+									i++) {
+		dcf77_timelayer_decode(&current_recover, telegrams[i]);
+		if(memcmp(&current_recover, recovered_tm + i,
+				sizeof(struct dcf77_timelayer_tm)) == 0) {
+			printf("[ OK ] test %2d -- %04d-%02d-%02d "
+				"%02d:%02d:%02d\n", i + 1,
+				recovered_tm[i].y, recovered_tm[i].m,
+				recovered_tm[i].d, recovered_tm[i].h,
+				recovered_tm[i].i, recovered_tm[i].s);
+		} else {
+			test_pass = 0;
+			printf("[FAIL] test %2d -- Expected %04d-%02d-%02d "
+				"%02d:%02d:%02d, but got %04d-%02d-%02d "
+				"%02d:%02d:%02d\n", i + 1,
+				recovered_tm[i].y, recovered_tm[i].m,
+				recovered_tm[i].d, recovered_tm[i].h,
+				recovered_tm[i].i, recovered_tm[i].s,
+				current_recover.y, current_recover.m,
+				current_recover.d, current_recover.h,
+				current_recover.i, current_recover.s);
+		}
+	}
+	puts("end    test_decode.");
 	return test_pass;
 }
