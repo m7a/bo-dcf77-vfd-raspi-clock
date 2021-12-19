@@ -86,4 +86,6 @@ void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
 char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx);
 void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 						const unsigned char* telegram);
+void dcf77_timelayer_tm_to_telegram(const struct dcf77_timelayer_tm* tm,
+						unsigned char* out_telegram);
 #endif

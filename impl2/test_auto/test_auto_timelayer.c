@@ -11,6 +11,7 @@ static char test_is_leap_year();
 static char test_advance_tm_by_sec();
 static char test_recover_ones();
 static char test_decode();
+static char test_telegram_identity();
 
 int main(int argc, char** argv)
 {
@@ -19,7 +20,8 @@ int main(int argc, char** argv)
 		test_is_leap_year() &
 		test_advance_tm_by_sec() &
 		test_recover_ones() &
-		test_decode())?
+		test_decode() &
+		test_telegram_identity())?
 		EXIT_SUCCESS: EXIT_FAILURE;
 }
 
@@ -381,5 +383,37 @@ static char test_decode()
 		}
 	}
 	puts("end    test_decode.");
+	return test_pass;
+}
+
+static char test_telegram_identity()
+{
+	const struct dcf77_timelayer_tm tm_in[] = {
+		{ .y = 2002, .m = 2, .d = 21, .h = 16, .i = 1, .s = 0 },
+	};
+	const unsigned char cmp[][DCF77_SECONDLAYER_LINE_BYTES] = {
+		{ 0x55,0x55,0x55,0x55,0x55,0xad,0xaa,0xf9,0x6e,0xab,0x5e,0xb9,0xea,0xaa,0x5a, },
+	};
+	char test_pass = 1;
+	unsigned i, j;
+	unsigned char current_tel[DCF77_SECONDLAYER_LINE_BYTES];
+	puts("begin  test_telegram_identity...");
+	for(i = 0; i < sizeof(tm_in)/sizeof(struct dcf77_timelayer_tm); i++) {
+		dcf77_timelayer_tm_to_telegram(&tm_in[i], current_tel);
+		if(memcmp(current_tel, cmp[i],
+					DCF77_SECONDLAYER_LINE_BYTES) == 0) {
+			printf("[ OK ] identity %d\n", i);
+		} else {
+			test_pass = 0;
+			printf("[FAIL] identity %d -- Expected ", i);
+			for(j = 0; j < DCF77_SECONDLAYER_LINE_BYTES; j++)
+				printf("%02x,", cmp[i][j]);
+			printf(", but got ");
+			for(j = 0; j < DCF77_SECONDLAYER_LINE_BYTES; j++)
+				printf("%02x,", current_tel[j]);
+			printf("\n");
+		}
+	}
+	puts("end    test_telegram_identity.");
 	return test_pass;
 }

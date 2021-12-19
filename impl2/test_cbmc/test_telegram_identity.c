@@ -8,7 +8,7 @@
  * USAGE:
  * cbmc --trace -I ../interface test_telegram_identity.c
  *
- * TODO CSTAT DOES NOT VERIFY. CREATE TEST AND FIX BUGS IN PROCEDURES!
+ * VERIFICATION SUCCESSFUL as per 2021-12-19
  */
 void main()
 {
@@ -26,7 +26,7 @@ void main()
 		tm_under_test.y >= 2000 &&
 		tm_under_test.m >= 1 && tm_under_test.m <= 12 &&
 		tm_under_test.h < 24 &&
-		tm_under_test.i <= 60 &&
+		tm_under_test.i < 60 &&
 		tm_under_test.s == 0
 	);
 	if(tm_under_test.m == 2 &&
@@ -39,9 +39,9 @@ void main()
 	dcf77_timelayer_tm_to_telegram(&tm_under_test, tel_intermediate);
 	dcf77_timelayer_decode(&tm_intermediate, tel_intermediate);
 
-	assert(tm_under_test.y == tm_intermediate.y);
-	assert(tm_under_test.m == tm_intermediate.m);
-	assert(tm_under_test.d == tm_intermediate.d);
-	assert(tm_under_test.h == tm_intermediate.h);
-	assert(tm_under_test.i == tm_intermediate.i);
+	__CPROVER_assert(tm_under_test.y == tm_intermediate.y, "Years match");
+	__CPROVER_assert(tm_under_test.m == tm_intermediate.m, "Months match");
+	__CPROVER_assert(tm_under_test.d == tm_intermediate.d, "Days match");
+	__CPROVER_assert(tm_under_test.h == tm_intermediate.h, "Hours match");
+	__CPROVER_assert(tm_under_test.i == tm_intermediate.i, "Minutes match");
 }

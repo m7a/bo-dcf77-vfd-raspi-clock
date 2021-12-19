@@ -60,10 +60,12 @@ static void dcf77_timelayer_advance_tm_by_sec(struct dcf77_timelayer_tm* tm,
 static char dcf77_timelayer_recover_ones(struct dcf77_timelayer* ctx);
 static void dcf77_timelayer_decode(struct dcf77_timelayer_tm* tm,
 						const unsigned char* telegram);
+static void dcf77_timelayer_tm_to_telegram(const struct dcf77_timelayer_tm* tm,
+						unsigned char* out_telegram);
 #endif
 
-static void dcf77_timelayer_tm_to_telegram_10min(struct dcf77_timelayer_tm* tm,
-						unsigned char* out_telegram);
+static void dcf77_timelayer_tm_to_telegram_10min(
+	const struct dcf77_timelayer_tm* tm, unsigned char* out_telegram);
 static void dcf77_timelayer_write_multiple_bits_converting(
 			unsigned char* out_telegram, unsigned char from_bit,
 			unsigned char num_bits, unsigned char in_bits);
@@ -89,8 +91,6 @@ static char dcf77_timelayer_tm_eq(struct dcf77_timelayer_tm* a,
 						struct dcf77_timelayer_tm* b);
 static char dcf77_timelayer_check_if_current_compat_by_xeliminate(
 	struct dcf77_timelayer* ctx, struct dcf77_secondlayer* secondlayer);
-static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
-						unsigned char* out_telegram);
 static char dcf77_timelayer_cross_check_by_xeliminate(
 	struct dcf77_timelayer* ctx, struct dcf77_secondlayer* secondlayer);
 
@@ -203,8 +203,8 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
  * Currently needed to store "prev" values if +1sec yields a new minute tens.
  * Currently only stores tm to ten minute precision.
  */
-static void dcf77_timelayer_tm_to_telegram_10min(struct dcf77_timelayer_tm* tm,
-						unsigned char* out_telegram)
+static void dcf77_timelayer_tm_to_telegram_10min(
+	const struct dcf77_timelayer_tm* tm, unsigned char* out_telegram)
 {
 	unsigned char y_val = tm->y % 100;
 	memset(out_telegram, 0x55, sizeof(unsigned char) *
@@ -213,6 +213,10 @@ static void dcf77_timelayer_tm_to_telegram_10min(struct dcf77_timelayer_tm* tm,
 		DCF77_OFFSET_YEAR_ONES, DCF77_LENGTH_YEAR_ONES, y_val % 10);
 	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
 		DCF77_OFFSET_YEAR_TENS, DCF77_LENGTH_YEAR_TENS, y_val / 10);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_MONTH_ONES, DCF77_LENGTH_MONTH_ONES, tm->m % 10);
+	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
+		DCF77_OFFSET_MONTH_TENS, DCF77_LENGTH_MONTH_TENS, tm->m / 10);
 	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
 		DCF77_OFFSET_DAY_ONES, DCF77_LENGTH_DAY_ONES, tm->d % 10);
 	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
@@ -237,6 +241,7 @@ static void dcf77_timelayer_write_multiple_bits_converting(
 		val_to_write = (in_bits & 1)? DCF77_BIT_1: DCF77_BIT_0;
 		dcf77_telegram_write_bit(from_bit + bits_processed,
 						out_telegram, val_to_write);
+		in_bits >>= 1;
 	}
 }
 
@@ -809,11 +814,14 @@ static char dcf77_timelayer_check_if_current_compat_by_xeliminate(
 							virtual_telegram);
 }
 
-/* Variant with one minute precision! */
-/* TODO TEST THIS PROCEDURE INDIVIDUALLY
- * NB: MIGHT WANT TO _VERIFY_ WITH CBMC THAT dcf77_timelayer_tm_to_telegram(tm, telegram) + decode_telegram() yields same tm! */
-static void dcf77_timelayer_tm_to_telegram(struct dcf77_timelayer_tm* tm,
-						unsigned char* out_telegram)
+/*
+ * Variant with one minute precision!
+ * 
+ * The identity of dcf77_timelayer_tm_to_telegram o decode_telegram is verified
+ * with ../test_cbmc/test_telegram_identity.c
+ */
+EXPORTED_FOR_TESTING void dcf77_timelayer_tm_to_telegram(
+	const struct dcf77_timelayer_tm* tm, unsigned char* out_telegram)
 {
 	dcf77_timelayer_tm_to_telegram_10min(tm, out_telegram);
 	dcf77_timelayer_write_multiple_bits_converting(out_telegram,
