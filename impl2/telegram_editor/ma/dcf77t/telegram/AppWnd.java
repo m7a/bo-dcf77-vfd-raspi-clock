@@ -519,7 +519,7 @@ class AppWnd {
 
 	private void processBinCSV(ActionEvent ev) {
 		rawInOutBinary.setText(rawInOutBinaryCSV.getText().
-					replace(",", "").replace(" ", ""));
+			replace(",", "").replace(" ", "").replace("\n", ""));
 		processRaw();
 	}
 
