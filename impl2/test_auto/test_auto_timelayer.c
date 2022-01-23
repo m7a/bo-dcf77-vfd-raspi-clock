@@ -12,6 +12,7 @@ static char test_advance_tm_by_sec();
 static char test_recover_ones();
 static char test_decode();
 static char test_telegram_identity();
+static char test_quality_of_service();
 
 int main(int argc, char** argv)
 {
@@ -21,7 +22,8 @@ int main(int argc, char** argv)
 		test_advance_tm_by_sec() &
 		test_recover_ones() &
 		test_decode() &
-		test_telegram_identity())?
+		test_telegram_identity() &
+		test_quality_of_service())?
 		EXIT_SUCCESS: EXIT_FAILURE;
 }
 
@@ -415,5 +417,406 @@ static char test_telegram_identity()
 		}
 	}
 	puts("end    test_telegram_identity.");
+	return test_pass;
+}
+
+/* -- begin debug aux procedures, cf test_auto_secondlayer.c -- */
+static void printtel_sub(unsigned char* data)
+{
+	unsigned char j;
+	for(j = 0; j < 15; j++)
+		printf("%02x,", data[j]);
+	putchar('\n');
+}
+
+static void dumpmem(struct dcf77_secondlayer* ctx)
+{
+	unsigned char i;
+	printf("               ");
+	for(i = 0; i < DCF77_SECONDLAYER_LINE_BYTES; i++) {
+		if((ctx->private_line_cursor/4) == i) {
+			if(ctx->private_line_cursor % 4 >= 2)
+				printf("*  ");
+			else
+				printf(" * ");
+		} else {
+			printf("   ");
+		}
+	}
+	putchar('\n');
+	for(i = 0; i < DCF77_SECONDLAYER_LINES; i++) {
+		printf("       %s meml%d=", i == ctx->private_line_current?
+								"*": " ", i);
+		printtel_sub(ctx->private_telegram_data +
+					(i * DCF77_SECONDLAYER_LINE_BYTES));
+	}
+	printf("       line_current=%u, cursor=%u\n",
+			ctx->private_line_current, ctx->private_line_cursor);
+}
+
+static void debug_date_mis(const struct dcf77_timelayer_tm* expected,
+					struct dcf77_secondlayer* secondlayer,
+					struct dcf77_timelayer* timelayer)
+{
+	printf("       Datetime mismatch. Expected %02d.%02d.%04d "
+		"%02d:%02d:%02d, got %02d.%02d.%04d %02d:%02d:%02d\n",
+		expected->d, expected->m, expected->y,
+		expected->h, expected->i, expected->s,
+		timelayer->out_current.d, timelayer->out_current.m,
+		timelayer->out_current.y, timelayer->out_current.h,
+		timelayer->out_current.i, timelayer->out_current.s);
+	dumpmem(secondlayer);
+}
+/* -- end debug aux procedures -- */
+
+/*
+ * QOS test is intended to test the degradation upon receiving bad signals.
+ */
+static char test_quality_of_service()
+{
+	char test_pass = 1;
+	#define MAX_SIGNALS_PER_TEST 512
+	#define MAX_CHECKPOINTS_PER_TEST 32
+	const char* test_descr[] = {
+		/* test 0 */
+		"13.04.2019 17:00:00-17:01:01 undisturbed test at EOM",
+		/* test 1 */
+		"13.04.2019 17:00:00-17:01:01 go down to QOS9 for invalid data",
+		/* test 2 */
+		"22.04.2019 22:41:00-22:42:01 with only tens matching / QOS2",
+		/* test 3 */
+		"22.04.2019 22:41:00-22:43:00 with recovery from QOS2->QOS1",
+		/* test 4 */
+		"22.04.2019 22:41:00-22:42:01 with tens unchanged QOS2",
+		/* test 5 */
+		"13.04.2019 17:29:00-17:30:00 tens change undisturbed QOS1",
+		/* test 6 */
+		"13.04.2019 17:29:00-17:30:00 tens change prev recovery QOS3",
+		/* TODO TEST QOS4, QOS5, QOS6, QOS7, QOS8, QOS9 */
+	};
+	const unsigned num_signals[] = {
+		/* test 0 */
+		121,
+		/* test 1 */
+		121,
+		/* test 2 */
+		121,
+		/* test 3 */
+		180,
+		/* test 4 */
+		121,
+		/* test 5 */
+		120,
+		/* test 6 */
+		120,
+	};
+	const enum dcf77_bitlayer_reading signals[][MAX_SIGNALS_PER_TEST] = {
+		/* test 0 */
+		{
+			/* 13.04.2019 17:00:00 */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+			2, 2, 2, 2, 2, 2, 3, 2, 3, 2, 2, 2,
+			2, 2, 2, 2, 2, 3, 3, 3, 2, 3, 2, 2,
+			3, 3, 2, 2, 3, 2, 2, 3, 3, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 13.04.2019 17:01:00 */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+			2, 2, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
+			2, 2, 2, 2, 3, 3, 3, 3, 2, 3, 2, 2,
+			3, 3, 2, 2, 3, 2, 2, 3, 3, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 13.04.2019 17:01:01 */
+			2,
+		},
+		/* test 1 */
+		{
+			/* 13.04.2019 17:00:00 */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+			2, 2, 2, 2, 2, 2, 3, 2, 3, 2, 2, 2,
+			2, 2, 2, 2, 2, 3, 3, 3, 2, 3, 2, 2,
+			3, 3, 2, 2, 3, 2, 2, 3, 3, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 13.04.2019 17:01:00 | here illegal begin of min=1 */
+			3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+			2, 2, 2, 2, 2, 2, 3, 2, 3, 3, 2, 2,
+			2, 2, 2, 2, 3, 3, 3, 3, 2, 3, 2, 2,
+			3, 3, 2, 2, 3, 2, 2, 3, 3, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 13.04.2019 17:01:01 */
+			2,
+		},
+		/* test 2 */
+		{
+			/* 22.04.2019 22:41:00 */
+			2, 2, 2, 2, 3, 2, 2, 2, 3, 2, 3, 3,
+			2, 2, 2, 2, 2, 3, 2, 2, 3, 3, 2, 2,
+			2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2,
+			2, 3, 2, 2, 2, 3, 3, 2, 2, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 22.04.2019 22:4_:00 */
+			2, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 2,
+			2, 3, 2, 2, 2, 3, 2, 2, 3, 1, 1, 1,
+			1, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2,
+			2, 3, 2, 2, 2, 3, 3, 2, 2, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 12.04.2019 22:42:01 */
+			2,
+		},
+		/* test 3 */
+		{
+			/* 22.04.2019 22:41:00 */
+			2, 2, 2, 2, 3, 2, 2, 2, 3, 2, 3, 3,
+			2, 2, 2, 2, 2, 3, 2, 2, 3, 3, 2, 2,
+			2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2,
+			2, 3, 2, 2, 2, 3, 3, 2, 2, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 22.04.2019 22:4_:00 */
+			2, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 2,
+			2, 3, 2, 2, 2, 3, 2, 2, 3, 1, 1, 1,
+			1, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2,
+			2, 3, 2, 2, 2, 3, 3, 2, 2, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 12.04.2019 22:42:01 */
+			2, 2, 3, 3, 2, 2, 2, 2, 2, 2, 2, 3,
+			3, 2, 3, 2, 2, 3, 2, 2, 3, 3, 3, 2,
+			2, 2, 2, 3, 3, 2, 3, 2, 2, 2, 3, 2,
+			2, 3, 2, 2, 2, 3, 3, 2, 2, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+		},
+		/* test 4 */
+		{
+			/* 22.04.2019 22:41:00 */
+			2, 2, 2, 2, 3, 2, 2, 2, 3, 2, 3, 3,
+			2, 2, 2, 2, 2, 3, 2, 2, 3, 3, 2, 2,
+			2, 2, 2, 3, 2, 2, 3, 2, 2, 2, 3, 2,
+			2, 3, 2, 2, 2, 3, 3, 2, 2, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 22.04.2019 22:__:00 */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+			2, 2, 2, 2, 2, 3, 2, 2, 3, 1, 1, 1,
+			1, 1, 1, 1, 1, 2, 3, 2, 2, 2, 3, 2,
+			2, 3, 2, 2, 2, 3, 3, 2, 2, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 12.04.2019 22:42:01 */
+			2,
+		},
+		/* test 5 */
+		{
+			/* 13.04.2019 17:29:00 */
+			2, 3, 2, 3, 3, 3, 2, 3, 3, 2, 3, 2,
+			3, 3, 3, 2, 2, 3, 2, 2, 3, 3, 2, 2,
+			3, 2, 3, 2, 3, 3, 3, 3, 2, 3, 2, 2,
+			3, 3, 2, 2, 3, 2, 2, 3, 3, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 13.04.2019 17:30:00 */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+			2, 2, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2,
+			2, 3, 3, 2, 2, 3, 3, 3, 2, 3, 2, 2,
+			3, 3, 2, 2, 3, 2, 2, 3, 3, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+		},
+		/* test 6 */
+		{
+			/* 13.04.2019 17:29:00 */
+			2, 3, 2, 3, 3, 3, 2, 3, 3, 2, 3, 2,
+			3, 3, 3, 2, 2, 3, 2, 2, 3, 3, 2, 2,
+			3, 2, 3, 2, 3, 3, 3, 3, 2, 3, 2, 2,
+			3, 3, 2, 2, 3, 2, 2, 3, 3, 2, 2, 3,
+			2, 2, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+			/* 13.04.2019 17:__:00 */
+			2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+			2, 2, 2, 2, 2, 3, 2, 2, 3, 2, 2, 2,
+			2, 3, 3, 2, 2, 3, 3, 3, 2, 3, 2, 2,
+			3, 3, 2, 2, 3, 2, 2, 3, 3, 1, 1, 1,
+			1, 1, 3, 2, 2, 3, 3, 2, 2, 2, 3, 1,
+		}
+	};
+	const unsigned checkpoints_loc[][MAX_CHECKPOINTS_PER_TEST] = {
+		/* test 0 */
+		{
+			59,
+			119,
+			120,
+			512
+		},
+		/* test 1 */
+		{
+			59,
+			119,
+			120,
+			512
+		},
+		/* test 2 */
+		{
+			59,
+			119,
+			120,
+			512
+		},
+		/* test 3 */
+		{
+			59,
+			119,
+			120,
+			179,
+			512
+		},
+		/* test 4 */
+		{
+			59,
+			119,
+			120,
+			512
+		},
+		/* test 5 */
+		{
+			59,
+			119,
+			512
+		},
+		/* test 6 */
+		{
+			59,
+			119,
+			512
+		},
+	};
+	const struct dcf77_timelayer_tm checkpoints_val[][
+						MAX_CHECKPOINTS_PER_TEST] = {
+		/* test 0 */
+		{
+			{ .y = 2019, .m = 4, .d = 13, .h = 17, .i = 0, .s = 0 },
+			{ .y = 2019, .m = 4, .d = 13, .h = 17, .i = 1, .s = 0 },
+			{ .y = 2019, .m = 4, .d = 13, .h = 17, .i = 1, .s = 1 },
+		},
+		/* test 1 */
+		{
+			{ .y = 2019, .m = 4, .d = 13, .h = 17, .i = 0, .s = 0 },
+			{ .y = 2019, .m = 4, .d = 13, .h = 17, .i = 1, .s = 0 },
+			{ .y = 2019, .m = 4, .d = 13, .h = 17, .i = 1, .s = 1 },
+		},
+		/* test 2 */
+		{
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 41,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 42,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 42,.s = 1 },
+		},
+		/* test 3 */
+		{
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 41,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 42,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 42,.s = 1 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 43,.s = 0 },
+		},
+		/* test 4 */
+		{
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 41,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 42,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 42,.s = 1 },
+		},
+		/* test 5 */
+		{
+			{ .y = 2019,.m = 4,.d = 13,.h = 17,.i = 29,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 13,.h = 17,.i = 30,.s = 0 },
+		},
+		/* test 6 */
+		{
+			{ .y = 2019,.m = 4,.d = 13,.h = 17,.i = 29,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 13,.h = 17,.i = 30,.s = 0 },
+		},
+	};
+	enum dcf77_timelayer_qos checkpoints_qos[][MAX_CHECKPOINTS_PER_TEST] = {
+		/* test 0 */
+		{
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+		},
+		/* test 1 */
+		{
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS9_ASYNC,
+			DCF77_TIMELAYER_QOS9_ASYNC,
+		},
+		/* test 2 */
+		{
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS2,
+			DCF77_TIMELAYER_QOS2,
+		},
+		/* test 3 */
+		{
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS2,
+			DCF77_TIMELAYER_QOS2,
+			DCF77_TIMELAYER_QOS1,
+		},
+		/* test 4 */
+		{
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS2,
+			DCF77_TIMELAYER_QOS2,
+		},
+		/* test 5 */
+		{
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+		},
+		/* test 6 */
+		{
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS3,
+		},
+	};
+	const int num_tests = sizeof(num_signals)/sizeof(unsigned);
+	unsigned i;
+	unsigned j;
+	unsigned chk;
+
+	struct dcf77_secondlayer secondlayer;
+	struct dcf77_timelayer timelayer;
+
+	puts("begin  test_quality_of_service...");
+	for(i = 0; i < num_tests; i++) {
+		chk = 0;
+
+		dcf77_secondlayer_init(&secondlayer);
+		dcf77_timelayer_init(&timelayer);
+		for(j = 0; j < num_signals[i]; j++) {
+			secondlayer.in_val = signals[i][j];
+			dcf77_secondlayer_process(&secondlayer);
+			dcf77_timelayer_process(&timelayer, 1, &secondlayer);
+			if(j == checkpoints_loc[i][chk]) {
+				/* now perform a check */
+				if(memcmp(&checkpoints_val[i][chk],
+				&timelayer.out_current,
+				sizeof(struct dcf77_timelayer_tm)) != 0) {
+					debug_date_mis(&checkpoints_val[i][chk],
+							&secondlayer,
+							&timelayer);
+					test_pass = 0;
+					break;
+				}
+				if(checkpoints_qos[i][chk]
+							!= timelayer.out_qos) {
+					printf("       QOS mismatch. Expected "
+						"%d, got %d at %d\n",
+						checkpoints_qos[i][chk],
+						timelayer.out_qos, j);
+					test_pass = 0;
+					break;
+				}
+				chk++;
+			}
+			secondlayer.out_telegram_1_len = 0; /* TODO DEBUG ONLY? */
+		}
+
+		if(j != num_signals[i]) {
+			printf("[FAIL] %s\n", test_descr[i]);
+		} else {
+			printf("[ OK ] %s\n", test_descr[i]);
+		}
+	}
+	puts("end    test_quality_of_service.");
 	return test_pass;
 }

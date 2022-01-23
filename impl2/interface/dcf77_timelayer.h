@@ -21,7 +21,7 @@ enum dcf77_timelayer_qos {
 	DCF77_TIMELAYER_QOS5       = 5, /* o5 -- async telegram match */
 	DCF77_TIMELAYER_QOS6       = 6, /* o6 -- count from prev */
 	DCF77_TIMELAYER_QOS7       = 7, /* -7 -- async might match -1 */
-	DCF77_TIMELAYER_QOS8       = 8, /* -7 -- async might match +1 */
+	DCF77_TIMELAYER_QOS8       = 8, /* -8 -- async might match +1 */
 	DCF77_TIMELAYER_QOS9_ASYNC = 9, /* -9 -- async count from last */
 };
 
@@ -72,8 +72,12 @@ struct dcf77_timelayer {
 };
 
 void dcf77_timelayer_init(struct dcf77_timelayer* ctx);
+
+/*
+ * @param has_new_bitlayer_signal = bitlayer->out_reading != DCF77_BIT_NO_UPDATE
+ */
 void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
-					struct dcf77_bitlayer* bitlayer,
+					char has_new_bitlayer_signal,
 					struct dcf77_secondlayer* secondlayer);
 
 #ifdef TEST

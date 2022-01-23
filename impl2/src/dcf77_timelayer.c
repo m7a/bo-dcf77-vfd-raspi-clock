@@ -9,8 +9,8 @@
 #include "dcf77_bcd.h"
 
 enum dcf77_timelayer_recovery {
-	DCF77_TIMELAYER_DATA_IS_COMPLETE = 1,
-	DCF77_TIMELAYER_DATA_IS_INCOMPLETE_FOR_MINUTE = 2,
+	DCF77_TIMELAYER_DATA_IS_COMPLETE                = 1,
+	DCF77_TIMELAYER_DATA_IS_INCOMPLETE_FOR_MINUTE   = 2,
 	DCF77_TIMELAYER_DATA_IS_INCOMPLETE_FOR_MULTIPLE = 3,
 };
 
@@ -109,11 +109,11 @@ void dcf77_timelayer_init(struct dcf77_timelayer* ctx)
 }
 
 void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
-					struct dcf77_bitlayer* bitlayer,
+					char has_new_bitlayer_signal,
 					struct dcf77_secondlayer* secondlayer)
 {
 	/* Always handle second if detected */
-	if(bitlayer->out_reading != DCF77_BIT_NO_UPDATE) {
+	if(has_new_bitlayer_signal) {
 		/*
 		 * Add one sec to current time handling leap seconds and prev
 		 * management.

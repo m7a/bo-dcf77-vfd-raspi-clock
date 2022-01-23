@@ -42,7 +42,6 @@ void dcf77_secondlayer_process_telegrams(struct dcf77_secondlayer* ctx)
 {
 
 	/* Input situation: cursor is at the end of the current minute. */
-
 	if(dcf77_secondlayer_check_bcd_correct_telegram_ignore_eom(ctx,
 						ctx->private_line_current, 0)) {
 		process_telegrams_correct_minute(ctx);
