@@ -494,6 +494,9 @@ static char test_quality_of_service()
 		"13.04.2019 17:29:00-17:30:00 tens change prev recovery QOS3",
 		/* test 7 */
 		"22.04.2019 22:41:00-22:52:00 long clear signal QOS1",
+		/* test 8 */
+		/* TODO CSTAT SMALL PROBLEM: THIS TEST SHOWS AN ERROR: IT INTERMEDIATELY OUTPUTS 22:40:00 instead of 22:50:00. It can be explained in part by aggressive xeliminate which fills the missing minute tens from the previous minutes' data. However, this does not explain why a telegram with invalid minute checksum is generated. Such a telegram should never be output and instead the result be doubted before passing to timelayer. Finally, I suspect there are cases where the timelayer cannot detect such cases (e.g. checksum received as 3/_ rather than definitive 0). In these cases it should still not permit the clock to jump from 22:49:00 to 22:40:00. It might make sense to degrade to sort of QOS9 and jump back as soon as the data is definitive. / Should focus on how that "definitiveness" can be sharpened.
+		"22.04.2019 22:41:00-22:52:00 TODO TEST QOS4",
 		/* TODO TEST QOS4, QOS5, QOS6, QOS7, QOS8, QOS9 */
 	};
 	const unsigned num_signals[] = {
@@ -512,6 +515,8 @@ static char test_quality_of_service()
 		/* test 6 */
 		120,
 		/* test 7 */
+		720,
+		/* test 8 */
 		720,
 	};
 	const enum dcf77_bitlayer_reading signals[][MAX_SIGNALS_PER_TEST] = {
@@ -685,6 +690,58 @@ static char test_quality_of_service()
 			3,2,3,2,2,3,2,3,3,2,3,2,2,2,3,2,2,3,2,2,
 			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
 		},
+		/* test 8 */
+		{
+			/* 22.04.2019 22:41:00 */
+			2,2,2,2,3,2,2,2,3,2,3,3,2,2,2,2,2,3,2,2,
+			/* 1: minute tens  end*/
+			3,3,2,2,2,2,2,1,2,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:42:00 */
+			2,3,2,3,3,3,2,3,3,3,2,2,2,3,2,2,2,3,2,2,
+			3,2,3,2,2,2,2,3,2,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:43:00 */
+			2,2,3,3,2,2,2,2,2,2,2,3,3,2,3,2,2,3,2,2,
+			3,3,3,2,2,2,2,3,3,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:44:00 */
+			2,2,3,2,2,2,3,3,2,2,2,2,2,3,2,2,2,3,2,2,
+			3,2,2,3,2,2,2,3,2,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:45:00 */
+			2,2,2,3,2,3,3,3,3,3,3,3,2,2,3,2,2,3,2,2,
+			3,3,2,3,2,2,2,3,3,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:46:00 */
+			2,2,3,2,3,2,3,3,2,2,3,2,3,3,3,2,2,3,2,2,
+			3,2,3,3,2,2,2,3,3,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:47:00 */
+			2,2,2,2,2,3,3,3,2,2,2,2,2,3,3,2,2,3,2,2,
+			3,3,3,3,2,2,2,3,2,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:48:00 */
+			2,3,3,2,2,2,3,3,3,3,2,2,2,3,3,2,2,3,2,2,
+			3,2,2,2,3,2,2,3,2,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:49:00 */
+			2,2,3,3,3,2,2,3,2,3,2,3,2,3,2,2,2,3,2,2,
+			3,3,2,2,3,2,2,3,3,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:50:00 */
+			2,3,3,2,3,3,2,3,3,3,2,3,3,3,3,2,2,3,2,2,
+			3,2,2,2,2,1,1,1,2,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:51:00 */
+			2,3,2,2,2,2,3,3,3,3,3,2,2,2,2,2,2,3,2,2,
+			3,3,2,2,2,1,1,1,3,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+			/* 22.04.2019 22:52:00 */
+			2,2,2,3,3,2,3,3,2,3,3,2,2,2,3,2,2,3,2,2,
+			3,2,3,2,2,1,1,1,3,2,3,2,2,2,3,2,2,3,2,2,
+			2,3,3,2,2,2,2,3,2,2,3,2,2,3,3,2,2,2,3,1,
+		},
 	};
 	const unsigned checkpoints_loc[][MAX_CHECKPOINTS_PER_TEST] = {
 		/* test 0 */
@@ -736,6 +793,22 @@ static char test_quality_of_service()
 			1024,
 		},
 		/* test 7 */
+		{
+			 59,
+			119,
+			179,
+			239,
+			299,
+			359,
+			419,
+			479,
+			539,
+			599,
+			659,
+			719,
+			1024,
+		},
+		/* test 8 */
 		{
 			 59,
 			119,
@@ -810,6 +883,21 @@ static char test_quality_of_service()
 			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 51,.s = 0 },
 			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 52,.s = 0 },
 		},
+		/* test 8 */
+		{
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 41,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 42,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 43,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 44,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 45,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 46,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 47,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 48,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 49,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 50,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 51,.s = 0 },
+			{ .y = 2019,.m = 4,.d = 22,.h = 22,.i = 52,.s = 0 },
+		},
 	};
 	enum dcf77_timelayer_qos checkpoints_qos[][MAX_CHECKPOINTS_PER_TEST] = {
 		/* test 0 */
@@ -868,6 +956,21 @@ static char test_quality_of_service()
 			DCF77_TIMELAYER_QOS1,
 			DCF77_TIMELAYER_QOS1,
 		},
+		/* test 8 */
+		{
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS1,
+			DCF77_TIMELAYER_QOS4,
+			DCF77_TIMELAYER_QOS4,
+			DCF77_TIMELAYER_QOS4,
+		},
 	};
 	const int num_tests = sizeof(num_signals)/sizeof(unsigned);
 	unsigned i;
@@ -895,6 +998,16 @@ static char test_quality_of_service()
 					debug_date_mis(&checkpoints_val[i][chk],
 							&secondlayer,
 							&timelayer);
+					printf("       out_telegram_1[%2d] = ",
+						secondlayer.out_telegram_1_len);
+					printtel_sub(
+						secondlayer.out_telegram_1);
+					printf("       out_telegram_2[%2d] = ",
+						secondlayer.out_telegram_2_len);
+					printtel_sub(
+						secondlayer.out_telegram_2);
+					printf("       qos = %d\n",
+							timelayer.out_qos);
 					test_pass = 0;
 					break;
 				}
