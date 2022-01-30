@@ -10,10 +10,10 @@
 #
 # 	make clean
 
-#MAIN        = test_display.o
+MAIN        = test_display.o
 #MAIN        = test_input.o
 #MAIN        = test_alarm.o
-MAIN        = main.o
+#MAIN        = main.o
 
 CC_TEST      = gcc
 CC_PROD      = avr-gcc
@@ -35,6 +35,11 @@ compile-debug:
 compile-prod:
 	make "CC=$(CC_PROD)" "CFLAGS=$(CFLAGS_PROD)" LLTYPE=hw \
 		INNERDEP=c_ll_hw compile-inner
+
+# still too little RAM?
+compile-prod-minimal:
+	$(CC_PROD) $(CFLAGS_PROD) -I interface -o a.out ll_hw/*.c \
+			src/interrupt.c src/display.c main/test_display.c
 
 compile-inner: c_main c_src $(INNERDEP)
 	$(CC) -o a.out ll_$(LLTYPE)/*.o src/*.o main/$(MAIN) $(LDFLAGS)
