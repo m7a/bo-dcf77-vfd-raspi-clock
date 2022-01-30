@@ -27,8 +27,9 @@ unsigned mainloop_timing_post_get_delay(struct mainloop_timing_ctx* ctx)
 		/* /3 -- do not change too rapidly */
 		ctx->delay_ms += (DELAY_MS_TARGET - ctx->delta_t) / 3;
 
-	if(ctx->delay_ms < 0)
-		ctx->delay_ms = 0;
+	/* Minimum 1ms delay for simulation integration */
+	if(ctx->delay_ms <= 0)
+		ctx->delay_ms = 1;
 
 	return ctx->delay_ms;
 }

@@ -136,6 +136,7 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 
 		if(ctx->private_seconds_left_in_minute > 0)
 			ctx->private_seconds_left_in_minute--;
+
 		if(ctx->private_seconds_left_in_minute == 1 &&
 						ctx->out_current.s == 59) {
 			/* special leap second case */
@@ -196,6 +197,10 @@ void dcf77_timelayer_process(struct dcf77_timelayer* ctx,
 					DCF77_TIMELAYER_DST_SWITCH_APPLIED)
 			ctx->private_eoh_dst_switch =
 					DCF77_TIMELAYER_DST_NO_CHANGE;
+
+		/* reset after use */
+		secondlayer->out_telegram_1_len = 0;
+		secondlayer->out_telegram_2_len = 0;
 	}
 }
 
@@ -255,7 +260,6 @@ EXPORTED_FOR_TESTING void dcf77_timelayer_advance_tm_by_sec(
 				struct dcf77_timelayer_tm* tm, short seconds)
 {
 	unsigned char midx;
-
 
 	tm->s += seconds;
 	if(tm->s >= 60) {

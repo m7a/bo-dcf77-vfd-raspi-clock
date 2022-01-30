@@ -41,7 +41,11 @@ class Ticker extends Thread implements ComProcOutRequestDelay {
 		while(!isInterrupted()) {
 			long dly = nextTick - System.currentTimeMillis();
 			try {
-				if(dly > 0)
+				/*
+				 * Ignore delay 1 as it is only a marker for
+				 * "continue ASAP"
+				 */
+				if(dly > 1)
 					sleep(dly);
 			} catch(InterruptedException ex) {
 				System.out.println("[INFO    ] Ticker " +

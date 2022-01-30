@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 			data.entry_text,
 			"B%02x M%02x L%02x"
 			"D%03d A%03d"
-			"T%10d",
+			"T%10lu",
 			button, mode, light, val, ticks_ago,			
 			interrupt_get_time_ms()
 		);

@@ -11,7 +11,8 @@ import java.util.function.Supplier;
 class AppWnd {
 
 	// 20fps = 1000/20 = 50ms
-	private static final int REPAINT_INTERVAL_MS = 50;
+	// 15fps = 1000/15 = 66.66ms
+	private static final int REPAINT_INTERVAL_MS = 67;
 
 	private AppWnd() {}
 

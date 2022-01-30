@@ -10,34 +10,34 @@
 #
 # 	make clean
 
-MAIN        = test_display.o
+#MAIN        = test_display.o
 #MAIN        = test_input.o
 #MAIN        = test_alarm.o
-#MAIN        = main.o
+MAIN        = main.o
 
 CC_TEST      = gcc
 CC_PROD      = avr-gcc
 CFLAGS_ALL   = -Wall -I../interface -DDCF77_TIMELAYER_T_COMPILATION=$(shell \
 			date "+{.y=%Y,.m=%-m,.d=%-d,.h=%-H,.i=%-M,.s=%-S}")
-CFLAGS_DEBG  = $(CFLAGS_ALL) -O0 -fprofile-arcs -ftest-coverage -g -DDEBUG
+CFLAGS_DEBG  = $(CFLAGS_ALL) -O2 -fprofile-arcs -ftest-coverage -DDEBUG
 CFLAGS_TEST  = $(CFLAGS_ALL) -O2 -fprofile-arcs -ftest-coverage -DTEST
-CFLAGS_PROD  = $(CFLAGS_ALL) -O2 -DF_CPU=16000000UL -mmcu=atmega328p
+CFLAGS_PROD  = $(CFLAGS_ALL) -Os -DF_CPU=16000000UL -mmcu=atmega328p
 LDFLAGS_TEST = -lgcov --coverage
 
 compile-test:
 	make "CC=$(CC_TEST)" "CFLAGS=$(CFLAGS_TEST)" "LDFLAGS=$(LDFLAGS_TEST)" \
-				"INNERDEP=c_ll_test c_test_auto" compile-inner
+		"INNERDEP=c_ll_test c_test_auto" LLTYPE=test compile-inner
 
 compile-debug:
 	make "CC=$(CC_TEST)" "CFLAGS=$(CFLAGS_DEBG)" "LDFLAGS=$(LDFLAGS_TEST)" \
-				"INNERDEP=c_ll_test c_test_auto" compile-inner
+		"INNERDEP=c_ll_test" LLTYPE=test compile-inner
 
 compile-prod:
-	make "CC=$(CC_PROD)" "CFLAGS=$(CFLAGS_PROD)" INNERDEP=c_ll_hw \
-								compile-inner
+	make "CC=$(CC_PROD)" "CFLAGS=$(CFLAGS_PROD)" LLTYPE=hw \
+		INNERDEP=c_ll_hw compile-inner
 
 compile-inner: c_main c_src $(INNERDEP)
-	gcc -o a.out ll_test/*.o src/*.o main/$(MAIN) $(LDFLAGS)
+	$(CC) -o a.out ll_$(LLTYPE)/*.o src/*.o main/$(MAIN) $(LDFLAGS)
 
 c_%:
 	make -C $* CC=$(CC) "CFLAGS=$(CFLAGS)"

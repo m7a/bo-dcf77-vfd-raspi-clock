@@ -1,6 +1,7 @@
 package ma.dcf77t;
 
 import java.util.function.Consumer;
+import java.util.ArrayList;
 import java.io.IOException;
 
 class ComProc extends Thread {
@@ -11,6 +12,8 @@ class ComProc extends Thread {
 	private final ComProcOutRequestDelay     outRequestDelay;
 	private final SerialDisplayInterface     outSerial;
 	private final Consumer<String>           outLog;
+
+	// private final ArrayList<String>          delayedLines;
 
 	private int wantAck = 0;
 
@@ -28,6 +31,7 @@ class ComProc extends Thread {
 		this.outRequestDelay = outRequestDelay;
 		this.outSerial       = outSerial;
 		this.outLog          = outLog;
+		//delayedLines         = new ArrayList<String>();
 	}
 
 	@Override
@@ -61,27 +65,45 @@ class ComProc extends Thread {
 			outLine.writeLine("ACK,ll_delay_ms");
 		} else {
 			assert(msg.type == ComProcInMsgType.LINE);
-
-			if(wantAck > 0) {
-				if(msg.line.equals("ACK," +
-						"interrupt_service_routine")) {
-					wantAck--;
-					return;
-				} else {
-					outLog.accept("[WARNING ] Mismatch: " +
-						"Expected ACK,interrupt_" +
-						"service_routine but got " +
-						msg.line);
-				}
-			} 
-			
-			int idx = msg.line.indexOf(',');
-			if(idx == -1)
-				procReadLine(msg.line);
-			else
-				procKV(msg.line.substring(0, idx),
-						msg.line.substring(idx + 1));
+			procLineMsg(msg.line);
 		}
+	}
+
+	private void procLineMsg(String line) throws IOException {
+		if(wantAck > 0) {
+			if(line.equals("ACK,interrupt_service_routine")) {
+				wantAck--;
+				//processDelayedLines();
+				return;
+			} else {
+				outLog.accept("[WARNING ] Mismatch: Expected " +
+					"ACK,interrupt_service_routine but " +
+					"got " + line); // + " ... delayed!");
+				//delayedLines.add(line);
+			}
+		}
+		//processDelayedLines();
+		processRequestLine(line);
+	}
+
+/*
+	private void processDelayedLines() throws IOException {
+		if(delayedLines.size() != 0) {
+			outLog.accept("[WARNING ] Resume processing " +
+				delayedLines.size() + " delayed lines.");
+			for(String delayedLine: delayedLines)
+				processRequestLine(delayedLine);
+			delayedLines.clear();
+		}
+	}
+*/
+
+	private void processRequestLine(String line) throws IOException {
+		int idx = line.indexOf(',');
+		if(idx == -1)
+			procReadLine(line);
+		else
+			procKV(line.substring(0, idx), line.substring(idx + 1));
 	}
 
 	private void procReadLine(String line) throws IOException {

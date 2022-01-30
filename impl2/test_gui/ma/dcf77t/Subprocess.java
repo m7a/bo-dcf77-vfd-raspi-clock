@@ -19,6 +19,8 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 	private Writer         stdin;
 	private BufferedReader stdout;
 
+	private long lastRead = 0;
+
 	Subprocess(Path executable, Consumer<String> log,
 				ComProcInQueueLineProcessorSide lineStream) {
 		this.executable = executable.toAbsolutePath().toString();
@@ -32,6 +34,7 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 		try {
 			while(!isInterrupted() &&
 					(line = stdout.readLine()) != null) {
+				lastRead = System.currentTimeMillis();
 				log.accept(String.format("[%8d] %s",
 							deltaT(), line));
 				lineStream.sendLineToComProc(line);
@@ -64,6 +67,11 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 
 	@Override
 	public void writeLine(String str) throws IOException {
+		/*
+		while((System.currentTimeMillis() - lastRead) < 5) {
+			try { Thread.sleep(5); } catch(InterruptedException ex) {}
+		}
+		*/
 		log.accept(String.format("[%8d] > %s", deltaT(), str));
 		stdin.write(str);
 		stdin.write('\n');

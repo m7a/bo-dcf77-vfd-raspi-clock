@@ -6,6 +6,8 @@
 #define INPUT_MUX_MODE_SELECTOR  (_BV(MUX2) | _BV(MUX1)            ) /* ADC6 */
 #define INPUT_MUX_BUTTONS        (_BV(MUX2) | _BV(MUX1) | _BV(MUX0)) /* ADC7 */
 
+static unsigned char read_val(unsigned mux);
+
 void ll_input_init()
 {
 	/* Enable ADC */

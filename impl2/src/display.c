@@ -37,7 +37,7 @@
 /* == Terminus Font == */
 
 /* one long unsigned makes one vertical line */
-static const long unsigned FONT_LARGE[][16] = {
+static long unsigned const FONT_LARGE[][16] = {
 
 	/* -- area mapped to ASCII -- */
 
@@ -87,7 +87,7 @@ static const long unsigned FONT_LARGE[][16] = {
 };
 
 /* one unsigned makes one vertical line. first char = ... */
-static const unsigned FONT_SMALL[][8] = {
+static const unsigned const FONT_SMALL[][8] = {
 	/*   */ {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,},
 	/* ! */ {0x0,0x0,0x0,0x3fb0,0x0,0x0,0x0,0x0,},
 	/* " */ {0x0,0x0,0x7000,0x0,0x0,0x7000,0x0,0x0,},

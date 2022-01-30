@@ -1,5 +1,5 @@
 /*
- * Ma_Sys.ma DCF-77 VFD Module Clock 1.0.0, Copyright (c) 2018, 2019 Ma_Sys.ma.
+ * Ma_Sys.ma DCF-77 VFD Module Clock 1.0.0, Copyright (c) 2018-2021 Ma_Sys.ma.
  * For further info send an e-mail to Ma_Sys.ma@web.de.
  *
  * I/O
@@ -38,8 +38,10 @@
 
 #include "display_shared.h"
 #include "display.h"
-#include "formatted_display.h"
 #include "dcf77_bitlayer.h"
+#include "dcf77_secondlayer.h"
+#include "dcf77_timelayer.h"
+#include "ui.h"
 #include "mainloop_timing.h"
 #include "interrupt.h"
 
@@ -48,22 +50,31 @@ int main()
 	struct display_ctx         display_private;
 	struct display_shared      display;
 	struct dcf77_bitlayer      dcf77_bitlayer;
+	struct dcf77_secondlayer   dcf77_secondlayer;
+	struct dcf77_timelayer     dcf77_timelayer;
+	struct ui                  ui;
 	struct mainloop_timing_ctx mainloop_timing;
+
+	unsigned delay = 0;
 
 	ll_input_init();
 	ll_out_display_init();
 	ll_out_buzzer_init();
 
 	display_init_ctx(&display_private);
+	ui_init(&ui, &display);
+	display_update(&display_private, &display);
+
 	dcf77_bitlayer_init(&dcf77_bitlayer),
+	dcf77_secondlayer_init(&dcf77_secondlayer);
+	dcf77_timelayer_init(&dcf77_timelayer);
 	mainloop_timing_init(&mainloop_timing);
 
-	display.set_brightness = DISPLAY_BRIGHTNESS_PERC_100;
+	ll_delay_ms(2000); /* wait 2 sec */
 
-	formatted_display_coypright(&display);
 	ll_interrupt_enable();
 	while(1) {
-		/* == Read Inputs, Proc DCF-77 Bitlayer == */
+		/* == Read DCF-77 Signal, Process DCF-77 Bitlayer == */
 		interrupt_read_dcf77_signal(&dcf77_bitlayer.in_val,
 						&dcf77_bitlayer.in_ticks_ago);
 		dcf77_bitlayer_proc(&dcf77_bitlayer);
@@ -72,14 +83,27 @@ int main()
 			ll_delay_ms(25);
 
 		/* == Process Data == */
-		
+		dcf77_secondlayer.in_val = dcf77_bitlayer.out_reading;
+		dcf77_secondlayer_process(&dcf77_secondlayer);
+		dcf77_timelayer_process(&dcf77_timelayer,
+			dcf77_bitlayer.out_reading != DCF77_BIT_NO_UPDATE,
+			&dcf77_secondlayer);
 
-		/* == Update Display == */
+		/* == Read Sensors + Process User Interface == */
+		ui.in_sensor  = ll_input_read_sensor();
+		ui.in_buttons = ll_input_read_buttons();
+		ui.in_mode    = ll_input_read_mode();
+		ui_update(&ui, &dcf77_bitlayer, &dcf77_secondlayer,
+					&dcf77_timelayer, &display, delay);
+
+		/* == Update Outputs == */
+		ll_out_buzzer(ui.out_buzzer_on);
 		display_update(&display_private, &display);
 
 		/* == Delay before next Iteration == */
-		ll_delay_ms(mainloop_timing_post_get_delay(&mainloop_timing));
+		delay = mainloop_timing_post_get_delay(&mainloop_timing);
+		ll_delay_ms(delay);
 	}
-
-	return 0; /* should never happen */
+	
+	return 0; /* this should never happen */
 }
