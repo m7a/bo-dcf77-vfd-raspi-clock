@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="build">
+
+<target name="build">
+	<exec executable="alr">
+		<arg value="build"/>
+	</exec>
+	<exec executable="elf2uf2">
+		<arg value="bin/dcf77vfd"/>
+		<arg value="bin/dcf77vfd.uf2"/>
+	</exec>
+</target>
+
+<target name="clean">
+	<delete dir="obj"/>
+</target>
+<target name="dist-clean" depends="clean">
+	<delete dir="bin"/>
+</target>
+
+</project>

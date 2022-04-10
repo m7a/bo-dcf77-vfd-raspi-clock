@@ -1,0 +1,11 @@
+name = "dcf77vfd"
+description = "Ma_Sys.ma DCF77 VFD Module Clock - Raspberry Pi Pico Ada Incarnation"
+version = "0.0.0"
+
+authors = ["Linux-Fan"]
+maintainers = ["Linux-Fan <Ma_Sys.ma@web.de>"]
+maintainers-logins = ["m7a"]
+
+executables = ["dcf77vfd"]
+[[depends-on]]  # Added by alr
+pico_bsp = "^1.1.0"  # Added by alr
