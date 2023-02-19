@@ -1,5 +1,9 @@
 with RP.Clock;
 with HAL.SPI;
+with HAL.UART;
+
+with DCF77_Functions;
+use  DCF77_Functions; -- Inc_Saturated
 
 package body DCF77_Low_Level is
 
@@ -12,30 +16,27 @@ package body DCF77_Low_Level is
 		RP.Device.Timer.Enable;
 
 		-- Digital Inputs
-		Not_DCF.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
-		Not_DCF.Set_Interrupt_Handler(Handle_DCF_Interrupt'Access);
+		DCF.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
+		DCF.Set_Interrupt_Handler(Handle_DCF_Interrupt'Access);
+		Not_Ta_G.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_L.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_R.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 
 		-- Analog Inputs
 		Light.Configure(RP.GPIO.Input, RP.GPIO.Floating);
 		Light.Configure(RP.GPIO.Analog);
-		Ctx.ADC1_Light := RP.ADC.To_ADC_Channel(Light);
-		RP.ADC.Configure(Ctx.ADC1_Light);
-
-		Wheel.Configure(RP.GPIO.Input, RP.GPIO.Floating);
-		Wheel.Configure(RP.GPIO.Analog);
-		Ctx.ADC2_Wheel := RP.ADC.To_ADC_Channel(Wheel);
-		RP.ADC.Configure(Ctx.ADC2_Wheel);
+		Ctx.ADC0_Light := RP.ADC.To_ADC_Channel(Light);
+		RP.ADC.Configure(Ctx.ADC0_Light);
 
 		-- Outputs
 		Control_Or_Data.Configure(RP.GPIO.Output);
 		Buzzer.Configure(RP.GPIO.Output);
+		Alarm_LED.Configure(RP.GPIO.Output);
 
 		-- SPI (https://pico-doc.synack.me/#spi)
-		SCK.Configure(RP.GPIO.Output, RP.GPIO.Floating, RP.GPIO.SPI);
-		TX.Configure(RP.GPIO.Output, RP.GPIO.Floating, RP.GPIO.SPI);
-		RX.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up, RP.GPIO.SPI);
+		SCK.Configure   (RP.GPIO.Output, RP.GPIO.Floating, RP.GPIO.SPI);
+		TX.Configure    (RP.GPIO.Output, RP.GPIO.Floating, RP.GPIO.SPI);
+		RX.Configure    (RP.GPIO.Input,  RP.GPIO.Pull_Up,  RP.GPIO.SPI);
 		Not_CS.Configure(RP.GPIO.Output, RP.GPIO.Floating, RP.GPIO.SPI);
 		-- if it matters, Arduino has DORD - data order lsb first?
 		SPI_Port.Configure(Config => (
@@ -44,23 +45,33 @@ package body DCF77_Low_Level is
 			Data_Size => HAL.SPI.Data_Size_8b, -- not on Arduino
 			Polarity  => RP.SPI.Active_Low,    -- clock idle at 1
 			Phase     => RP.SPI.Rising_Edge,   -- sample on leading
-			Blocking  => True
+			Blocking  => True,
+			others    => <>                    -- Loopback = False
 		));
+
+		-- UART (https://pico-doc.synack.me/#uart)
+		-- https://github.com/JeremyGrosser/pico_examples/blob/master/
+		-- uart_echo/src/main.adb
+		UTX.Configure(RP.GPIO.Output, RP.GPIO.Floating, RP.GPIO.UART);
+		URX.Configure(RP.GPIO.Input,  RP.GPIO.Floating, RP.GPIO.UART);
+		UART_Port.Configure; -- use default 115200 8n1
 	end Init;
 	
 	procedure Handle_DCF_Interrupt(Pin: RP.GPIO.GPIO_Pin;
 					Trigger: RP.GPIO.Interrupt_Triggers) is
-		-- TODO MOVE TO SUPPORT MODULE / Maymbe dedicated counter 0..ff or 0.999 or such?
-		procedure Inc_Saturated(Ctr: in out Natural; Lim: in Natural) is
-		begin
-			if Ctr < Lim then
-				Ctr := Ctr + 1;
-			end if;
-		end Inc_Saturated;
 	begin
 		case Trigger is
 		when RP.GPIO.Rising_Edge =>
-			-- Input voltage 0/1 transition means DCF77 1/0
+			-- Input voltage 0/1 transition means DCF77 0/1
+			-- transition. Begin of a "high" signal
+			if Interrupt_Start_Ticks = 0 then
+				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
+			else
+				Inc_Saturated(Interrupt_Fault,
+							Interrupt_Fault_Max);
+			end if;
+		when RP.GPIO.Falling_Edge =>
+			-- Input voltage 1/0 transition means DCF77 1/0
 			-- transition. End of a "high" signal
 			if Interrupt_Start_Ticks = 0 then
 				Inc_Saturated(Interrupt_Fault,
@@ -73,15 +84,6 @@ package body DCF77_Low_Level is
 				Interrupt_Out_Ticks := Time(RP.Timer.Clock) -
 							Interrupt_Start_Ticks;
 				Interrupt_Start_Ticks := 0;
-			end if;
-		when RP.GPIO.Falling_Edge =>
-			-- Input voltage 1/0 transition means DCF77 0/1
-			-- transition. Begin of a "high" signal
-			if Interrupt_Start_Ticks = 0 then
-				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
-			else
-				Inc_Saturated(Interrupt_Fault,
-							Interrupt_Fault_Max);
 			end if;
 		when others => 
 			Inc_Saturated(Interrupt_Fault, Interrupt_Fault_Max);
@@ -100,6 +102,15 @@ package body DCF77_Low_Level is
 		end if;
 	end Set_Buzzer_Enabled;
 
+	procedure Set_Alarm_LED_Enabled(Ctx: in out LL; Enabled: in Boolean) is
+	begin
+		if Enabled then
+			Alarm_LED.Set;
+		else
+			Alarm_LED.Clear;
+		end if;
+	end Set_Alarm_LED_Enabled;
+
 	function Read_Interrupt_Signal(Ctx: in out LL) return Time is
 		Ret: constant Time := Interrupt_Out_Ticks;
 	begin
@@ -110,12 +121,30 @@ package body DCF77_Low_Level is
 		return Ret;
 	end Read_Interrupt_Signal;
 
+	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean is
+							(not Not_Ta_G.Get);
 	function Read_Left_Button_Is_Down(Ctx: in out LL) return Boolean is
 							(not Not_Ta_L.Get);
 	function Read_Right_Button_Is_Down(Ctx: in out LL) return Boolean is
 							(not Not_Ta_R.Get);
 
-	function Read_Wheel_Selection(Ctx: in out LL) return Wheel_Selection is (Wheel_Default); -- TODO
-	function Read_Light_Sensor(Ctx: in out LL) return Light_Value is (0); -- TODO
+	function Read_Light_Sensor(Ctx: in out LL) return Light_Value is
+		use type RP.ADC.Microvolts;
+		Val: constant RP.ADC.Microvolts :=
+					RP.ADC.Read_Microvolts(Ctx.ADC0_Light);
+	begin
+		-- TODO MAY WANT TO EMBED SOME TUNED CONVERSION HERE
+		return Light_Value(RP.ADC.Microvolts'Min(
+			RP.ADC.Microvolts(Light_Value'Last),
+			Val * RP.ADC.Microvolts(Light_Value'Last) / 3_300_000));
+	end Read_Light_Sensor;
+
+	procedure Log(Ctx: in out LL; Msg: in String) is
+		Data: HAL.UART.UART_Data_8b(Msg'Range)
+						with Address => Msg'Address;
+		Status: HAL.UART.UART_Status;
+	begin
+		UART_Port.Transmit(Data, Status);
+	end Log;
 
 end DCF77_Low_Level;

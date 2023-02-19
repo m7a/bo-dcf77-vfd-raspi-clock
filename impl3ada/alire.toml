@@ -8,4 +8,4 @@ maintainers-logins = ["m7a"]
 
 executables = ["dcf77vfd"]
 [[depends-on]]  # Added by alr
-pico_bsp = "^1.1.0"  # Added by alr
+pico_bsp = "^1.4.0"  # Added by alr

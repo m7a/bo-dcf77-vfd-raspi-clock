@@ -4,24 +4,11 @@ with RP.GPIO;
 with RP.Timer;
 with RP.Device;
 with RP.SPI;
+with RP.UART;
 
 package DCF77_Low_Level is
 
-	type Time is new RP.Timer.Time;
-
-	type Wheel_Selection is (
-		Wheel_Default,
-		Wheel_Timer_Enabe,
-		Wheel_Timer_Configure,
-		-- TODO JUST EXAMPLES. COULD DESIGN DIFFERENTLY...
-		Wheel_Set_Time,
-		Wheel_Set_Date,
-		Wheel_Set_Year,
-		Wheel_Display_Status,
-		Wheel_Display_Debug,
-		Wheel_Display_Version
-	);
-
+	type Time        is new RP.Timer.Time;
 	type Light_Value is new Integer range 0 .. 100;
 
 	type LL is tagged limited private;
@@ -30,15 +17,21 @@ package DCF77_Low_Level is
 
 	function Get_Time_Micros(Ctx: in out LL) return Time;
 
-	-- Returns 0 if no new data available.
+	-- Returns 0 if no new data available. Clears data
 	function Read_Interrupt_Signal(Ctx: in out LL) return Time;
+
+	-- Returns True when Button is held down
+	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean;
 	function Read_Left_Button_Is_Down(Ctx: in out LL) return Boolean;
 	function Read_Right_Button_Is_Down(Ctx: in out LL) return Boolean;
-	function Read_Wheel_Selection(Ctx: in out LL) return Wheel_Selection;
-	-- return "percentage" scale value
+
+	-- Returns "percentage" scale value
 	function Read_Light_Sensor(Ctx: in out LL) return Light_Value;
 
 	procedure Set_Buzzer_Enabled(Ctx: in out LL; Enabled: in Boolean);
+	procedure Set_Alarm_LED_Enabled(Ctx: in out LL; Enabled: in Boolean);
+
+	procedure Log(Ctx: in out LL; Msg: in String);
 
 private
 
@@ -46,29 +39,34 @@ private
 					Trigger: RP.GPIO.Interrupt_Triggers);
 
 	type LL is tagged limited record
-		ADC1_Light: RP.ADC.ADC_Channel;
-		ADC2_Wheel: RP.ADC.ADC_Channel;
+		ADC0_Light: RP.ADC.ADC_Channel;
 	end record;
 
 	-- Digital Inputs
-	Not_DCF:         RP.GPIO.GPIO_Point renames Pico.GP7;
-	Not_Ta_L:        RP.GPIO.GPIO_Point renames Pico.GP8;
-	Not_Ta_R:        RP.GPIO.GPIO_Point renames Pico.GP9;
+	DCF:             RP.GPIO.GPIO_Point renames Pico.GP22;
+	Not_Ta_G:        RP.GPIO.GPIO_Point renames Pico.GP15;
+	Not_Ta_L:        RP.GPIO.GPIO_Point renames Pico.GP21;
+	Not_Ta_R:        RP.GPIO.GPIO_Point renames Pico.GP20;
 
 	-- Analog Inputs
-	Light:           RP.GPIO.GPIO_Point renames Pico.GP27;
-	Wheel:           RP.GPIO.GPIO_Point renames Pico.GP28;
+	Light:           RP.GPIO.GPIO_Point renames Pico.GP26;
 
 	-- Outputs
-	Control_Or_Data: RP.GPIO.GPIO_Point renames Pico.GP6;
-	Buzzer:          RP.GPIO.GPIO_Point renames Pico.GP10;
+	Control_Or_Data: RP.GPIO.GPIO_Point renames Pico.GP14;
+	Buzzer:          RP.GPIO.GPIO_Point renames Pico.GP3;
+	Alarm_LED:       RP.GPIO.GPIO_Point renames Pico.GP28;
 
 	-- SPI
-	SCK:             RP.GPIO.GPIO_Point renames Pico.GP2;
-	TX:              RP.GPIO.GPIO_Point renames Pico.GP3;
-	RX:              RP.GPIO.GPIO_Point renames Pico.GP4;
-	Not_CS:          RP.GPIO.GPIO_Point renames Pico.GP5;
-	SPI_Port:        RP.SPI.SPI_Port    renames RP.Device.SPI_0;
+	SCK:             RP.GPIO.GPIO_Point renames Pico.GP10;
+	TX:              RP.GPIO.GPIO_Point renames Pico.GP11;
+	RX:              RP.GPIO.GPIO_Point renames Pico.GP12;
+	Not_CS:          RP.GPIO.GPIO_Point renames Pico.GP13;
+	SPI_Port:        RP.SPI.SPI_Port    renames RP.Device.SPI_1;
+
+	-- UART
+	UTX:             RP.GPIO.GPIO_Point renames Pico.GP0;
+	URX:             RP.GPIO.GPIO_Point renames Pico.GP1;
+	UART_Port:       RP.UART.UART_Port  renames RP.Device.UART_0;
 
 	-- Static Variables for Interrupt Counter.
 	-- Cannot be part of the record for lifecycle reasons

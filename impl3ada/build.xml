@@ -5,6 +5,7 @@
 	<exec executable="alr">
 		<arg value="build"/>
 	</exec>
+	<!-- There is newly https://github.com/NicoPy/Ada_RP2040_ELF2UF2 -->
 	<exec executable="elf2uf2">
 		<arg value="bin/dcf77vfd"/>
 		<arg value="bin/dcf77vfd.uf2"/>
