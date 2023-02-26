@@ -94,6 +94,9 @@ private
 
 	procedure Send_Seq(Ctx: in out Disp; Seq: in Sequence);
 	procedure Send_U8(Ctx: in out Disp; Seq: in Sequence_Member);
+	function Reverse_Bits(V: in U8) return U8;
+	function Reverse_Bits(V: in U16) return U16;
+	function Reverse_Bits(V: in U32) return U32;
 	procedure Add(Ctx: in out Disp; Item: in Display_Item);
 	procedure Set_Address(Ctx: in out Disp; Addr: in U16);
 	procedure Write_Zero(Ctx: in out Disp; Addr: in U16; N: in U16);

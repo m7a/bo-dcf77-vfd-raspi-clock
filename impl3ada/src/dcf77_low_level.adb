@@ -6,9 +6,6 @@ with RP.GPIO.Interrupts;
 with DCF77_Functions;
 use  DCF77_Functions; -- Inc_Saturated
 
-with Interfaces;
-use  Interfaces;
-
 package body DCF77_Low_Level is
 
 	-- Disable warnings about this for the entire file since we want to
@@ -49,10 +46,12 @@ package body DCF77_Low_Level is
 		TX.Configure    (RP.GPIO.Output, RP.GPIO.Floating, RP.GPIO.SPI);
 		RX.Configure    (RP.GPIO.Input,  RP.GPIO.Pull_Up,  RP.GPIO.SPI);
 		Not_CS.Configure(RP.GPIO.Output, RP.GPIO.Floating, RP.GPIO.SPI);
-		-- if it matters, Arduino has DORD - data order lsb first?
+		-- NB: Arduino has DORD -- data order lsb first, but the RPI2040
+		--     does not seem to support it. We need to change the order
+		--     of bytes on the software side!
 		SPI_Port.Configure(Config => (
-			Role      => RP.SPI.Master,
-			Baud      => 10_000_000,           -- 1MHz, up to 50MHz!
+			Role      => RP.SPI.Master,        -- min 1MHz max 50MHz
+			Baud      => 10_000_000,           -- here: 10MHz SEL
 			Data_Size => HAL.SPI.Data_Size_8b, -- not on Arduino
 			Polarity  => RP.SPI.Active_Low,    -- clock idle at 1
 			Phase     => RP.SPI.Rising_Edge,   -- sample on leading
@@ -159,99 +158,34 @@ package body DCF77_Low_Level is
 			Val * RP.ADC.Microvolts(Light_Value'Last) / 3_300_000));
 	end Read_Light_Sensor;
 
-	-- TODO X TMP
-	procedure SPI_Display_Apply_Mode(Mode: in SPI_Display_Mode) is
+	procedure SPI_Display_Transfer_Gen(Ctx: in out LL; Send_Value: in Num;
+						Mode: in SPI_Display_Mode) is
+		Status: HAL.SPI.SPI_Status;
+		Data_Out: HAL.SPI.SPI_Data_8b(1 .. Len);
+		for Data_Out'Address use Send_Value'Address;
 	begin
 		case Mode is
 		when Control => Control_Or_Data.Set;
 		when Data    => Control_Or_Data.Clear;
 		end case;
-	end SPI_Display_Apply_Mode;
+		SPI_Port.Transmit(Data_Out, Status);
+	end SPI_Display_Transfer_Gen;
 
+	procedure SPI_Display_Transfer_U8 is
+				new SPI_Display_Transfer_Gen(U8, 1);
 	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U8;
-						Mode: SPI_Display_Mode) is
-		use type U8;
-		Status: HAL.SPI.SPI_Status;
-		Data_Out: constant HAL.SPI.SPI_Data_8b(1..1) := (1 => HAL.UInt8(
-			Shift_Left (Send_Value and 16#01#, 7) or
-			Shift_Left (Send_Value and 16#02#, 5) or
-			Shift_Left (Send_Value and 16#04#, 3) or
-			Shift_Left (Send_Value and 16#08#, 1) or
-			Shift_Right(Send_Value and 16#10#, 1) or
-			Shift_Right(Send_Value and 16#20#, 3) or
-			Shift_Right(Send_Value and 16#40#, 5) or
-			Shift_Right(Send_Value and 16#80#, 7)
-		));
-	begin
-		SPI_Display_Apply_Mode(Mode);
-		SPI_Port.Transmit(Data_Out, Status);
-	end SPI_Display_Transfer;
-
+				Mode: in SPI_Display_Mode)
+				renames SPI_Display_Transfer_U8;
+	procedure SPI_Display_Transfer_U16 is
+				new SPI_Display_Transfer_Gen(U16, 2);
 	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U16;
-						Mode: SPI_Display_Mode) is
-		use type U16;
-		Status: HAL.SPI.SPI_Status;
-		Data_Out: constant HAL.SPI.SPI_Data_8b(1 .. 2) := (
-			HAL.UInt8(Shift_Right(
-				Shift_Left (Send_Value and 16#0100#, 7) or
-				Shift_Left (Send_Value and 16#0200#, 5) or
-				Shift_Left (Send_Value and 16#0400#, 3) or
-				Shift_Left (Send_Value and 16#0800#, 1) or
-				Shift_Right(Send_Value and 16#1000#, 1) or
-				Shift_Right(Send_Value and 16#2000#, 3) or
-				Shift_Right(Send_Value and 16#4000#, 5) or
-				Shift_Right(Send_Value and 16#8000#, 7),
-				8
-			)),
-			HAL.UInt8(
-				Shift_Left (Send_Value and 16#01#, 7) or
-				Shift_Left (Send_Value and 16#02#, 5) or
-				Shift_Left (Send_Value and 16#04#, 3) or
-				Shift_Left (Send_Value and 16#08#, 1) or
-				Shift_Right(Send_Value and 16#10#, 1) or
-				Shift_Right(Send_Value and 16#20#, 3) or
-				Shift_Right(Send_Value and 16#40#, 5) or
-				Shift_Right(Send_Value and 16#80#, 7)
-			)
-		);
-	begin
-		SPI_Display_Apply_Mode(Mode);
-		SPI_Port.Transmit(Data_Out, Status);
-	end SPI_Display_Transfer;
-
-	-- TODO WE'LL SEE
+				Mode: in SPI_Display_Mode)
+				renames SPI_Display_Transfer_U16;
+	procedure SPI_Display_Transfer_U32 is
+				new SPI_Display_Transfer_Gen(U32, 4);
 	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U32;
-						Mode: SPI_Display_Mode) is null;
-		
-
-	--procedure SPI_Display_Transfer_Gen(Ctx: in out LL; Send_Value: in Num;
-	--					Mode: in SPI_Display_Mode) is
-	--	Status: HAL.SPI.SPI_Status;
-	--	Data_Out: HAL.SPI.SPI_Data_8b(1 .. Len);
-	--	for Data_Out'Address use Send_Value'Address;
-	--begin
-	--	case Mode is
-	--	when Control => Control_Or_Data.Set;
-	--	when Data    => Control_Or_Data.Clear;
-	--	end case;
-	--	SPI_Port.Transmit(Data_Out, Status);
-	--end SPI_Display_Transfer_Gen;
-
-	--procedure SPI_Display_Transfer_U8 is
-	--			new SPI_Display_Transfer_Gen(U8, 1);
-	--procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U8;
-	--			Mode: in SPI_Display_Mode)
-	--			renames SPI_Display_Transfer_U8;
-	--procedure SPI_Display_Transfer_U16 is
-	--			new SPI_Display_Transfer_Gen(U16, 2);
-	--procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U16;
-	--			Mode: in SPI_Display_Mode)
-	--			renames SPI_Display_Transfer_U16;
-	--procedure SPI_Display_Transfer_U32 is
-	--			new SPI_Display_Transfer_Gen(U32, 4);
-	--procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U32;
-	--			Mode: in SPI_Display_Mode)
-	--			renames SPI_Display_Transfer_U32;
+				Mode: in SPI_Display_Mode)
+				renames SPI_Display_Transfer_U32;
 
 	procedure Log(Ctx: in out LL; Msg: in String) is
 		Msg_Cpy: constant String := Msg & Character'Val(16#0d#) &

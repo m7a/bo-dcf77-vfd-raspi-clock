@@ -38,6 +38,9 @@ package DCF77_Low_Level is
 	procedure Set_Alarm_LED_Enabled(Ctx: in out LL; Enabled: in Boolean);
 
 	-- Display management for common word sizes
+	-- These write with data order msb first (most significant bit first)
+	-- The actual display expects lsb first -> must convert before using
+	-- these transfer functions.
 	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U8;
 						Mode: in SPI_Display_Mode);
 	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U16;
@@ -49,16 +52,15 @@ package DCF77_Low_Level is
 
 private
 
-	-- TODO TMP
 	-- No idea why this warning is generated here, but it does not belong
 	-- here...
-	--pragma Warnings(Off, "formal parameter ""Ctx"" is not referenced");
-	--generic
-	--	type Num is private;
-	--	Len: Natural;
-	--procedure SPI_Display_Transfer_Gen(Ctx: in out LL; Send_Value: in Num;
-	--					Mode: in SPI_Display_Mode);
-	--pragma Warnings(On,  "formal parameter ""Ctx"" is not referenced");
+	pragma Warnings(Off, "formal parameter ""Ctx"" is not referenced");
+	generic
+		type Num is private;
+		Len: Natural;
+	procedure SPI_Display_Transfer_Gen(Ctx: in out LL; Send_Value: in Num;
+						Mode: in SPI_Display_Mode);
+	pragma Warnings(On,  "formal parameter ""Ctx"" is not referenced");
 
 	procedure Handle_DCF_Interrupt(Pin: RP.GPIO.GPIO_Pin;
 					Trigger: RP.GPIO.Interrupt_Triggers);
