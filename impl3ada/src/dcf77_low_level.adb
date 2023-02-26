@@ -1,11 +1,17 @@
 with RP.Clock;
 with HAL.SPI;
 with HAL.UART;
+with RP.GPIO.Interrupts;
 
 with DCF77_Functions;
 use  DCF77_Functions; -- Inc_Saturated
 
 package body DCF77_Low_Level is
+
+	-- Disable warnings about this for the entire file since we want to
+	-- design the API in a way that dependency on Ctx can later be added
+	-- for any of the procedures as necessary.
+	pragma Warnings(Off, "formal parameter ""Ctx"" is not referenced");
 
 	procedure Init(Ctx: in out LL) is
 	begin
@@ -17,7 +23,9 @@ package body DCF77_Low_Level is
 
 		-- Digital Inputs
 		DCF.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
-		DCF.Set_Interrupt_Handler(Handle_DCF_Interrupt'Access);
+		DCF.Enable_Interrupt(RP.GPIO.Rising_Edge);
+		DCF.Enable_Interrupt(RP.GPIO.Falling_Edge);
+		RP.GPIO.Interrupts.Attach_Handler(DCF, Handle_DCF_Interrupt'Access);
 		Not_Ta_G.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_L.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_R.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
@@ -57,8 +65,11 @@ package body DCF77_Low_Level is
 		UART_Port.Configure; -- use default 115200 8n1
 	end Init;
 	
+	-- This parameter is present in the fixed API but currently unused.
+	pragma Warnings(Off, "formal parameter ""Pin"" is not referenced");
 	procedure Handle_DCF_Interrupt(Pin: RP.GPIO.GPIO_Pin;
 					Trigger: RP.GPIO.Interrupt_Triggers) is
+	pragma Warnings(On,  "formal parameter ""Pin"" is not referenced");
 	begin
 		case Trigger is
 		when RP.GPIO.Rising_Edge =>

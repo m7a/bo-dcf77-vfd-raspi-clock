@@ -1,97 +1,39 @@
 with "config/dcf77vfd_config.gpr";
 with "pico_bsp.gpr";
 
--- TODO THIS AUTO GENERATED BUILD FILE IS A MESS. FIX IT
 project Dcf77vfd is
 
-   for Target use "arm-eabi";
-   --for Runtime ("Ada") use "zfp-cortex-m0p"; -- old
-   for Runtime ("Ada") use "light-cortex-m0p"; -- new
-   -- TODO NOT FOUND? HOW TO FIX THIS
-   --for Runtime ("Ada") use "light-cortex-m0p";
-   package Linker is
-      for Switches ("Ada") use Pico_BSP.Linker_Switches & (
-         "-Wl,-gc-sections",
-         "-Wl,-print-memory-usage"
-      );
-   end Linker;
+	for Target              use "arm-eabi";
+	for Runtime("Ada")      use "light-cortex-m0p";
+	for Main                use ("dcf77vfd.adb");
+	for Source_Dirs         use ("src");
+	for Object_Dir          use "obj";
+	for Exec_Dir            use "bin";
+	for Create_Missing_Dirs use "True";
 
-   for Source_Dirs use ("src");
-   for Object_Dir use "obj";
-   for Create_Missing_Dirs use "True";
-   for Exec_Dir use "bin";
-   for Main use ("dcf77vfd.adb");
+	package Compiler is
+		for Default_Switches("Ada") use (
+			"-gnatwa",       -- All warnings
+			"-gnatVa",       -- All validity checks
+			"-gnatwe",       -- Warnings as errors
+			"-O3", "-gnatn", -- Optimization and inlining
+			-- "-Og", "-g"   -- alt.: For ddebugging
+			"-gnatp",        -- Suppress runtime checks
+			"-gnatyd",       -- DOS Lines    \
+			"-gnatyM80",     -- Line Length   |_ Style settings
+			"-gnatyO",       -- Override     /
+			"-gnatw.X",      -- Hide No_Exception_Propagation wrn.
+			"-gnatQ"         -- Always generate ALI and tree files
+		);
+	end Compiler;
 
-   type Enabled_Kind is ("enabled", "disabled");
-   -- TODO RE-ENABLE AFTER FINDING OUT HOW TO FIX NOT USED WARNINGS
-   Compile_Checks : Enabled_Kind := External ("DCF77VFD_COMPILE_CHECKS", "disabled");
-   Runtime_Checks : Enabled_Kind := External ("DCF77VFD_RUNTIME_CHECKS", "disabled");
-   Style_Checks : Enabled_Kind := External ("DCF77VFD_STYLE_CHECKS", "enabled");
-   Contracts_Checks : Enabled_Kind := External ("DCF77VFD_CONTRACTS", "disabled");
+	package Binder is
+		for Switches("Ada") use ("-Es"); --  Symbolic traceback
+	end Binder;
 
-   type Build_Kind is ("debug", "optimize");
-   Build_Mode : Build_Kind := External ("DCF77VFD_BUILD_MODE", "optimize");
-
-   Compile_Checks_Switches := ();
-   case Compile_Checks is
-      when "enabled" =>
-         Compile_Checks_Switches :=
-           ("-gnatwa",  -- All warnings
-            "-gnatVa",  -- All validity checks
-            "-gnatwe"); -- Warnings as errors
-      when others => null;
-   end case;
-
-   Runtime_Checks_Switches := ();
-   case Runtime_Checks is
-      when "enabled" => null;
-      when others =>
-         Runtime_Checks_Switches :=
-           ("-gnatp"); -- Suppress checks
-   end case;
-
-   Style_Checks_Switches := ();
-   case Style_Checks is
-      when "enabled" =>
-         Style_Checks_Switches :=
-           (--"-gnatyg",   -- GNAT Style checks
-            "-gnaty-d",  -- Disable no DOS line terminators
-            "-gnatyM80", -- Maximum line length
-            "-gnatyO");  -- Overriding subprograms explicitly marked as such
-      when others => null;
-   end case;
-
-   Contracts_Switches := ();
-   case Contracts_Checks is
-      when "enabled" =>
-         Contracts_Switches :=
-           ("-gnata"); --  Enable assertions and contracts
-      when others => null;
-   end case;
-
-   Build_Switches := ();
-   case Build_Mode is
-      when "optimize" =>
-         Build_Switches := ("-O3",     -- Optimization
-                            "-gnatn"); -- Enable inlining
-      when "debug" =>
-         Build_Switches := ("-g",   -- Debug info
-                            "-Og"); -- No optimization
-   end case;
-
-   package Compiler is
-      for Default_Switches ("Ada") use
-        Compile_Checks_Switches &
-        Build_Switches &
-        Runtime_Checks_Switches &
-        Style_Checks_Switches &
-        Contracts_Switches &
-        ("-gnatw.X", -- Disable warnings for No_Exception_Propagation
-         "-gnatQ");  -- Don't quit. Generate ALI and tree files even if illegalities
-   end Compiler;
-
-   package Binder is
-      for Switches ("Ada") use ("-Es"); --  Symbolic traceback
-   end Binder;
+	package Linker is
+		for Switches("Ada") use Pico_BSP.Linker_Switches &
+			("-Wl,-gc-sections", "-Wl,-print-memory-usage");
+	end Linker;
 
 end Dcf77vfd;
