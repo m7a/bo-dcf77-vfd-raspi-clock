@@ -1,9 +1,14 @@
 with "config/dcf77vfd_config.gpr";
 with "pico_bsp.gpr";
+
+-- TODO THIS AUTO GENERATED BUILD FILE IS A MESS. FIX IT
 project Dcf77vfd is
 
    for Target use "arm-eabi";
-   for Runtime ("Ada") use "zfp-cortex-m0p";
+   --for Runtime ("Ada") use "zfp-cortex-m0p"; -- old
+   for Runtime ("Ada") use "light-cortex-m0p"; -- new
+   -- TODO NOT FOUND? HOW TO FIX THIS
+   --for Runtime ("Ada") use "light-cortex-m0p";
    package Linker is
       for Switches ("Ada") use Pico_BSP.Linker_Switches & (
          "-Wl,-gc-sections",
@@ -18,7 +23,8 @@ project Dcf77vfd is
    for Main use ("dcf77vfd.adb");
 
    type Enabled_Kind is ("enabled", "disabled");
-   Compile_Checks : Enabled_Kind := External ("DCF77VFD_COMPILE_CHECKS", "enabled");
+   -- TODO RE-ENABLE AFTER FINDING OUT HOW TO FIX NOT USED WARNINGS
+   Compile_Checks : Enabled_Kind := External ("DCF77VFD_COMPILE_CHECKS", "disabled");
    Runtime_Checks : Enabled_Kind := External ("DCF77VFD_RUNTIME_CHECKS", "disabled");
    Style_Checks : Enabled_Kind := External ("DCF77VFD_STYLE_CHECKS", "enabled");
    Contracts_Checks : Enabled_Kind := External ("DCF77VFD_CONTRACTS", "disabled");
