@@ -6,7 +6,12 @@ with RP.Device;
 with RP.SPI;
 with RP.UART;
 
+with DCF77_Types;
+use  DCF77_Types;
+
 package DCF77_Low_Level is
+
+	type SPI_Display_Mode is (Control, Data);
 
 	type Time        is new RP.Timer.Time;
 	type Light_Value is new Integer range 0 .. 100;
@@ -16,6 +21,7 @@ package DCF77_Low_Level is
 	procedure Init(Ctx: in out LL);
 
 	function Get_Time_Micros(Ctx: in out LL) return Time;
+	procedure Delay_Micros(Ctx: in out LL; DT: in Time);
 
 	-- Returns 0 if no new data available. Clears data
 	function Read_Interrupt_Signal(Ctx: in out LL) return Time;
@@ -31,9 +37,28 @@ package DCF77_Low_Level is
 	procedure Set_Buzzer_Enabled(Ctx: in out LL; Enabled: in Boolean);
 	procedure Set_Alarm_LED_Enabled(Ctx: in out LL; Enabled: in Boolean);
 
+	-- Display management for common word sizes
+	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U8;
+						Mode: in SPI_Display_Mode);
+	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U16;
+						Mode: in SPI_Display_Mode);
+	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U32;
+						Mode: in SPI_Display_Mode);
+
 	procedure Log(Ctx: in out LL; Msg: in String);
 
 private
+
+	-- TODO TMP
+	-- No idea why this warning is generated here, but it does not belong
+	-- here...
+	--pragma Warnings(Off, "formal parameter ""Ctx"" is not referenced");
+	--generic
+	--	type Num is private;
+	--	Len: Natural;
+	--procedure SPI_Display_Transfer_Gen(Ctx: in out LL; Send_Value: in Num;
+	--					Mode: in SPI_Display_Mode);
+	--pragma Warnings(On,  "formal parameter ""Ctx"" is not referenced");
 
 	procedure Handle_DCF_Interrupt(Pin: RP.GPIO.GPIO_Pin;
 					Trigger: RP.GPIO.Interrupt_Triggers);
