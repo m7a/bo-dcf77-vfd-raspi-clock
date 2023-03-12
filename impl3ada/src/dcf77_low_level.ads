@@ -23,8 +23,9 @@ package DCF77_Low_Level is
 	function Get_Time_Micros(Ctx: in out LL) return Time;
 	procedure Delay_Micros(Ctx: in out LL; DT: in Time);
 
-	-- Returns 0 if no new data available. Clears data
-	function Read_Interrupt_Signal(Ctx: in out LL) return Time;
+	-- Returns False if no new data available. Clears data
+	function Read_Interrupt_Signal(Ctx: in out LL; Signal_Length: out Time;
+					Signal_Begin: out Time) return Boolean;
 
 	-- Returns True when Button is held down
 	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean;
@@ -101,8 +102,9 @@ private
 	-- Marker value "0" is used to indicate "unset".
 	-- After processing, users should reset the Interrupt_Out_Ticks to 0.
 	Interrupt_Fault_Max: constant Natural := 1000;
-	Interrupt_Start_Ticks: Time    := 0;
-	Interrupt_Out_Ticks:   Time    := 0;
-	Interrupt_Fault:       Natural := 0;
+	Interrupt_Start_Ticks:  Time    := 0;
+	Interrupt_Out_Ticks:    Time    := 0;
+	Interrupt_Pending_Read: Boolean := False;
+	Interrupt_Fault:        Natural := 0;
 
 end DCF77_Low_Level;

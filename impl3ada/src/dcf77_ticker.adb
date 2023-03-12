@@ -15,11 +15,10 @@ package body DCF77_Ticker is
 			Ctx.Delay_Us := Ctx.Delay_Us +
 				(Delay_Us_Target - Delta_T) / Delay_Slowdown;
 		elsif Delta_T > (Delay_Us_Target + Delay_Us_Variance) then
-			Ctx.Delay_Us := Ctx.Delay_Us - Time'Max(
+			Ctx.Delay_Us := Ctx.Delay_Us - Time'Min(
 				Ctx.Delay_Us + 1,
 				(Delta_T - Delay_Us_Target) / Delay_Slowdown);
 		end if;
-
 		Ctx.Time_Old := Time_New;
 		Ctx.LL.Delay_Micros(Ctx.Delay_Us);
 	end Tick;

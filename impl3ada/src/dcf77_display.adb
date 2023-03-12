@@ -10,7 +10,7 @@ package body DCF77_Display is
 		Ctx.Current_Brightness := Display_Brightness_Perc_100;
 		-- Add 10ms startup delay before starting SPI comms to give the
 		-- display a chance to initialize itself before the first
-		-- command. TODO TEST IF WE CAN REDUCE THIS TO 1ms?
+		-- command.
 		Ctx.LL.Delay_Micros(10_000);
 		Ctx.Send_Seq((
 			-- mode / initialization
@@ -28,14 +28,6 @@ package body DCF77_Display is
 			(GP9002_Clearscreen,          Control),
 			(GP9002_Display1on,           Control)
 		));
-		-- TODO DEBUG ONLY -- TODO TEST IF WE CAN DO WITHOUT THIS
-		--                    (clearscreen should suffice?)
-		-- Zero out the entire memory to clear both screens
-		--Ctx.Write_Zero(0, 16#800#);
-		Ctx.Set_Address(0);
-		for I in 1 .. 16#400# loop
-			Ctx.Send_U8((16#a5#, Data));
-		end loop;
 	end Init;
 
 	procedure Send_Seq(Ctx: in out Disp; Seq: in Sequence) is

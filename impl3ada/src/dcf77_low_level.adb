@@ -77,26 +77,23 @@ package body DCF77_Low_Level is
 		when RP.GPIO.Rising_Edge =>
 			-- Input voltage 0/1 transition means DCF77 0/1
 			-- transition. Begin of a "high" signal
-			if Interrupt_Start_Ticks = 0 then
-				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
-			else
+			if Interrupt_Pending_Read then
 				Inc_Saturated(Interrupt_Fault,
 							Interrupt_Fault_Max);
+			else
+				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
 			end if;
 		when RP.GPIO.Falling_Edge =>
 			-- Input voltage 1/0 transition means DCF77 1/0
 			-- transition. End of a "high" signal
-			if Interrupt_Start_Ticks = 0 then
+			if Interrupt_Pending_Read or Interrupt_Start_Ticks = 0
+									then
 				Inc_Saturated(Interrupt_Fault,
 							Interrupt_Fault_Max);
 			else 
-				if Interrupt_Out_Ticks /= 0 then
-					Inc_Saturated(Interrupt_Fault,
-							Interrupt_Fault_Max);
-				end if;
 				Interrupt_Out_Ticks := Time(RP.Timer.Clock) -
 							Interrupt_Start_Ticks;
-				Interrupt_Start_Ticks := 0;
+				Interrupt_Pending_Read := True;
 			end if;
 		when others => 
 			Inc_Saturated(Interrupt_Fault, Interrupt_Fault_Max);
@@ -130,14 +127,19 @@ package body DCF77_Low_Level is
 		end if;
 	end Set_Alarm_LED_Enabled;
 
-	function Read_Interrupt_Signal(Ctx: in out LL) return Time is
-		Ret: constant Time := Interrupt_Out_Ticks;
+	function Read_Interrupt_Signal(Ctx: in out LL;
+				Signal_Length: out Time; Signal_Begin: out Time)
+				return Boolean is
 	begin
-		if Ret /= 0 then
-			-- mark that the data was processed successfully
-			Interrupt_Out_Ticks := 0;
+		if Interrupt_Pending_Read then
+			Signal_Length          := Interrupt_Out_Ticks;
+			Signal_Begin           := Interrupt_Start_Ticks;
+			Interrupt_Start_Ticks  := 0;
+			Interrupt_Pending_Read := False;
+			return True;
+		else
+			return False;
 		end if;
-		return Ret;
 	end Read_Interrupt_Signal;
 
 	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean is
