@@ -11,7 +11,7 @@ package DCF77_Secondlayer is
 
 	type Telegram is record
 		Valid: Telegram_State := Invalid;
-		Value: Bits(1 .. Sec_Per_Min) :=
+		Value: Bits(0 .. Sec_Per_Min - 1) :=
 					(others => DCF77_Bitlayer.No_Update);
 	end record;
 	
@@ -31,17 +31,24 @@ private
 		In_Forward   -- Aligned+Unknown mode. Push data forwards
 	);
 
-	type Telegram_Data is array (1 .. Lines) of Telegram;
+	type Line_Num is mod Lines;
+	type Telegram_Data is array (Line_Num) of Telegram;
+
+	type Inner_Checkresult is (
+		OK,       Error_1,  Error_2,  Error_3,  Error_4,  Error_5,
+		Error_6,  Error_7,  Error_8,  Error_9,  Error_10, Error_11,
+		Error_12, Error_13, Error_14, Error_15
+	);
 
 	type Secondlayer is tagged limited record
 		Inmode:       Input_Mode;
 		Lines:        Telegram_Data;
 
 		-- Current line to work on
-		Line_Current: Natural;
+		Line_Current: Line_Num;
 
 		-- Position in line given in data points “bits”.
-		-- Ranges from 1 to 60 both incl.
+		-- Ranges from 0 to 59 both incl.
 		--
 		-- In forward mode, this sets the position to write the next bit
 		-- to.
@@ -54,10 +61,9 @@ private
 		-- Gives the index of a line that has a leap second.	
 		-- 
 		-- The additional NO_SIGNAL for the leap second is not stored
-		-- anywhere, but only reflected by this value. As long as there
-		-- is no leap second recorded anywhere, this field has value
-		-- Noleap (0).
-		Leap_In_Line: Natural;
+		-- anywhere, but only reflected by this value.
+		Has_Leap_In_Line: Boolean;
+		Leap_In_Line:     Line_Num;
 
 		-- Leap second announce timer/countdown in seconds.
 		-- 
@@ -82,5 +88,15 @@ private
 	procedure Shift_Existing_Bits_To_The_Left(Ctx: in out Secondlayer);
 	procedure In_Forward(Ctx: in out Secondlayer; Val: in Reading;
 				Telegram_1, Telegram_2: in out Telegram);
+	procedure Recompute_EOM(Ctx: in out Secondlayer);
+	procedure Move_Entries_Backwards(Ctx: in out Secondlayer;
+							Mov: in Natural);
+	function Check_BCD_Correct_Telegram(Ctx: in out Secondlayer;
+			Start_Line: in Line_Num;
+			Start_Offset_In_Line: in Natural) return Boolean;
+	procedure Process_Telegrams_Advance_To_Next_Line(
+						Ctx: in out Secondlayer);
+	procedure Complex_Reorganization(Ctx: in out Secondlayer;
+		Val: in Reading; Telegram_1, Telegram_2: in out Telegram);
 
 end DCF77_Secondlayer;
