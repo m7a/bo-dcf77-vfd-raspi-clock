@@ -290,13 +290,37 @@ package body DCF77_Secondlayer is
 		Is_Next_Empty: constant Boolean :=
 					Ctx.Lines(Next_Line).Valid = Invalid;
 
-		function Check_Begin_Of_Minute return Inner_Checkresult is
-		begin
-			return (Error_1); -- TODO CSTAT ...
-		end Check_Begin_Of_Minute;
+		function Get_Bit(Idx: in Natural) return Reading is
+			(if Start_Offset_In_Line + Idx >= Sec_Per_Min
+				then (if Is_Next_Empty
+					then No_Signal
+					else Ctx.Lines(Next_Line).Value(
+						Start_Offset_In_Line + Idx -
+						Sec_Per_Min))
+				else Ctx.Lines(Start_Line).Value(
+						Start_Offset_In_Line + Idx));
 
-		function Check_DST return Inner_Checkresult is (Error_1);
-		function Check_Begin_Of_Time return Inner_Checkresult is (Error_1);
+		function Check_Begin_Of_Minute return Inner_Checkresult is
+			-- begin of minute is constant 0
+			(if Get_Bit(Offset_Begin_Of_Minute) = Bit_1
+							then Error_1 else OK);
+
+		function Check_DST return Inner_Checkresult is
+			AN1: constant Reading :=
+				Get_Bit(Offset_Daylight_Saving_Time);
+			AN2: constant Reading :=
+				Get_Bit(Offset_Daylight_Saving_Time + 1);
+		begin
+			return (if (AN1 = Bit_0 and AN2 = Bit_0) or
+			           (AN1 = Bit_1 and AN2 = Bit_1) then
+					Error_2 else OK);
+		end Check_DST;
+
+		function Check_Begin_Of_Time return Inner_Checkresult is
+					(if Get_Bit(Offset_Begin_Time) = Bit_0
+					then Error_3 else OK);
+
+		-- TODO ASTAT
 		function Check_Minute return Inner_Checkresult is (Error_1);
 		function Check_Hour return Inner_Checkresult is (Error_1);
 		function Check_Date return Inner_Checkresult is (Error_1);
@@ -311,7 +335,10 @@ package body DCF77_Secondlayer is
 
 		function Check_End_Of_Minute return Inner_Checkresult is
 		begin
-			return (if Is_Next_Empty then Error_1 else Error_1); -- TODO ...
+			case Get_Bit(Offset_Endmarker_Regular) is
+			when Bit_0 | Bit_1 => return Error_15;
+			when others        => return OK;
+			end case;
 		end Check_End_Of_Minute;
 	begin
 		return Check_Ignore_EOM_Inner and then Check_End_Of_Minute = OK;
