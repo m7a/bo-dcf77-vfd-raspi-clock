@@ -292,13 +292,13 @@ package body DCF77_Secondlayer is
 
 		function Get_Bit(Idx: in Natural) return Reading is
 			(if Start_Offset_In_Line + Idx >= Sec_Per_Min
-				then (if Is_Next_Empty
-					then No_Signal
-					else Ctx.Lines(Next_Line).Value(
-						Start_Offset_In_Line + Idx -
-						Sec_Per_Min))
-				else Ctx.Lines(Start_Line).Value(
-						Start_Offset_In_Line + Idx));
+			then (if Is_Next_Empty
+				then No_Signal
+				else Ctx.Lines(Next_Line).Value(
+					Start_Offset_In_Line + Idx -
+					Sec_Per_Min))
+			else Ctx.Lines(Start_Line).Value(Start_Offset_In_Line +
+					Idx));
 
 		function Check_Begin_Of_Minute return Inner_Checkresult is
 			-- begin of minute is constant 0
@@ -316,12 +316,45 @@ package body DCF77_Secondlayer is
 					Error_2 else OK);
 		end Check_DST;
 
+		function Get_Bits(Offset, Length: in Natural) return Bits is
+			RV: Bits(1 .. Length);
+		begin
+			for I in RV'Range loop
+				RV(I) := Get_Bit(Offset + I - 1);
+			end loop;
+			return RV;
+		end Get_Bits;
+
 		function Check_Begin_Of_Time return Inner_Checkresult is
 					(if Get_Bit(Offset_Begin_Time) = Bit_0
 					then Error_3 else OK);
 
-		-- TODO ASTAT
-		function Check_Minute return Inner_Checkresult is (Error_1);
+		function Check_Minute return Inner_Checkresult is
+			Parity_Minute: Parity_State := Parity_Sum_Even_Pass;
+			Minute_Ones: constant Natural := Decode_BCD(Get_Bits(
+					Offset_Minute_Ones, Length_Minute_Ones),
+					Parity_Minute);
+			Minute_Tens: constant Natural := Decode_BCD(Get_Bits(
+					Offset_Minute_Tens, Length_Minute_Tens),
+					Parity_Minute);
+		begin
+			Update_Parity(Get_Bit(Offset_Parity_Minute),
+								Parity_Minute);
+			-- 21-24 -- minute ones range from 0..9
+			if Minute_Ones > 9 then
+				return Error_4;
+			-- 25-27 -- minute tens range from 0..5
+			elsif Minute_Tens > 5 then
+				return Error_5;
+			-- telegram failing minute parity is invalid
+			elsif Parity_Minute = Parity_Sum_Odd_Mismatch then
+				return Error_6;
+			else
+				return OK;
+			end if;
+		end Check_Minute;
+
+		-- TODO ASTAT USE DECODE_BCD ROUTINE
 		function Check_Hour return Inner_Checkresult is (Error_1);
 		function Check_Date return Inner_Checkresult is (Error_1);
 
@@ -343,6 +376,41 @@ package body DCF77_Secondlayer is
 	begin
 		return Check_Ignore_EOM_Inner and then Check_End_Of_Minute = OK;
 	end Check_BCD_Correct_Telegram;
+
+	-- When beginning to decode, supply Parity = Parity_Sum_Even_Pass
+	-- When ready decoding, supply the last bit as parity update, then
+	-- check if we are still at Parity_Sum_Even_Pass
+	function Decode_BCD(Data: in Bits; Parity: in out Parity_State)
+							return Natural is
+		Rslt: Natural := 0;
+	begin
+		for Val of Data loop
+			Rslt := Rslt * 2;
+			if Val = Bit_1 then
+				Rslt := Rslt + 1;
+			end if;
+			Update_Parity(Val, Parity);
+		end loop;
+		return Rslt;
+	end Decode_BCD;
+
+	procedure Update_Parity(Val: in Reading; Parity: in out Parity_State) is
+	begin
+		case Val is
+		when Bit_1  => Parity := not Parity;
+		when Bit_0  => null;
+		when others => Parity := Parity_Sum_Undefined;
+		end case;
+	end Update_Parity;
+
+	function "not"(Parity: in Parity_State) return Parity_State is
+	begin
+		case Parity is
+		when Parity_Sum_Even_Pass    => return Parity_Sum_Odd_Mismatch;
+		when Parity_Sum_Odd_Mismatch => return Parity_Sum_Even_Pass;
+		when Parity_Sum_Undefined    => return Parity_Sum_Undefined;
+		end case;
+	end "not";
 
 	procedure Process_Telegrams_Advance_To_Next_Line(
 						Ctx: in out Secondlayer) is

@@ -40,6 +40,9 @@ private
 		Error_12, Error_13, Error_14, Error_15
 	);
 
+	type Parity_State is (Parity_Sum_Even_Pass, Parity_Sum_Odd_Mismatch,
+							Parity_Sum_Undefined);
+
 	type Secondlayer is tagged limited record
 		Inmode:       Input_Mode;
 		Lines:        Telegram_Data;
@@ -94,6 +97,10 @@ private
 	function Check_BCD_Correct_Telegram(Ctx: in out Secondlayer;
 			Start_Line: in Line_Num;
 			Start_Offset_In_Line: in Natural) return Boolean;
+	function Decode_BCD(Data: in Bits; Parity: in out Parity_State)
+							return Natural;
+	procedure Update_Parity(Val: in Reading; Parity: in out Parity_State);
+	function "not"(Parity: in Parity_State) return Parity_State;
 	procedure Process_Telegrams_Advance_To_Next_Line(
 						Ctx: in out Secondlayer);
 	procedure Complex_Reorganization(Ctx: in out Secondlayer;
