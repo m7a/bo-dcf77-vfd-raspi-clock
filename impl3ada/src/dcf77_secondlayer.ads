@@ -35,9 +35,9 @@ private
 	type Telegram_Data is array (Line_Num) of Telegram;
 
 	type Inner_Checkresult is (
-		OK,       Error_1,  Error_2,  Error_3,  Error_4,  Error_5,
-		Error_6,  Error_7,  Error_8,  Error_9,  Error_10, Error_11,
-		Error_12, Error_13, Error_14, Error_15
+		OK,        Error_1,  Error_2,  Error_3,  Error_4,  Error_5,
+		Error_6,   Error_7,  Error_8,  Error_8b, Error_9,  Error_10,
+		Error_10b, Error_11, Error_12, Error_13, Error_14, Error_15
 	);
 
 	type Parity_State is (Parity_Sum_Even_Pass, Parity_Sum_Odd_Mismatch,

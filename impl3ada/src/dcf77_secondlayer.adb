@@ -354,9 +354,69 @@ package body DCF77_Secondlayer is
 			end if;
 		end Check_Minute;
 
+		function Check_Hour return Inner_Checkresult is
+			Parity_Hour: Parity_State := Parity_Sum_Even_Pass;
+			Hour_Ones: constant Natural := Decode_BCD(
+				Get_Bits(Offset_Hour_Ones, Length_Hour_Ones),
+				Parity_Hour);
+			Hour_Tens: constant Natural := Decode_BCD(
+				Get_Bits(Offset_Hour_Tens, Length_Hour_Tens),
+				Parity_Hour);
+		begin
+			-- 29-32 -- hour ones range from 0..9
+			if Hour_Ones > 9 then
+				return Error_7;
+			-- 33-34 -- hour tens range from 0..2
+			-- (anything but 11 = 3 is valid)
+			elsif Hour_Tens > 3 then
+				return Error_8;
+			-- If hour tens is 2 then hour ones may at most be 3
+			elsif Hour_Tens = 2 and Hour_Ones > 3 then
+				return Error_8b;
+			end if;
+
+			Update_Parity(Get_Bit(Offset_Parity_Hour), Parity_Hour);
+			return (if Parity_Hour = Parity_Sum_Odd_Mismatch
+				then Error_9 else OK);
+		end Check_Hour;
+
 		-- TODO ASTAT USE DECODE_BCD ROUTINE
-		function Check_Hour return Inner_Checkresult is (Error_1);
-		function Check_Date return Inner_Checkresult is (Error_1);
+		function Check_Date return Inner_Checkresult is
+			Parity_Date: Parity_State := Parity_Sum_Even_Pass;
+			Day_Ones_Bits: constant Bits := Get_Bits(
+					Offset_Day_Ones, Length_Day_Ones);
+			Day_Ones: constant Natural := Decode_BCD(Day_Ones_Bits,
+								Parity_Date);
+			Day_Tens_Bits: constant Bits := Get_Bits(
+					Offset_Day_Tens, Length_Day_Tens);
+			Day_Of_Week_Bits: constant Bits := Get_Bits(
+					Offset_Day_Of_Week, Length_Day_Of_Week);
+		begin
+			-- 36-39 -- day ones ranges from 0..9
+			if Day_Ones > 9 then
+				return Error_10;
+			-- 40-41 -- all day tens are valid (0..3)
+			-- If day tens is 0 then day ones must not be 0
+			elsif Day_Tens_Bits = (Bit_0, Bit_0, Bit_0) and
+					Day_Ones_Bits =
+					(Bit_0, Bit_0, Bit_0, Bit_0) then
+				return Error_10b;
+			-- 42-44 -- all day of week (1-7) are valid except "0"
+			elsif Day_Of_Week_Bits = (Bit_0, Bit_0, Bit_0) then
+				return Error_11;
+			end if;
+			for Bit of Day_Tens_Bits loop
+				Update_Parity(Bit, Parity_Date);
+			end loop;
+			for Bit of Day_Of_Week_Bits loop
+				Update_Parity(Bit, Parity_Date);
+			end loop;
+			
+			-- TODO ASTAT check_bcd_correct_telegram.c:276
+			-- 45-48 -- month ones (0..9) -- nothing to check until
+			--          tens
+			return OK;
+		end Check_Date;
 
 		function Check_Ignore_EOM_Inner return Boolean is
 					(Check_Begin_Of_Minute = OK and then
