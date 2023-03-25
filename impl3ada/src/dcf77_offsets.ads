@@ -17,6 +17,11 @@ package DCF77_Offsets is
 	Offset_Day_Ones:             constant Natural := 36;
 	Offset_Day_Tens:             constant Natural := 40;
 	Offset_Day_Of_Week:          constant Natural := 42;
+	Offset_Month_Ones:           constant Natural := 45;
+	Offset_Month_Tens:           constant Natural := 49;
+	Offset_Year_Ones:            constant Natural := 50;
+	Offset_Year_Tens:            constant Natural := 54;
+	Offset_Parity_Date:          constant Natural := 58;
 	Offset_Endmarker_Regular:    constant Natural := 59;
 
 	Length_Minute_Ones:          constant Natural := 4;
@@ -26,5 +31,9 @@ package DCF77_Offsets is
 	Length_Day_Ones:             constant Natural := 4;
 	Length_Day_Tens:             constant Natural := 2;
 	Length_Day_Of_Week:          constant Natural := 3;
+	Length_Month_Ones:           constant Natural := 4;
+	Length_Month_Tens:           constant Natural := 1;
+	Length_Year_Ones:            constant Natural := 4;
+	Length_Year_Tens:            constant Natural := 4;
 
 end DCF77_Offsets;

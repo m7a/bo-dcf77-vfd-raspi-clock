@@ -123,9 +123,171 @@ package body DCF77_Secondlayer is
 		end if;
 	end In_Backward;
 
-	-- TODO CONTINUE TRANSLATION OF IMPLEMENTATION HERE
+	-- TODO z might be possible to simplify this procedure by making
+	-- Merge_Result items appear at the top level of the procedure as
+	-- regular variables, because it seems that only one instance of it
+	-- is ever created. do this once tests are in place.
 	procedure Process_Telegrams(Ctx: in out Secondlayer;
-			Telegram_1, Telegram_2: in out Telegram) is null;
+				Telegram_1, Telegram_2: in out Telegram) is
+		type Merge_Result is record
+			Match:           Boolean := True;
+			Is_Leap_In_Line: Boolean := False;
+			Line:            Line_Num;
+		end record;
+
+		function Try_Merge(Merge_Line: in Line_Num;
+					Backup_Before_Eliminate: in Boolean)
+					return Merge_Result is
+			RV: Merge_Result := (Line => Merge_Line, others => <>);
+		begin
+			loop
+				RV.Line := RV.Line + 1;
+				-- ignore empty lines
+				if Ctx.Lines(RV.Line).Valid /= Invalid then
+					-- backup contents before processing
+					if Backup_Before_Eliminate then
+						Telegram_2 := Telegram_1;
+					end if;
+					RV.Is_Leap_In_Line := 
+						Ctx.Has_Leap_In_Line and
+						RV.Line = Ctx.Leap_In_Line;
+					RV.Match := X_Eliminate(
+						RV.Is_Leap_In_Line,
+						Ctx.Lines(RV.Line),
+						Telegram_1
+					);
+				end if;
+				exit when RV.Line = Ctx.Line_Current or
+								not RV.Match;
+			end loop;
+			return RV;
+		end Try_Merge;
+
+		-- this is not a "proper" X-elimination but copies minute value
+		-- bits, leap second announce bit and minute parity from the
+		-- last telegram processed prior to outputting something. It
+		-- allows the higher layers to receive and process these bits
+		-- although they are not set by the normal xelimination.
+		procedure Add_Missing_Bits(TO: in out Telegram;
+							TI: in Telegram) is
+		begin
+			X_Eliminate_Entry(TI.Value(Offset_Leap_Sec_Announce),
+					TO.Value(Offset_Leap_Sec_Announce));
+			for I in Offset_Minute_Ones .. Offset_Minute_Ones +
+						Length_Minute_Ones - 1 loop
+				X_Eliminate_Entry(TI.Value(I), TO.Value(I));
+			end loop;
+			X_Eliminate_Entry(TI.Value(Offset_Parity_Minute),
+						TO.Value(Offset_Parity_Minute));
+		end Add_Missing_Bits;
+
+		procedure Check_For_Leapsec_Announce is
+		begin
+			-- Only set if no counter in place yet
+			if Telegram_1.Value(Offset_Leap_Sec_Announce) = Bit_1
+					and Ctx.Leap_Second_Expected = Noleap
+					then
+				-- leap sec lies at most one hour in the future.
+				-- we allow +10 minutes s.t. existing telegrams
+				-- (w/ leap sec) do not become invalid until the
+				-- whole telegram from the leap second has
+				-- passed out of memory.
+				Ctx.Leap_Second_Expected := 70 * 60;
+			end if;
+		end Check_For_Leapsec_Announce;
+
+		procedure Postprocess(Line: in Line_Num) is
+		begin
+			Add_Missing_Bits(Telegram_1, Ctx.Lines(Line));
+			Check_For_Leapsec_Announce;
+		end Postprocess;
+
+		procedure Advance_To_Next_Line is
+		begin
+			Ctx.Line_Cursor  := 0;
+			Ctx.Line_Current := Ctx.Line_Current + 1;
+			-- clear line by marking as invalid
+			Ctx.Lines(Ctx.Line_Current).Valid := Invalid;
+		end Advance_To_Next_Line;
+
+		-- No mismatch at all means: No minute tens change in buffer.
+		-- E.g. 13:00, 13:01, 13:02, 13:03, 13:04, ... 13:08
+		procedure No_Mismatch(RV: in Merge_Result) is
+		begin
+			Postprocess(RV.Line);
+			Telegram_1.Valid := (if RV.Is_Leap_In_Line
+						then Valid_61 else Valid_60);
+			Telegram_2.Valid := Invalid;
+			if not RV.Is_Leap_In_Line then
+				Advance_To_Next_Line;
+			end if;
+		end No_Mismatch;
+
+		-- Single mismatch means: Minute tens change in buffer. This
+		-- may at most happen once.
+		-- E.g.: 13:05, 13:06, 13:07, 13:08, 13:09, 13:10, ... 13:13
+		procedure Single_Mismatch(RV: in out Merge_Result) is null;
+		--begin
+		--	-- TODO ASTAT
+		--end Single_Mismatch;
+
+		procedure Correct_Minute is
+			RV: Merge_Result;
+		begin
+			-- first clear buffers to no signal
+			Telegram_1.Value := (others => No_Signal);
+			Telegram_2.Value := (others => No_Signal);
+
+			-- then merge till mismatch
+			RV := Try_Merge(Ctx.Line_Current, False);
+			if RV.Match then
+				No_Mismatch(RV);
+			else
+				Single_Mismatch(RV);
+			end if;
+		end Correct_Minute;
+	begin
+		Telegram_1.Valid := Invalid;
+		Telegram_2.Valid := Invalid;
+		if Check_BCD_Correct_Telegram(Ctx, Ctx.Line_Current, 0) then
+			Correct_Minute;
+		else
+			-- received data is invalid. This requires us to perform
+			-- a recompute_eom()
+			Ctx.Recompute_EOM;
+		end if;
+	end Process_Telegrams;
+
+	function X_Eliminate(Telegram_1_Is_Leap: in Boolean;
+				Telegram_1: in Telegram;
+				Telegram_2: in out Telegram) return Boolean is
+	begin
+		-- TODO
+		return False;
+	end X_Eliminate;
+
+	procedure X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading) is
+	begin
+		if TVO = No_Signal or TVO = No_Update then
+			TVO := TVI;
+		end if;
+	end X_Eliminate_Entry;
+
+	function X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading)
+							return Boolean is
+	begin
+		if TVI = No_Signal or TVI = No_Update or TVI = TVO then
+			-- no update
+			return True; -- OK
+		elsif TVO = No_Signal or TVO = No_Update then
+			-- takes val 1
+			TVO := TVI;
+			return True;
+		else
+			-- mismatch
+			return False;
+		end if;
+	end X_Eliminate_Entry;
 
 	procedure Shift_Existing_Bits_To_The_Left(Ctx: in out Secondlayer) is
 	begin
@@ -279,9 +441,68 @@ package body DCF77_Secondlayer is
 		end if;
 	end Recompute_EOM;
 
-	-- TODO dcf77_secondlayer_moventries.c
+	-- dcf77_secondlayer_moventries.c
 	procedure Move_Entries_Backwards(Ctx: in out Secondlayer;
-						Mov: in Natural) is null;
+						Mov: in Natural) is
+		Bytes_Proc:   Natural  := 0;
+		Input_Line_0: Line_Num := Ctx.Line_Current + 1; -- il0
+		Input_Line:   Line_Num; -- il
+		Output_Line:  Line_Num; -- ol
+		Copy_From_In: Natural;
+		Pos_In_Line:  Natural; -- pil
+		Pos_Out_Line: Natural := 0; -- pol
+	begin
+		-- start from the first line in buffer. This is the first line
+		-- following from the current which is not empty.
+		while Ctx.Lines(Input_Line_0).Valid = Invalid and
+				Input_Line_0 /= Ctx.Line_Current loop
+			Input_Line_0 := Input_Line_0 + 1;
+		end loop;
+
+		Input_Line  := Input_Line_0;
+		Output_Line := Input_Line_0;
+		loop
+			-- skip empty input lines (except for the current which
+			-- could be "invalid" despite not being empty)
+			if Input_Line = Ctx.Line_Current then
+				Copy_From_In := Ctx.Line_Cursor;
+			elsif Ctx.Lines(Input_Line).Valid = Invalid then
+				Copy_From_In := 0;
+			else
+				Copy_From_In := Sec_Per_Min;
+			end if;
+				
+			Pos_In_Line := 0;
+			while Pos_In_Line < Copy_From_In loop
+				if Bytes_Proc >= Mov then
+					Ctx.Lines(Output_Line).Value(
+						Pos_Out_Line) := Ctx.Lines(
+						Input_Line).Value(Pos_In_Line);
+					if Pos_Out_Line = Sec_Per_Min - 1 then
+						Pos_Out_Line := 0;
+						Output_Line  := Output_Line + 1;
+					else
+						Pos_Out_Line :=
+							Pos_Out_Line + 1;
+					end if;
+				end if;
+				Bytes_Proc  := Bytes_Proc + 1;
+				Pos_In_Line := Pos_In_Line + 1;
+			end loop;
+
+			Input_Line := Input_Line + 1;
+			exit when Input_Line = Input_Line_0;
+		end loop;
+
+		if Ctx.Line_Cursor >= Mov then
+			Ctx.Line_Cursor := Ctx.Line_Cursor - Mov;
+		else
+			Ctx.Lines(Ctx.Line_Current).Valid := Invalid;
+			Ctx.Line_Current := Ctx.Line_Current - 1;
+			Ctx.Line_Cursor  := (Sec_Per_Min -
+						(Mov - Ctx.Line_Cursor));
+		end if;
+	end Move_Entries_Backwards;
 
 	function Check_BCD_Correct_Telegram(Ctx: in out Secondlayer;
 			Start_Line: in Line_Num;
@@ -380,9 +601,8 @@ package body DCF77_Secondlayer is
 				then Error_9 else OK);
 		end Check_Hour;
 
-		-- TODO ASTAT USE DECODE_BCD ROUTINE
-		function Check_Date return Inner_Checkresult is
-			Parity_Date: Parity_State := Parity_Sum_Even_Pass;
+		function Check_Date_Day(Parity_Date: in out Parity_State)
+						return Inner_Checkresult is
 			Day_Ones_Bits: constant Bits := Get_Bits(
 					Offset_Day_Ones, Length_Day_Ones);
 			Day_Ones: constant Natural := Decode_BCD(Day_Ones_Bits,
@@ -411,11 +631,67 @@ package body DCF77_Secondlayer is
 			for Bit of Day_Of_Week_Bits loop
 				Update_Parity(Bit, Parity_Date);
 			end loop;
-			
-			-- TODO ASTAT check_bcd_correct_telegram.c:276
+			return OK;
+		end Check_Date_Day;
+
+		function Check_Date_Month(Parity_Date: in out Parity_State)
+						return Inner_Checkresult is
 			-- 45-48 -- month ones (0..9) -- nothing to check until
 			--          tens
+			Month_Ones_Bits: constant Bits := Get_Bits(
+					Offset_Month_Ones, Length_Month_Ones);
+			Month_Ones: constant Natural := Decode_BCD(
+					Month_Ones_Bits, Parity_Date);
+			-- 49    -- month tens are all valid (0..1)
+			--          nothing to check
+			Month_Tens_Bit: constant Reading :=
+						Get_Bit(Offset_Month_Tens);
+		begin
+			-- If month tens is 1 then month ones is at most 2 or
+			-- If month tens is 0 then month ones must not be 0
+			if (Month_Tens_Bit = Bit_1 and Month_Ones > 2) or
+				(Month_Tens_Bit = Bit_0 and Month_Ones_Bits =
+					(Bit_0, Bit_0, Bit_0, Bit_0)) then
+				return Error_11b;
+			end if;
+			Update_Parity(Month_Tens_Bit, Parity_Date);
 			return OK;
+		end Check_Date_Month;
+
+		function Check_Date_Year(Parity_Date: in out Parity_State)
+						return Inner_Checkresult is
+			Year_Ones: constant Natural := Decode_BCD(
+				Get_Bits(Offset_Year_Ones, Length_Year_Ones),
+				Parity_Date);
+			Year_Tens: constant Natural := Decode_BCD(
+				Get_Bits(Offset_Year_Tens, Length_Year_Tens),
+				Parity_Date);
+		begin
+			-- 50-53 -- year ones are valid from 0..9
+			if Year_Ones > 9 then
+				return Error_12;
+			end if;
+			-- 54-57 -- year tens are valid from 0..9
+			if Year_Tens > 9 then
+				return Error_13;
+			end if;
+			-- Check parity of entire date
+			Update_Parity(Get_Bit(Offset_Parity_Date), Parity_Date);
+			return (if Parity_Date = Parity_Sum_Odd_Mismatch then
+				Error_14 else OK);
+		end Check_Date_Year;
+
+		function Check_Date return Inner_Checkresult is
+			Parity_Date: Parity_State := Parity_Sum_Even_Pass;
+			RV: Inner_Checkresult := Check_Date_Day(Parity_Date);
+		begin
+			if RV = OK then
+				RV := Check_Date_Month(Parity_Date);
+				if RV = OK then
+					RV := Check_Date_Year(Parity_Date);
+				end if;
+			end if;
+			return RV;
 		end Check_Date;
 
 		function Check_Ignore_EOM_Inner return Boolean is
@@ -475,7 +751,7 @@ package body DCF77_Secondlayer is
 	procedure Process_Telegrams_Advance_To_Next_Line(
 						Ctx: in out Secondlayer) is
 	begin
-		Ctx.Line_Cursor := 0;
+		Ctx.Line_Cursor  := 0;
 		Ctx.Line_Current := Ctx.Line_Current + 1;
 		-- clear line by setting valid to false
 		Ctx.Lines(Ctx.Line_Current).Valid := Invalid;

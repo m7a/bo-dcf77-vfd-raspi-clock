@@ -35,9 +35,10 @@ private
 	type Telegram_Data is array (Line_Num) of Telegram;
 
 	type Inner_Checkresult is (
-		OK,        Error_1,  Error_2,  Error_3,  Error_4,  Error_5,
-		Error_6,   Error_7,  Error_8,  Error_8b, Error_9,  Error_10,
-		Error_10b, Error_11, Error_12, Error_13, Error_14, Error_15
+		OK,        Error_1,  Error_2,   Error_3,  Error_4,  Error_5,
+		Error_6,   Error_7,  Error_8,   Error_8b, Error_9,  Error_10,
+		Error_10b, Error_11, Error_11b, Error_12, Error_13, Error_14,
+		Error_15
 	);
 
 	type Parity_State is (Parity_Sum_Even_Pass, Parity_Sum_Odd_Mismatch,
@@ -88,6 +89,10 @@ private
 				Telegram_1, Telegram_2: in out Telegram);
 	procedure Process_Telegrams(Ctx: in out Secondlayer;
 				Telegram_1, Telegram_2: in out Telegram);
+	function X_Eliminate(Telegram_1_Is_Leap: in Boolean;
+				Telegram_1: in Telegram;
+				Telegram_2: in out Telegram) return Boolean;
+	procedure X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading);
 	procedure Shift_Existing_Bits_To_The_Left(Ctx: in out Secondlayer);
 	procedure In_Forward(Ctx: in out Secondlayer; Val: in Reading;
 				Telegram_1, Telegram_2: in out Telegram);
