@@ -93,6 +93,8 @@ private
 				Telegram_1: in Telegram;
 				Telegram_2: in out Telegram) return Boolean;
 	procedure X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading);
+	function X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading)
+							return Boolean;
 	procedure Shift_Existing_Bits_To_The_Left(Ctx: in out Secondlayer);
 	procedure In_Forward(Ctx: in out Secondlayer; Val: in Reading;
 				Telegram_1, Telegram_2: in out Telegram);

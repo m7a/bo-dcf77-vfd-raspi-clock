@@ -226,10 +226,41 @@ package body DCF77_Secondlayer is
 		-- Single mismatch means: Minute tens change in buffer. This
 		-- may at most happen once.
 		-- E.g.: 13:05, 13:06, 13:07, 13:08, 13:09, 13:10, ... 13:13
-		procedure Single_Mismatch(RV: in out Merge_Result) is null;
-		--begin
-		--	-- TODO ASTAT
-		--end Single_Mismatch;
+		procedure Single_Mismatch(Line: in Line_Num) is
+			RV: Merge_Result;
+		begin
+			-- Second telegram now contains previous minute (the
+			-- data from begin of buffer up until mismatch
+			-- exclusive) generically write 60...
+			Telegram_2.Valid := Valid_60;
+
+			-- Clear mismatching out_telegram_1, otherwise the
+			-- xeliminates in try_merge might fail.
+			Telegram_1.Value := (others => No_Signal);
+
+			-- Repeat and write to actual output line is now one
+			-- before the line that failed and which we reprocess.
+			RV := Try_Merge(Line - 1, False);
+			if RV.Match then
+				-- no further mismatch. Data in the buffer is
+				-- fully consistent. Can output this as truth.
+				Telegram_1.Valid := (if RV.Is_Leap_In_Line
+						then Valid_61 else Valid_60);
+				Postprocess(RV.Line);
+				-- Do not advance cursor if we have a leap
+				-- second because cursor will stay in same line
+				-- and reach index 60 next second.
+				if not RV.Is_Leap_In_Line then
+					Advance_To_Next_Line;
+				end if;
+			else
+				-- We got another mismatch.
+				-- The data is not consistent.
+				Telegram_1.Valid := Invalid;
+				Telegram_2.Valid := Invalid;
+				Ctx.Recompute_EOM;
+			end if;
+		end Single_Mismatch;
 
 		procedure Correct_Minute is
 			RV: Merge_Result;
@@ -243,7 +274,7 @@ package body DCF77_Secondlayer is
 			if RV.Match then
 				No_Mismatch(RV);
 			else
-				Single_Mismatch(RV);
+				Single_Mismatch(RV.Line);
 			end if;
 		end Correct_Minute;
 	begin
@@ -261,9 +292,121 @@ package body DCF77_Secondlayer is
 	function X_Eliminate(Telegram_1_Is_Leap: in Boolean;
 				Telegram_1: in Telegram;
 				Telegram_2: in out Telegram) return Boolean is
+
+		function Begin_Of_Minute return Inner_Checkresult is
+		begin
+			if X_Eliminate_Entry(
+				Telegram_1.Value(Offset_Begin_Of_Minute),
+				Telegram_2.Value(Offset_Begin_Of_Minute))
+			then
+				case Telegram_2.Value(Offset_Begin_Of_Minute) is
+				when Bit_1 =>
+					return Error_3; -- constant 0 violated
+				when No_Signal =>
+					-- correct to 0
+					Telegram_2.Value(Offset_Begin_Of_Minute)
+								:= Bit_0;
+					return OK;
+				when others =>
+					return OK;
+				end case;
+			else
+				return Error_2;
+			end if;
+		end Begin_Of_Minute;
+
+		-- begin and end both incl
+		function Match(From, To, Except: in Natural)
+						return Inner_Checkresult is
+		begin
+			for I in From .. To loop
+				if I /= Except and then not X_Eliminate_Entry(
+						Telegram_1.Value(I),
+						Telegram_2.Value(I)) then
+					return Error_4;
+				end if;
+			end loop;
+			return OK;
+		end Match;
+
+		function "not"(R: in Reading) return Reading is
+		begin
+			case R is
+			when Bit_0  => return Bit_1;
+			when Bit_1  => return Bit_0;
+			when others => return R;
+			end case;
+		end "not";
+
+		-- 17+18: needs to be 10 or 01
+		function Daylight_Saving_Time return Inner_Checkresult is
+			DST1: constant Reading := Telegram_2.Value(
+					Offset_Daylight_Saving_Time);
+			DST2: constant Reading := Telegram_2.Value(
+					Offset_Daylight_Saving_Time + 1);
+		begin
+			-- assertion violated if 00 or 11 found
+			if (DST1 = Bit_0 and DST2 = Bit_0) or
+					(DST1 = Bit_1 and DST2 = Bit_1) then
+				return Error_5;
+			end if;
+			if DST2 = No_Signal and DST1 /= No_Signal and
+							DST1 /= No_Update then
+				-- use 17 to infer value of 18
+				-- Write inverse value of dst1 (0->1, 1->0)
+				-- to entry 2 in byte 4 (=18)
+				Telegram_2.Value(Offset_Daylight_Saving_Time +
+								1) := not DST1;
+			elsif DST1 = No_Signal and DST2 /= No_Signal and
+							DST2 /= No_Update then
+				Telegram_2.Value(Offset_Daylight_Saving_Time
+								) := not DST2;
+			end if;
+			return OK;
+		end Daylight_Saving_Time;
+
+		-- 20: entry has to match and be constant 1
+		function Begin_Time return Inner_Checkresult is
+		begin
+			case Telegram_2.Value(Offset_Begin_Time) is
+			when Bit_0 =>
+				return Error_6; -- constant 1 violated
+			when No_Signal =>
+				-- unset => correct to 1
+				Telegram_2.Value(Offset_Begin_Time) := Bit_1;
+				return OK;
+			when others =>
+				return OK;
+			end case;
+		end Begin_Time;
+
+		-- 59:entries have to match and be constant X
+		-- (or special case leap second)
+		-- new error results compared to C version.
+		function End_Of_Minute return Inner_Checkresult is
+			EOM1: constant Reading := Telegram_1.Value(
+						Offset_Endmarker_Regular);
+		begin
+			if Telegram_2.Value(Offset_Endmarker_Regular) /=
+								No_Signal then
+				-- telegram 2 cannot be leap, must end on no
+				-- signal
+				return Error_7;
+			elsif (Telegram_1_Is_Leap and EOM1 /= Bit_1) or
+							(EOM1 = No_Signal) then
+				return OK;
+			else
+				return Error_8;
+			end if;
+		end End_Of_Minute;
+
 	begin
-		-- TODO
-		return False;
+		return  Begin_Of_Minute                         = OK and then
+			Match(16, 20, Offset_Leap_Sec_Announce) = OK and then
+			Daylight_Saving_Time                    = OK and then
+			Begin_Time                              = OK and then
+			Match(25, 58, Offset_Parity_Minute)     = OK and then
+			End_Of_Minute                           = OK;
 	end X_Eliminate;
 
 	procedure X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading) is
