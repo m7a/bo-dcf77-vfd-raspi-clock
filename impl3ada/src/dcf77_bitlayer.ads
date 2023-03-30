@@ -1,9 +1,10 @@
 with DCF77_Low_Level;
+with DCF77_Types;
+use  DCF77_Types;
 
 package DCF77_Bitlayer is
 
 	type Bitlayer is tagged limited private;
-	type Reading is (Bit_0, Bit_1, No_Signal, No_Update);
 
 	procedure Init(Ctx: in out Bitlayer; LL: access DCF77_Low_Level.LL);
 	function Update(Ctx: in out Bitlayer) return Reading;

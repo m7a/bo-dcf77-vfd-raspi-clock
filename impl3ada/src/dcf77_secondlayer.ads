@@ -1,5 +1,5 @@
-with DCF77_Bitlayer;
-use  DCF77_Bitlayer; -- Reading
+with DCF77_Types;
+use  DCF77_Types;
 with DCF77_Offsets;
 use  DCF77_Offsets;  -- Sec_Per_Min
 
@@ -11,8 +11,7 @@ package DCF77_Secondlayer is
 
 	type Telegram is record
 		Valid: Telegram_State := Invalid;
-		Value: Bits(0 .. Sec_Per_Min - 1) :=
-					(others => DCF77_Bitlayer.No_Update);
+		Value: Bits(0 .. Sec_Per_Min - 1) := (others => No_Update);
 	end record;
 	
 	procedure Init(Ctx: in out Secondlayer);
