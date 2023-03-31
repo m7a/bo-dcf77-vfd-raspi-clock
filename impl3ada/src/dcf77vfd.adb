@@ -31,12 +31,13 @@ procedure DCF77VFD is
 
 	-- TMP BEGIN EXPERIMENTAL STUFF
 	Date:      String := "20YY-MM-DD";
-	Prefix:    String := "HH:ii:";
+	Prefix:    String := "HH:ii";
 	Date_B:    DCF77_Display.SB.Bounded_String;
 	Prefix_B:  DCF77_Display.SB.Bounded_String;
 	Second:    Natural := 0;
 	New_Time:  DCF77_Low_Level.Time;
 	Last_Time: DCF77_Low_Level.Time := 0;
+	Last_Reading: DCF77_Types.Reading := No_Update;
 
 	-- TODO x Quick and dirty triple conversion...
 	function BCD_To_Char(Offset: in Natural; Length: in Natural)
@@ -127,15 +128,28 @@ begin
 			Secondlayer_Telegram_1.Valid :=
 						DCF77_Secondlayer.Invalid;
 		end if;
+		if Bitlayer_Reading /= No_Update then
+			Last_Reading := Bitlayer_Reading;
+		end if;
 
 		Disp.Update((
 			1 => (X => 0, Y => 0, F => DCF77_Display.Small,
 							Msg => Date_B),
-			2 => (X => 8, Y => 16, F => DCF77_Display.Small,
-							Msg => Prefix_B),
-			3 => (X => 64, Y => 16, F => DCF77_Display.Small,
+			2 => (X => 80, Y => 0, F => DCF77_Display.Small,
 				Msg => DCF77_Display.SB.To_Bounded_String(
-				Natural'Image(Second)))
+				Time'Image(Ticker.Get_Delay / 1000))),
+			3 => (X => 80, Y => 16, F => DCF77_Display.Small,
+				Msg => DCF77_Display.SB.To_Bounded_String(
+				Natural'Image(Second))),
+			4 => (X => 80, Y => 32, F => DCF77_Display.Small,
+				Msg => DCF77_Display.SB.To_Bounded_String(
+				Natural'Image(Bitlayer.Get_Unidentified))),
+			5 => (X => 0, Y => 48, F => DCF77_Display.Small,
+				Msg => DCF77_Display.SB.To_Bounded_String(
+				DCF77_Types.Reading'Image(Last_Reading) &
+				" FL" & Natural'Image(LL.Get_Fault))),
+			6 => (X => 0, Y => 16, F => DCF77_Display.Large,
+				Msg => Prefix_B)
 		));
 		-- END EXPERIMENTAL STUFF --
 

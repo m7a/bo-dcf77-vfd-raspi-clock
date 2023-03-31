@@ -49,6 +49,8 @@ package DCF77_Low_Level is
 	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U32;
 						Mode: in SPI_Display_Mode);
 
+	function Get_Fault(Ctx: in out LL) return Natural;
+
 	procedure Log(Ctx: in out LL; Msg: in String);
 
 private
@@ -106,5 +108,7 @@ private
 	Interrupt_Out_Ticks:    Time    := 0;
 	Interrupt_Pending_Read: Boolean := False;
 	Interrupt_Fault:        Natural := 0;
+
+	function Get_Fault(Ctx: in out LL) return Natural is (Interrupt_Fault);
 
 end DCF77_Low_Level;

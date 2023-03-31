@@ -22,7 +22,7 @@ package body DCF77_Low_Level is
 		RP.Device.Timer.Enable;
 
 		-- Digital Inputs
-		DCF.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
+		DCF.Configure(RP.GPIO.Input, RP.GPIO.Floating);
 		DCF.Enable_Interrupt(RP.GPIO.Rising_Edge);
 		DCF.Enable_Interrupt(RP.GPIO.Falling_Edge);
 		RP.GPIO.Interrupts.Attach_Handler(DCF, Handle_DCF_Interrupt'Access);
@@ -80,9 +80,9 @@ package body DCF77_Low_Level is
 			if Interrupt_Pending_Read then
 				Inc_Saturated(Interrupt_Fault,
 							Interrupt_Fault_Max);
-			else
-				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
+				Interrupt_Pending_Read := False;
 			end if;
+			Interrupt_Start_Ticks := Time(RP.Timer.Clock);
 		when RP.GPIO.Falling_Edge =>
 			-- Input voltage 1/0 transition means DCF77 1/0
 			-- transition. End of a "high" signal
@@ -90,10 +90,13 @@ package body DCF77_Low_Level is
 									then
 				Inc_Saturated(Interrupt_Fault,
 							Interrupt_Fault_Max);
+				Interrupt_Pending_Read := False;
 			else 
 				Interrupt_Out_Ticks := Time(RP.Timer.Clock) -
 							Interrupt_Start_Ticks;
-				Interrupt_Pending_Read := True;
+				if Interrupt_Out_Ticks > 3_000 then
+					Interrupt_Pending_Read := True;
+				end if;
 			end if;
 		when others => 
 			Inc_Saturated(Interrupt_Fault, Interrupt_Fault_Max);
