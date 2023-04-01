@@ -79,7 +79,7 @@ begin
 	Bitlayer.Init(LL'Access);
 	Secondlayer.Init;
 
-	LL.Log("BEFORE CTR=27");
+	LL.Log("BEFORE CTR=28");
 
 	Disp.Update((
 		1 => (X => 16, Y => 16, F => DCF77_Display.Small,
@@ -87,6 +87,7 @@ begin
 	));
 
 	loop
+		LL.Debug_Dump_Interrupt_Info;
 		--LL.Log("Hello");
 
 		Bitlayer_Reading := Bitlayer.Update;

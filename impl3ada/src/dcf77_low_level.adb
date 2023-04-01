@@ -202,4 +202,12 @@ package body DCF77_Low_Level is
 		UART_Port.Transmit(Data, Status, 60);
 	end Log;
 
+	procedure Debug_Dump_Interrupt_Info(Ctx: in out LL) is
+	begin
+		Ctx.Log("IINFO ot=" & Time'Image(Interrupt_Out_Ticks) &
+			" st=" & Time'Image(Interrupt_Start_Ticks) &
+			" pending=" & Boolean'Image(Interrupt_Pending_Read) &
+			" dv=" & Boolean'Value(DCF.Get));
+	end Debug_Dump_Interrupt_Info;
+
 end DCF77_Low_Level;

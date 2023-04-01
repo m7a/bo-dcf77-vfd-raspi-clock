@@ -53,6 +53,8 @@ package DCF77_Low_Level is
 
 	procedure Log(Ctx: in out LL; Msg: in String);
 
+	procedure Debug_Dump_Interrupt_Info(Ctx: in out LL);
+
 private
 
 	-- No idea why this warning is generated here, but it does not belong
