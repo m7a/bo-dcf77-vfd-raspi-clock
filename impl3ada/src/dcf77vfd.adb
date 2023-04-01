@@ -99,7 +99,6 @@ begin
 		if New_Time > Last_Time + 1_000_000 then
 			Last_Time := New_Time;
 			Inc_Saturated(Second, 1000);
-			LL.Log("- second -");
 		end if;
 
 		if Secondlayer_Telegram_1.Valid =

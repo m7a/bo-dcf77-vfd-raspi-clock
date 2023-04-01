@@ -1,10 +1,7 @@
 with RP.Clock;
 with HAL.SPI;
 with HAL.UART;
-
-with RP_Interrupts;
-with RP2040_SVD.TIMER; -- TIMER_Periph
-with RP2040_SVD.Interrupts;
+with RP.GPIO.Interrupts;
 
 with DCF77_Functions;
 use  DCF77_Functions; -- Inc_Saturated
@@ -26,6 +23,9 @@ package body DCF77_Low_Level is
 
 		-- Digital Inputs
 		DCF.Configure(RP.GPIO.Input, RP.GPIO.Floating);
+		DCF.Enable_Interrupt(RP.GPIO.Rising_Edge);
+		DCF.Enable_Interrupt(RP.GPIO.Falling_Edge);
+		RP.GPIO.Interrupts.Attach_Handler(DCF, Handle_DCF_Interrupt'Access);
 		Not_Ta_G.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_L.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_R.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
@@ -59,16 +59,6 @@ package body DCF77_Low_Level is
 			others    => <>                    -- Loopback = False
 		));
 
-		-- DCF Interrupt
-		RP2040_SVD.TIMER.TIMER_Periph.INTE.ALARM_1 := True;
-		-- start delay of 100ms
-		RP2040_SVD.TIMER.TIMER_Periph.ALARM1 := 100_000;
-		RP_Interrupts.Attach_Handler(
-			Handler => Handle_DCF_Interrupt'Access,
-			Id      => RP2040_SVD.Interrupts.TIMER_IRQ_1_Interrupt,
-			Prio    => RP_Interrupts.Interrupt_Priority'First + 1
-		);
-
 		-- UART (https://pico-doc.synack.me/#uart)
 		-- https://github.com/JeremyGrosser/pico_examples/blob/master/
 		-- uart_echo/src/main.adb
@@ -76,33 +66,41 @@ package body DCF77_Low_Level is
 		URX.Configure(RP.GPIO.Input,  RP.GPIO.Floating, RP.GPIO.UART);
 		UART_Port.Configure; -- use default 115200 8n1
 	end Init;
-
-	procedure Handle_DCF_Interrupt is
-		Val: constant Boolean := DCF.Get;
+	
+	-- This parameter is present in the fixed API but currently unused.
+	pragma Warnings(Off, "formal parameter ""Pin"" is not referenced");
+	procedure Handle_DCF_Interrupt(Pin: RP.GPIO.GPIO_Pin;
+					Trigger: RP.GPIO.Interrupt_Triggers) is
+	pragma Warnings(On,  "formal parameter ""Pin"" is not referenced");
 	begin
-		RP2040_SVD.TIMER.TIMER_Periph.INTR.ALARM_1 := True;
-		RP2040_SVD.TIMER.TIMER_Periph.ALARM1 := 7_000; -- every 7ms
-
-		if Val then
-			if Interrupt_Start_Ticks = 0 then
-				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
-			elsif Interrupt_Pending_Read then
+		case Trigger is
+		when RP.GPIO.Rising_Edge =>
+			-- Input voltage 0/1 transition means DCF77 0/1
+			-- transition. Begin of a "high" signal
+			if Interrupt_Pending_Read then
 				Inc_Saturated(Interrupt_Fault,
 							Interrupt_Fault_Max);
 				Interrupt_Pending_Read := False;
-				Interrupt_Start_Ticks  := Time(RP.Timer.Clock);
 			end if;
-		else
-			if Interrupt_Start_Ticks /= 0 and
-						not Interrupt_Pending_Read then
+			Interrupt_Start_Ticks := Time(RP.Timer.Clock);
+		when RP.GPIO.Falling_Edge =>
+			-- Input voltage 1/0 transition means DCF77 1/0
+			-- transition. End of a "high" signal
+			if Interrupt_Pending_Read or Interrupt_Start_Ticks = 0
+									then
+				Inc_Saturated(Interrupt_Fault,
+							Interrupt_Fault_Max);
+				Interrupt_Pending_Read := False;
+			else 
 				Interrupt_Out_Ticks := Time(RP.Timer.Clock) -
 							Interrupt_Start_Ticks;
-				Interrupt_Pending_Read := True;
+				if Interrupt_Out_Ticks > 3_000 then
+					Interrupt_Pending_Read := True;
+				end if;
 			end if;
-			-- TODO z COULD ADD SOME SORT OF "ALL ZERO" RECOGNIZTION?
-			--        => better "No_Signal" recogniztion than a
-			--        timeout?
-		end if;
+		when others => 
+			Inc_Saturated(Interrupt_Fault, Interrupt_Fault_Max);
+		end case;
 	end Handle_DCF_Interrupt;
 
 	function Get_Time_Micros(Ctx: in out LL) return Time is
@@ -209,7 +207,7 @@ package body DCF77_Low_Level is
 		Ctx.Log("IINFO ot=" & Time'Image(Interrupt_Out_Ticks) &
 			" st=" & Time'Image(Interrupt_Start_Ticks) &
 			" pending=" & Boolean'Image(Interrupt_Pending_Read) &
-			" dv=" & Boolean'Image(DCF.Get));
+			" dv=" & Boolean'Value(DCF.Get));
 	end Debug_Dump_Interrupt_Info;
 
 end DCF77_Low_Level;
