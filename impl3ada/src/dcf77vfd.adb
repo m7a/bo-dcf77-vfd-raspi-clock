@@ -79,11 +79,10 @@ begin
 	Bitlayer.Init(LL'Access);
 	Secondlayer.Init;
 
-	LL.Log("BEFORE CTR=28");
-
+	LL.Log("BEFORE CTR=29");
 	Disp.Update((
 		1 => (X => 16, Y => 16, F => DCF77_Display.Small,
-		Msg => DCF77_Display.SB.To_Bounded_String("INIT CTR=27"))
+		Msg => DCF77_Display.SB.To_Bounded_String("INIT CTR=28"))
 	));
 
 	loop

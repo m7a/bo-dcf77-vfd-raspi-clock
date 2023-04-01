@@ -39,9 +39,9 @@ package body DCF77_Bitlayer is
 		Aligned := (Signal_Start_Ago_Ms > 20);
 		Ctx.Intervals_Of_100ms_Passed := 0;
 
-		if Signal_Length_Ms in 20 .. 150 then
+		if Signal_Length_Ms in 10 .. 130 then
 			R := Bit_0;
-		elsif Signal_Length_Ms in 151 .. 450 then
+		elsif Signal_Length_Ms in 131 .. 320 then
 			R := Bit_1;
 		else
 			R := No_Signal;

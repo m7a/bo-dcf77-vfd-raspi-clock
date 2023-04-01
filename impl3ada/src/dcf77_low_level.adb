@@ -94,9 +94,7 @@ package body DCF77_Low_Level is
 			else 
 				Interrupt_Out_Ticks := Time(RP.Timer.Clock) -
 							Interrupt_Start_Ticks;
-				if Interrupt_Out_Ticks > 3_000 then
-					Interrupt_Pending_Read := True;
-				end if;
+				Interrupt_Pending_Read := True;
 			end if;
 		when others => 
 			Inc_Saturated(Interrupt_Fault, Interrupt_Fault_Max);
@@ -207,7 +205,7 @@ package body DCF77_Low_Level is
 		Ctx.Log("IINFO ot=" & Time'Image(Interrupt_Out_Ticks) &
 			" st=" & Time'Image(Interrupt_Start_Ticks) &
 			" pending=" & Boolean'Image(Interrupt_Pending_Read) &
-			" dv=" & Boolean'Value(DCF.Get));
+			" dv=" & Boolean'Image(DCF.Get));
 	end Debug_Dump_Interrupt_Info;
 
 end DCF77_Low_Level;
