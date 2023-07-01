@@ -22,7 +22,7 @@ package body DCF77_Low_Level is
 		RP.Device.Timer.Enable;
 
 		-- Digital Inputs
-		DCF.Configure(RP.GPIO.Input, RP.GPIO.Floating);
+		DCF.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		DCF.Enable_Interrupt(RP.GPIO.Rising_Edge);
 		DCF.Enable_Interrupt(RP.GPIO.Falling_Edge);
 		RP.GPIO.Interrupts.Attach_Handler(DCF, Handle_DCF_Interrupt'Access);
@@ -75,16 +75,7 @@ package body DCF77_Low_Level is
 	begin
 		case Trigger is
 		when RP.GPIO.Rising_Edge =>
-			-- Input voltage 0/1 transition means DCF77 0/1
-			-- transition. Begin of a "high" signal
-			if Interrupt_Pending_Read then
-				Inc_Saturated(Interrupt_Fault,
-							Interrupt_Fault_Max);
-				Interrupt_Pending_Read := False;
-			end if;
-			Interrupt_Start_Ticks := Time(RP.Timer.Clock);
-		when RP.GPIO.Falling_Edge =>
-			-- Input voltage 1/0 transition means DCF77 1/0
+			-- Input voltage 0/1 transition means DCF77 1/0
 			-- transition. End of a "high" signal
 			if Interrupt_Pending_Read or Interrupt_Start_Ticks = 0
 									then
@@ -96,6 +87,15 @@ package body DCF77_Low_Level is
 							Interrupt_Start_Ticks;
 				Interrupt_Pending_Read := True;
 			end if;
+		when RP.GPIO.Falling_Edge =>
+			-- Input voltage 1/0 transition means DCF77 0/1
+			-- transition. Begin of a "high" signal
+			if Interrupt_Pending_Read then
+				Inc_Saturated(Interrupt_Fault,
+							Interrupt_Fault_Max);
+				Interrupt_Pending_Read := False;
+			end if;
+			Interrupt_Start_Ticks := Time(RP.Timer.Clock);
 		when others => 
 			Inc_Saturated(Interrupt_Fault, Interrupt_Fault_Max);
 		end case;
