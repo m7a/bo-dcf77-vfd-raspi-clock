@@ -24,7 +24,8 @@ package body DCF77_Bitlayer is
 			-- Next time query earlier by making this
 			-- execution take longer!
 			if not Aligned then
-				Ctx.LL.Delay_Micros(25_000);
+				Ctx.LL.Log("MISALIGNDLY");
+				Ctx.LL.Delay_Micros(10_000);
 			end if;
 		else
 			Ctx.Update_No_Signal(R);
@@ -39,12 +40,14 @@ package body DCF77_Bitlayer is
 		Aligned := (Signal_Start_Ago_Ms > 20);
 		Ctx.Intervals_Of_100ms_Passed := 0;
 
-		if Signal_Length_Ms in 10 .. 130 then
+		if Signal_Length_Ms in 50 .. 140 then
 			R := Bit_0;
-		elsif Signal_Length_Ms in 131 .. 320 then
+		elsif Signal_Length_Ms in 150 .. 250 then
 			R := Bit_1;
 		else
 			R := No_Signal;
+			Ctx.LL.Log("UNIDENTIFIED: " &
+					Natural'Image(Signal_Length_Ms));
 			DCF77_Functions.Inc_Saturated(Ctx.Unidentified,
 							Bitlayer_Fault_Max);
 		end if;

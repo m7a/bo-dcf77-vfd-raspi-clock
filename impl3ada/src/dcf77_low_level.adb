@@ -72,30 +72,35 @@ package body DCF77_Low_Level is
 	procedure Handle_DCF_Interrupt(Pin: RP.GPIO.GPIO_Pin;
 					Trigger: RP.GPIO.Interrupt_Triggers) is
 	pragma Warnings(On,  "formal parameter ""Pin"" is not referenced");
+		Now:       constant Time := Time(RP.Timer.Clock);
+		Now_Start: constant Time := Now - Interrupt_Start_Ticks;
 	begin
 		case Trigger is
 		when RP.GPIO.Rising_Edge =>
 			-- Input voltage 0/1 transition means DCF77 1/0
 			-- transition. End of a "high" signal
-			if Interrupt_Pending_Read or Interrupt_Start_Ticks = 0
-									then
+			if Interrupt_Start_Ticks = 0 or
+					(Interrupt_Pending_Read and
+						(Now_Start < Interrupt_Out_Ticks
+						or Now_Start > 300_000)) or
+					Now_Start < 10_000 then
 				Inc_Saturated(Interrupt_Fault,
 							Interrupt_Fault_Max);
-				Interrupt_Pending_Read := False;
-			else 
-				Interrupt_Out_Ticks := Time(RP.Timer.Clock) -
-							Interrupt_Start_Ticks;
+			else
 				Interrupt_Pending_Read := True;
+				Interrupt_Out_Ticks    := Now_Start;
 			end if;
 		when RP.GPIO.Falling_Edge =>
 			-- Input voltage 1/0 transition means DCF77 0/1
 			-- transition. Begin of a "high" signal
-			if Interrupt_Pending_Read then
+			if Interrupt_Pending_Read and Now_Start > 300_000 then
 				Inc_Saturated(Interrupt_Fault,
 							Interrupt_Fault_Max);
 				Interrupt_Pending_Read := False;
 			end if;
-			Interrupt_Start_Ticks := Time(RP.Timer.Clock);
+			if not Interrupt_Pending_Read then
+				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
+			end if;
 		when others => 
 			Inc_Saturated(Interrupt_Fault, Interrupt_Fault_Max);
 		end case;
@@ -204,7 +209,7 @@ package body DCF77_Low_Level is
 	begin
 		Ctx.Log("IINFO ot=" & Time'Image(Interrupt_Out_Ticks) &
 			" st=" & Time'Image(Interrupt_Start_Ticks) &
-			" pending=" & Boolean'Image(Interrupt_Pending_Read) &
+			" pd=" & Boolean'Image(Interrupt_Pending_Read) &
 			" dv=" & Boolean'Image(DCF.Get));
 	end Debug_Dump_Interrupt_Info;
 
