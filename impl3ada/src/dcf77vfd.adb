@@ -44,13 +44,14 @@ procedure DCF77VFD is
 							return Character is
 		function Decode_BCD(Data: in DCF77_Secondlayer.Bits)
 							return Natural is
+			Mul:  Natural := 1;
 			Rslt: Natural := 0;
 		begin
 			for Val of Data loop
-				Rslt := Rslt * 2;
 				if Val = Bit_1 then
-					Rslt := Rslt + 1;
+					Rslt := Rslt + Mul;
 				end if;
+				Mul := Mul * 2;
 			end loop;
 			return Rslt;
 		end Decode_BCD;
@@ -79,15 +80,14 @@ begin
 	Bitlayer.Init(LL'Access);
 	Secondlayer.Init;
 
-	LL.Log("BEFORE CTR=31");
+	LL.Log("BEFORE CTR=34");
 	Disp.Update((
 		1 => (X => 16, Y => 16, F => DCF77_Display.Small,
-		Msg => DCF77_Display.SB.To_Bounded_String("INIT CTR=31"))
+		Msg => DCF77_Display.SB.To_Bounded_String("INIT CTR=34"))
 	));
 
 	loop
 		LL.Debug_Dump_Interrupt_Info;
-		--LL.Log("Hello");
 
 		Bitlayer_Reading := Bitlayer.Update;
 		Secondlayer.Process(Bitlayer_Reading,
@@ -122,6 +122,7 @@ begin
 					Offset_Minute_Tens, Length_Minute_Tens);
 			Prefix(Prefix'First + 4) := BCD_To_Char(
 					Offset_Minute_Ones, Length_Minute_Ones);
+			LL.Log("DATE=" & Date & ", PREFIX=" & Prefix);
 			Date_B   := DCF77_Display.SB.To_Bounded_String(Date);
 			Prefix_B := DCF77_Display.SB.To_Bounded_String(Prefix);
 			Second   := 0;
@@ -129,6 +130,8 @@ begin
 						DCF77_Secondlayer.Invalid;
 		end if;
 		if Bitlayer_Reading /= No_Update then
+			LL.Log("BITLAYER " &
+				DCF77_Types.Reading'Image(Bitlayer_Reading));
 			Last_Reading := Bitlayer_Reading;
 		end if;
 

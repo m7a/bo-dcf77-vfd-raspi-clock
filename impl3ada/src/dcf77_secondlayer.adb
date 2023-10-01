@@ -3,6 +3,37 @@ use  DCF77_Functions; -- Inc_Saturated
 
 package body DCF77_Secondlayer is
 
+	--procedure Debug_Dump_State(Ctx: in Secondlayer) is
+	--	procedure Print(S: in String) renames Ada.Text_IO.Put_Line;
+
+	--	Bitmap: String(1 .. 61);
+	--	K: Integer;
+	--begin
+	--	Print("Inmode = " & Input_Mode'Image(Ctx.Inmode));
+	--	Print("HasLIL = " & Boolean'Image(Ctx.Has_Leap_In_Line));
+	--	Print("   LiL = " & Line_Num'Image(Ctx.Leap_In_Line));
+	--	Print("LExpec = " & Natural'Image(Ctx.Leap_Second_Expected));
+	--	Print("FaultR = " & Natural'Image(Ctx.Fault_Reset));
+	--	Bitmap := (others => ' ');
+	--	Bitmap(Ctx.Line_Cursor + 2) := 'v';
+	--	Print(Bitmap);
+	--	for I in Ctx.Lines'Range loop
+	--		Bitmap(Bitmap'First) :=
+	--			(if I = Ctx.Line_Current then '>' else ' ');
+	--		K := Bitmap'First + 1;
+	--		for J of Ctx.Lines(I).Value loop
+	--			case J is
+	--			when Bit_0     => Bitmap(K) := '0';
+	--			when Bit_1     => Bitmap(K) := '1';
+	--			when No_Update => Bitmap(K) := '2';
+	--			when No_Signal => Bitmap(K) := '3';
+	--			end case;
+	--			K := K + 1;
+	--		end loop;
+	--		Print(Bitmap);
+	--	end loop;
+	--end Debug_Dump_State;
+
 	procedure Init(Ctx: in out Secondlayer) is
 	begin
 		Ctx.Reset;
@@ -861,13 +892,14 @@ package body DCF77_Secondlayer is
 	-- check if we are still at Parity_Sum_Even_Pass
 	function Decode_BCD(Data: in Bits; Parity: in out Parity_State)
 							return Natural is
+		Mul:  Natural := 1;
 		Rslt: Natural := 0;
 	begin
 		for Val of Data loop
-			Rslt := Rslt * 2;
 			if Val = Bit_1 then
-				Rslt := Rslt + 1;
+				Rslt := Rslt + Mul;
 			end if;
+			Mul := Mul * 2;
 			Update_Parity(Val, Parity);
 		end loop;
 		return Rslt;
