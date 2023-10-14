@@ -36,7 +36,7 @@ package DCF77_Display is
 	Display_Brightness_Perc_030: constant Brightness := 16#2a#;
 	Display_Brightness_Perc_000: constant Brightness := 16#ff#;
 
-	procedure Init(Ctx: in out Disp; LL: access DCF77_Low_Level.LL);
+	procedure Init(Ctx: in out Disp; LL: in DCF77_Low_Level.LLP);
 	procedure Update(Ctx: in out Disp; It: in Items;
 		New_Brightness: in Brightness := Display_Brightness_Perc_100);
 
@@ -74,14 +74,14 @@ private
 	GP9002_Charbright         : constant U8 := 16#24#;
 
 	type Disp is tagged limited record
-		LL:                 access DCF77_Low_Level.LL;
+		LL:                 DCF77_Low_Level.LLP;
 		Vscreen:            U8;
 		Current_Brightness: Brightness;
 	end record;
 
 	type Sequence_Member is record
 		Value: U8;
-		Mode: SPI_Display_Mode;
+		Mode:  SPI_Display_Mode;
 	end record;
 
 	type Sequence is array (Natural range <>) of Sequence_Member;

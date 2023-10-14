@@ -3,7 +3,7 @@ use  Interfaces;
 
 package body DCF77_Display is
 
-	procedure Init(Ctx: in out Disp; LL: access DCF77_Low_Level.LL) is
+	procedure Init(Ctx: in out Disp; LL: in DCF77_Low_Level.LLP) is
 	begin
 		Ctx.LL                 := LL;
 		Ctx.Vscreen            := 0;

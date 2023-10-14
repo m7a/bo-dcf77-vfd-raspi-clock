@@ -18,7 +18,8 @@ project Dcf77vfd is
 			"-gnatwe",       -- Warnings as errors
 			"-O3", "-gnatn", -- Optimization and inlining
 			-- "-Og", "-g"   -- alt.: For ddebugging
-			"-gnatp",        -- Suppress runtime checks
+			-- TODO x Could re-enable this for production...
+			-- "-gnatp",     -- Suppress runtime checks
 			"-gnatyd",       -- DOS Lines    \
 			"-gnatyM80",     -- Line Length   |_ Style settings
 			"-gnatyO",       -- Override     /

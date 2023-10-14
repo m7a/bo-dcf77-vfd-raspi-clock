@@ -2,7 +2,7 @@ with DCF77_Functions;
 
 package body DCF77_Bitlayer is
 
-	procedure Init(Ctx: in out Bitlayer; LL: access DCF77_Low_Level.LL) is
+	procedure Init(Ctx: in out Bitlayer; LL: in DCF77_Low_Level.LLP) is
 	begin
 		Ctx.LL := LL;
 	end Init;

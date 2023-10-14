@@ -17,7 +17,10 @@ use type DCF77_Secondlayer.Telegram_State;
 procedure DCF77VFD is
 
 	-- Hardware-specific
-	LL:       aliased DCF77_Low_Level.LL;
+	-- We allocate this because otherwise access checks may fail.
+	-- Since our program never terminates we do not ever free this.
+	LL:       constant DCF77_Low_Level.LLP := new DCF77_Low_Level.LL;
+
 	Disp:     aliased DCF77_Display.Disp;
 	Ticker:   aliased DCF77_Ticker.Ticker;
 	Bitlayer: aliased DCF77_Bitlayer.Bitlayer;
@@ -75,9 +78,9 @@ procedure DCF77VFD is
 
 begin
 	LL.Init;
-	Disp.Init(LL'Access);
-	Ticker.Init(LL'Access);
-	Bitlayer.Init(LL'Access);
+	Disp.Init(LL);
+	Ticker.Init(LL);
+	Bitlayer.Init(LL);
 	Secondlayer.Init;
 
 	LL.Log("BEFORE CTR=34");

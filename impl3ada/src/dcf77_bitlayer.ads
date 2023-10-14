@@ -6,7 +6,7 @@ package DCF77_Bitlayer is
 
 	type Bitlayer is tagged limited private;
 
-	procedure Init(Ctx: in out Bitlayer; LL: access DCF77_Low_Level.LL);
+	procedure Init(Ctx: in out Bitlayer; LL: in DCF77_Low_Level.LLP);
 	function Update(Ctx: in out Bitlayer) return Reading;
 
 	function Get_Unidentified(Ctx: in Bitlayer) return Natural;
@@ -16,7 +16,7 @@ private
 	Bitlayer_Fault_Max: constant Natural := 1000;
 
 	type Bitlayer is tagged limited record
-		LL:                        access DCF77_Low_Level.LL;
+		LL:                        DCF77_Low_Level.LLP;
 		Intervals_Of_100ms_Passed: Natural := 0;
 		Unidentified:              Natural := 0;
 	end record;

@@ -1,7 +1,7 @@
 -- mainloop_timing.c
 package body DCF77_Ticker is
 
-	procedure Init(Ctx: in out Ticker; LL: access DCF77_Low_Level.LL) is
+	procedure Init(Ctx: in out Ticker; LL: in DCF77_Low_Level.LLP) is
 	begin
 		Ctx.LL       := LL;
 		Ctx.Time_Old := LL.Get_Time_Micros;

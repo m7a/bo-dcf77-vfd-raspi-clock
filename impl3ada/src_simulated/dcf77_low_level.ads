@@ -1,16 +1,18 @@
 with DCF77_Types;
 use  DCF77_Types;
 
--- TODO PROVIDE AN IMPLEMENTATION FOR TESTING
+with Interfaces;
+use  Interfaces;
 
 package DCF77_Low_Level is
 
 	type SPI_Display_Mode is (Control, Data);
 
-	type Time        is new RP.Timer.Time;
+	type Time        is new Interfaces.Unsigned_64;
 	type Light_Value is new Integer range 0 .. 100;
 
 	type LL is tagged limited private;
+	type LLP is access LL;
 
 	procedure Init(Ctx: in out LL);
 
@@ -49,23 +51,16 @@ package DCF77_Low_Level is
 
 	procedure Debug_Dump_Interrupt_Info(Ctx: in out LL);
 
-	procedure Simul_Set_Input_Status(
-			Green_Button, Left_Button, Right_Button: Boolean;
-			Light_Sensor: Light_Value);
-	procedure Simul_Query_Output_Status(Buzzer, Alarm_LED: out Boolean);
-
 private
 
-	-- inputs
-	Green_Button_Down:   Boolean     := False;
-	Left_Button_Down:    Boolean     := False;
-	Right_Button_Down:   Boolean     := False;
-	Light_Sensor_Status: Light_Value := 0;
+	type LL is tagged limited record
+		A: Integer;
+	end record;
 
-	-- outputs
-	Buzzer_Enabled:      Boolean     := False;
-	Alarm_LED_Enabled:   Boolean     := False;
-
-	type LL is tagged limited record with null;
+	function Call(Ctx: in out LL; Query: in String) return String;
+	function Call_Bool(Ctx: in out LL; Query: in String) return Boolean;
+	procedure Cast(Ctx: in out LL; Query: in String);
+	function Bool2Char(B: in Boolean) return Character;
+	function Mode2Char(M: in SPI_Display_Mode) return Character;
 
 end DCF77_Low_Level;

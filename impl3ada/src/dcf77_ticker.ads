@@ -9,14 +9,14 @@ package DCF77_Ticker is
 
 	type Ticker is tagged limited private;
 
-	procedure Init(Ctx: in out Ticker; LL: access DCF77_Low_Level.LL);
+	procedure Init(Ctx: in out Ticker; LL: in DCF77_Low_Level.LLP);
 	procedure Tick(Ctx: in out Ticker);
 	function Get_Delay(Ctx: in out Ticker) return Time;
 
 private
 
 	type Ticker is tagged limited record
-		LL:       access DCF77_Low_Level.LL;
+		LL:       DCF77_Low_Level.LLP;
 		Delay_Us: Time := Delay_Us_Target;
 		Time_Old: Time;
 	end record;
