@@ -9,6 +9,7 @@ class ComProc extends Thread {
 
 	private final LinkedBlockingQueue<String> in;
 	private final UserIOStatus                ustat;
+	private final DCF77Sim                    sim;
 	private final ComProcOutLine              outLine;
 	private final SerialDisplayInterface      outSerial;
 	private final Consumer<String>            outLog;
@@ -18,12 +19,14 @@ class ComProc extends Thread {
 	ComProc(
 		LinkedBlockingQueue<String> in,
 		UserIOStatus                ustat,
+		DCF77Sim                    sim,
 		ComProcOutLine              outLine,
 		SerialDisplayInterface      outSerial,
 		Consumer<String>            outLog
 	) {
 		this.in        = in;
 		this.ustat     = ustat;
+		this.sim       = sim;
 		this.outLine   = outLine;
 		this.outSerial = outSerial;
 		this.outLog    = outLog;
@@ -83,7 +86,7 @@ class ComProc extends Thread {
 		case "get_time_micros":
 			return String.valueOf(System.nanoTime() / 1000);
 		case "read_interrupt_signal":
-			return "none"; // TODO THIS REQURES NEW DCF77SIM IMPL
+			return readInterruptSignal();
 		case "green_button_is_down":
 			return bool2str(ustat.buttons.equals("green"));
 		case "left_button_is_down":
@@ -95,11 +98,17 @@ class ComProc extends Thread {
 		case "read_light_sensor":
 			return String.valueOf(ustat.light);
 		case "get_fault":
-			return String.valueOf(0); // TODO dispatch to DCF77SIM
+			return String.valueOf(sim.getFaults());
 		default:
 			outLog.accept("[ERROR   ] Unknown call: " + msg);
 			return null;
 		}
+	}
+
+	private String readInterruptSignal() {
+		long[] iinfo = sim.getInterrupt();
+		return (iinfo == null) ? "none" : (String.valueOf(iinfo[0]) +
+						"," + String.valueOf(iinfo[1]));
 	}
 
 	private static String bool2str(boolean value) {

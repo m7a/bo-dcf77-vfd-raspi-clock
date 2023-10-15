@@ -16,11 +16,12 @@ public class Main {
 					comIn = new LinkedBlockingQueue<>();
 		final UserIOStatus      ustat = new UserIOStatus();
 		final LogTransferQueue  log   = new LogTransferQueue();
+		final DCF77Sim          sim   = new DCF77Sim();
 		final VirtualDisplaySPI disp  = new VirtualDisplaySPI(log);
-		final Subprocess        proc  = new Subprocess(EXECUTABLE, log,
-									comIn);
-		final ComProc           proto = new ComProc(comIn, ustat, proc,
-								disp, log);
+		final Subprocess        proc  = new Subprocess(
+							EXECUTABLE, log, comIn);
+		final ComProc           proto = new ComProc(comIn, ustat, sim,
+							proc, disp, log);
 
 		proc.restart(); // start subprocess
 		proc.start();   // start thread

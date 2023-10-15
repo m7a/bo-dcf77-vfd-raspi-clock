@@ -92,6 +92,7 @@ package body DCF77_Secondlayer is
 		Ctx.Lines(Ctx.Line_Current).Value(Sec_Per_Min - 1) := Val;
 
 		-- assert cursor > 0
+		-- TODO CSTAT NB: IF A MALICIOUS SENDER IS SENDING ALL ZEROES THIS HERE GOES NEGATIVE. TRIGGER RESET AND FAULT IN SUCH CASES! / ADDITIONALLY THERE IS THE ISSUE IF WE START PERFECTLY ALIGNED OR ONE OFF (AS IN SIMULATION...) -> CHECK IT!
 		Ctx.Line_Cursor := Ctx.Line_Cursor - 1;
 
 		if Val = No_Signal then
