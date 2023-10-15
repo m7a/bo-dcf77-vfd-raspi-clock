@@ -1,14 +1,9 @@
 package ma.dcf77t;
 
-import java.util.function.BiConsumer;
+interface SerialDisplayInterface {
 
-@FunctionalInterface
-interface SerialDisplayInterface extends BiConsumer<Boolean,Integer> {
-
-	/**
-	 * write function
-	 * @param data is an unsigned byte 0..255
-	 */
-	void accept(Boolean isCtrl, Integer data);
+	void accept08(boolean isCtrl, long data);
+	void accept16(boolean isCtrl, long data);
+	void accept32(boolean isCtrl, long data);
 
 }

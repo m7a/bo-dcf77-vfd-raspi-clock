@@ -40,28 +40,10 @@ package body DCF77_Display is
 	procedure Send_U8(Ctx: in out Disp; Seq: in Sequence_Member) is
 		use type U8;
 	begin
-		Ctx.LL.SPI_Display_Transfer(Reverse_Bits(Seq.Value), Seq.Mode);
+		Ctx.LL.SPI_Display_Transfer(Seq.Value, Seq.Mode);
 		Ctx.LL.Delay_Micros(if Seq.Mode = Control and
 				Seq.Value = GP9002_Clearscreen then 270 else 1);
 	end Send_U8;
-
-	-- The low level functions (chip) only support msb first, but the
-	-- display module requires lsb first. These conversion function should
-	-- do the job clearly and efficiently. If they are needed in another
-	-- place, may as well move them to dcf77_types or dcf77_functions...
-	function Reverse_Bits(V: in U8) return U8 is (
-		Shift_Left (V and 16#01#, 7) or Shift_Right(V and 16#80#, 7) or
-		Shift_Left (V and 16#02#, 5) or Shift_Right(V and 16#40#, 5) or
-		Shift_Left (V and 16#04#, 3) or Shift_Right(V and 16#20#, 3) or
-		Shift_Left (V and 16#08#, 1) or Shift_Right(V and 16#10#, 1));
-
-	function Reverse_Bits(V: in U16) return U16 is (
-		U16(Reverse_Bits(U8(Shift_Right(V and 16#ff00#, 8)))) or
-		Shift_Left(U16(Reverse_Bits(U8(V and 16#00ff#))), 8));
-
-	function Reverse_Bits(V: in U32) return U32 is (
-		U32(Reverse_Bits(U16(Shift_Right(V and 16#ffff0000#, 16)))) or
-		Shift_Left(U32(Reverse_Bits(U16(V and 16#0000ffff#))), 16));
 
 	procedure Update(Ctx: in out Disp; It: in Items;
 					New_Brightness: in Brightness
@@ -113,11 +95,9 @@ package body DCF77_Display is
 				Ctx.Set_Address(Addr);
 				case Item.F is
 				when Small => Ctx.LL.SPI_Display_Transfer(
-					Reverse_Bits(Font_Small_Data(C)(RX)),
-					Data);
+					Font_Small_Data(C)(RX), Data);
 				when Large => Ctx.LL.SPI_Display_Transfer(
-					Reverse_Bits(Font_Large_Data(C)(RX)),
-					Data);
+					Font_Large_Data(C)(RX), Data);
 				end case;
 				Ctx.LL.Delay_Micros(1);
 				Addr := Addr + 8;

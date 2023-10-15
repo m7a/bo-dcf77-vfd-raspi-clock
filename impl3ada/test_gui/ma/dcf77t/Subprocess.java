@@ -3,6 +3,7 @@ package ma.dcf77t;
 import java.io.*;
 import java.nio.file.Path;
 import java.util.function.Consumer;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -13,7 +14,7 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 
 	private final String executable;
 	private final Consumer<String> log;
-	private final ComProcInQueueLineProcessorSide lineStream;
+	private final LinkedBlockingQueue<String> lineStream;
 
 	private Process        proc;
 	private Writer         stdin;
@@ -22,9 +23,9 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 	private long lastRead = 0;
 
 	Subprocess(Path executable, Consumer<String> log,
-				ComProcInQueueLineProcessorSide lineStream) {
+				LinkedBlockingQueue<String> lineStream) {
 		this.executable = executable.toAbsolutePath().toString();
-		this.log = log;
+		this.log        = log;
 		this.lineStream = lineStream;
 	}
 
@@ -35,9 +36,11 @@ class Subprocess extends Thread implements AutoCloseable, ComProcOutLine {
 			while(!isInterrupted() &&
 					(line = stdout.readLine()) != null) {
 				lastRead = System.currentTimeMillis();
-				log.accept(String.format("[%8d] %s",
+				// hide SPI traffic for now
+				if (!line.startsWith("spi"))
+					log.accept(String.format("[%8d] %s",
 							deltaT(), line));
-				lineStream.sendLineToComProc(line);
+				lineStream.add(line);
 			}
 		} catch(IOException ex) {
 			log.accept("[ERROR   ] Subprocess terminated due to " +

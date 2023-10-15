@@ -1,34 +1,37 @@
 package ma.dcf77t;
 
+import java.util.concurrent.LinkedBlockingQueue;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.io.IOException;
 
 public class Main {
 
+	private static final Path EXECUTABLE = Paths.get("..", "src_simulated",
+								"dcf77vfd");
+
 	public static void main(String[] args) throws IOException {
-		final UserIOStatus ustat = new UserIOStatus();
-		final LogTransferQueue log = new LogTransferQueue();
-		final ComProcInQueue comIn = new ComProcInQueue();
-		final VirtualDisplaySPI disp = new VirtualDisplaySPI(log);
-		final Subprocess proc = new Subprocess(Paths.get("..", "a.out"),
-								log, comIn);
-		final Ticker tick = new Ticker(comIn);
-		final ComProc proto = new ComProc(comIn, ustat, proc, tick,
+
+		final LinkedBlockingQueue<String>
+					comIn = new LinkedBlockingQueue<>();
+		final UserIOStatus      ustat = new UserIOStatus();
+		final LogTransferQueue  log   = new LogTransferQueue();
+		final VirtualDisplaySPI disp  = new VirtualDisplaySPI(log);
+		final Subprocess        proc  = new Subprocess(EXECUTABLE, log,
+									comIn);
+		final ComProc           proto = new ComProc(comIn, ustat, proc,
 								disp, log);
 
 		proc.restart(); // start subprocess
 		proc.start();   // start thread
 		proto.start();
-		tick.start();
 
 		AppWnd.createAndShow(new VirtualDisplay(disp), () -> {
-			// Shutdown routine (welcome to the world of JS)
-			tick.interrupt();
+			// Shutdown routine
 			proto.interrupt();
 			proc.interrupt();
 			ChainedTries.tryThem(
 				() -> proc.close(),
-				() -> tick.join(),
 				() -> proto.join(),
 				() -> proc.join()
 			);

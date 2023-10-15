@@ -12,7 +12,7 @@ package DCF77_Low_Level is
 	type Light_Value is new Integer range 0 .. 100;
 
 	type LL is tagged limited private;
-	type LLP is access LL;
+	type LLP is access all LL;
 
 	procedure Init(Ctx: in out LL);
 

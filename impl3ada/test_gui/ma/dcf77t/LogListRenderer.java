@@ -22,6 +22,8 @@ class LogListRenderer extends DefaultListCellRenderer {
 
 			if(str.startsWith("[INFO    ]"))
 				c.setForeground(Color.GREEN);
+			if (str.startsWith("[ADALOG  ]"))
+				c.setForeground(Color.CYAN);
 			else if(str.startsWith("[WARNING ]"))
 				c.setForeground(Color.YELLOW);
 			else if(str.startsWith("[ERROR   ]"))

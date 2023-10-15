@@ -20,13 +20,12 @@ class AppWnd {
 			Supplier<String> log, final UserIOStatus userIn) {
 		setDesign();
 
-		final JFrame wnd = new JFrame("Ma_Sys.ma DCF-77 VFD Module " +
+		final JFrame wnd = new JFrame("Ma_Sys.ma DCF-77 VFD Raspi " +
 					"Clock Interactive Test Application");
 		Container cp = wnd.getContentPane();
 		cp.setLayout(new BorderLayout());
 
 		// -- Virtual Clock --
-
 		Box virtualClock = new Box(BoxLayout.Y_AXIS);
 
 		JPanel displayPan = new JPanel(new FlowLayout(
@@ -49,12 +48,12 @@ class AppWnd {
 		buzpan.add(buzzer);
 		buzpan.setBorder(new TitledBorder("Buzzer"));
 		leftmost.add(buzpan);
+		JPanel alledpan = new JPanel(new FlowLayout(FlowLayout.CENTER));
+		final JLabel alarm = new JLabel("?");
+		alledpan.add(alarm);
+		alledpan.setBorder(new TitledBorder("Alarm LED"));
+		leftmost.add(alledpan);
 		clockFrontend.add(leftmost);
-
-		JPanel middle = new JPanel(new BorderLayout());
-		middle.add(BorderLayout.CENTER, RotationButton.create(userIn));
-		middle.setBorder(new TitledBorder("Mode Selection"));
-		clockFrontend.add(middle);
 
 		Box right = new Box(BoxLayout.Y_AXIS);
 		JSlider light = new JSlider(0, 255);
@@ -63,20 +62,20 @@ class AppWnd {
 		light.setValue(0);
 		right.add(light);
 		JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER));
-		JButton b1 = new JButton("B1");
-		JButton b2 = new JButton("B2");
-		JButton both = new JButton("(both)");
-		buttons.add(b1);
-		buttons.add(b2);
-		buttons.add(both);
+		JButton[] btn = {
+			new JButton("Green"), new JButton("Left"),
+			new JButton("Right"), new JButton("(L+R)"),
+			new JButton("Red")
+		};
+		for (JButton b: btn)
+			buttons.add(b);
 		MouseListener listen = new ButtonMouseListener(
-			new Object[] { b1, b2, both },
-			new int[] { 172, 127, 194 },
+			new Object[] { btn[0], btn[1], btn[2], btn[3], btn[4] },
+			new String[] { "green", "left", "right", "l+r", "red" },
 			userIn
 		);
-		b1.addMouseListener(listen);
-		b2.addMouseListener(listen);
-		both.addMouseListener(listen);
+		for (JButton b: btn)
+			b.addMouseListener(listen);
 
 		right.add(buttons);
 		right.setBorder(new TitledBorder("Light and Buttons"));
@@ -108,7 +107,8 @@ class AppWnd {
 			while((newLogLine = log.get()) != null)
 				logListData.addLine(newLogLine);
 			
-			buzzer.setText(userIn.buzzer? "BUZZ!": "no buzz");
+			buzzer.setText(userIn.buzzer?  "BUZZ!":  "no buzz");
+			alarm.setText(userIn.alarmLED? "LIGHT!": "no light");
 			disp.repaint();
 		});
 

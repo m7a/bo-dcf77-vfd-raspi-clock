@@ -24,7 +24,7 @@ use  Ada.Assertions;
 -- ---------------------------
 -- set_buzzer_enabled,<0|1>
 -- set_alarm_led_enabled,<0|1>
--- spi8,<c|d>,<0..255>
+-- spi08,<c|d>,<0..255>
 -- spi16,<c|d>,<0..65535>
 -- spi32,<c|d>,<0..4294967295>
 -- log,<msg>
@@ -150,7 +150,7 @@ package body DCF77_Low_Level is
 	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U8;
 						Mode: in SPI_Display_Mode) is
 	begin
-		Cast(Ctx, "spi8," & Mode2Char(Mode) & "," &
+		Cast(Ctx, "spi08," & Mode2Char(Mode) & "," &
 							U8'Image(Send_Value));
 	end SPI_Display_Transfer;
 

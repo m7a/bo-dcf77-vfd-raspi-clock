@@ -25,7 +25,11 @@ class VirtualDisplaySPI implements SerialDisplayInterface {
 	}
 
 	@Override
-	public void accept(Boolean isCtrl, Integer data) {
+	public void accept08(boolean isCtrl, long data) {
+		accept(isCtrl, (int) data);
+	}
+
+	public void accept(boolean isCtrl, int data) {
 		if(isCtrl) {
 			switch(lastCtrl = DisplayCtrl.fromCode(data)) {
 			case DISPLAYSOFF:
@@ -78,6 +82,18 @@ class VirtualDisplaySPI implements SerialDisplayInterface {
 				break;
 			}
 		}
+	}
+
+	public void accept16(boolean isCtrl, long data) {
+		accept08(isCtrl, (data & 0xff00) >> 8);
+		accept08(isCtrl, (data & 0x00ff));
+	}
+
+	public void accept32(boolean isCtrl, long data) {
+		accept08(isCtrl, (data & 0xff000000) >> 24);
+		accept08(isCtrl, (data & 0x00ff0000) >> 16);
+		accept08(isCtrl, (data & 0x0000ff00) >> 8);
+		accept08(isCtrl, (data & 0x000000ff));
 	}
 
 	boolean getScreenOn(int idx) {

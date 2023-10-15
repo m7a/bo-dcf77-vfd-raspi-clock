@@ -1,45 +1,40 @@
 package ma.dcf77t;
 
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 import java.util.ArrayList;
 import java.io.IOException;
 
 class ComProc extends Thread {
 
-	private final ComProcInQueueReceiverSide in;
-	private final UserIOStatus               ustat;
-	private final ComProcOutLine             outLine;
-	private final ComProcOutRequestDelay     outRequestDelay;
-	private final SerialDisplayInterface     outSerial;
-	private final Consumer<String>           outLog;
-
-	// private final ArrayList<String>          delayedLines;
+	private final LinkedBlockingQueue<String> in;
+	private final UserIOStatus                ustat;
+	private final ComProcOutLine              outLine;
+	private final SerialDisplayInterface      outSerial;
+	private final Consumer<String>            outLog;
 
 	private int wantAck = 0;
 
 	ComProc(
-		ComProcInQueueReceiverSide in,
-		UserIOStatus               ustat,
-		ComProcOutLine             outLine,
-		ComProcOutRequestDelay     outRequestDelay,
-		SerialDisplayInterface     outSerial,
-		Consumer<String>           outLog
+		LinkedBlockingQueue<String> in,
+		UserIOStatus                ustat,
+		ComProcOutLine              outLine,
+		SerialDisplayInterface      outSerial,
+		Consumer<String>            outLog
 	) {
-		this.in              = in;
-		this.ustat           = ustat;
-		this.outLine         = outLine;
-		this.outRequestDelay = outRequestDelay;
-		this.outSerial       = outSerial;
-		this.outLog          = outLog;
-		//delayedLines         = new ArrayList<String>();
+		this.in        = in;
+		this.ustat     = ustat;
+		this.outLine   = outLine;
+		this.outSerial = outSerial;
+		this.outLog    = outLog;
 	}
 
 	@Override
 	public void run() {
 		while(!isInterrupted()) {
-			ComProcInMsg msg;
+			String msg;
 			try {
-				msg = in.inComProcReceiveMsg();
+				msg = in.take();
 			} catch(InterruptedException ex) {
 				outLog.accept("[INFORMAT] ComProc shutdown " +
 						"due to InterruptedException " +
@@ -54,113 +49,87 @@ class ComProc extends Thread {
 		}
 	}
 
-	private void procMsg(ComProcInMsg msg) throws IOException {
-		if(msg == ComProcInMsg.MSG_TICK_0) {
-			outLine.writeLine("interrupt_service_routine,0");
-			wantAck++;
-		} else if(msg == ComProcInMsg.MSG_TICK_1) {
-			outLine.writeLine("interrupt_service_routine,1");
-			wantAck++;
-		} else if(msg == ComProcInMsg.MSG_DELAY_COMPLETED) {
-			outLine.writeLine("ACK,ll_delay_ms");
+	private void procMsg(String msg) throws IOException {
+		if(msg.startsWith("spi")) {
+			handleSPI(msg);
 		} else {
-			assert(msg.type == ComProcInMsgType.LINE);
-			procLineMsg(msg.line);
-		}
-	}
-
-	private void procLineMsg(String line) throws IOException {
-		if(wantAck > 0) {
-			if(line.equals("ACK,interrupt_service_routine")) {
-				wantAck--;
-				//processDelayedLines();
-				return;
+			int cidx = msg.indexOf(',');
+			if (cidx == -1) {
+				String ackPrefix = "ack," + msg + ",";
+				String reply     = handleCall(msg);
+				if (reply != null)
+					outLine.writeLine(ackPrefix + reply);
 			} else {
-				outLog.accept("[WARNING ] Mismatch: Expected " +
-					"ACK,interrupt_service_routine but " +
-					"got " + line); // + " ... delayed!");
-				//delayedLines.add(line);
+				handleCast(msg.substring(0, cidx),
+						msg.substring(cidx + 1));
 			}
 		}
-		//processDelayedLines();
-		processRequestLine(line);
 	}
 
-/*
-	private void processDelayedLines() throws IOException {
-		if(delayedLines.size() != 0) {
-			outLog.accept("[WARNING ] Resume processing " +
-				delayedLines.size() + " delayed lines.");
-			for(String delayedLine: delayedLines)
-				processRequestLine(delayedLine);
-			delayedLines.clear();
+	private void handleSPI(String msg) {
+		String  type   = msg.substring(0, 5);
+		boolean isCtrl = msg.charAt(6) == 'c' ? true : false;
+		long    value  = Long.parseLong(msg.substring(8).trim());
+		switch (type) {
+		case "spi08": outSerial.accept08(isCtrl, value); break;
+		case "spi16": outSerial.accept16(isCtrl, value); break;
+		case "spi32": outSerial.accept32(isCtrl, value); break;
+		default: outLog.accept("[ERROR   ] Unknown SPI type: " + type);
 		}
 	}
-*/
 
-	private void processRequestLine(String line) throws IOException {
-		int idx = line.indexOf(',');
-		if(idx == -1)
-			procReadLine(line);
-		else
-			procKV(line.substring(0, idx), line.substring(idx + 1));
+	private String handleCall(String msg) {
+		switch (msg) {
+		case "get_time_micros":
+			return String.valueOf(System.nanoTime() / 1000);
+		case "read_interrupt_signal":
+			return "none"; // TODO THIS REQURES NEW DCF77SIM IMPL
+		case "green_button_is_down":
+			return bool2str(ustat.buttons.equals("green"));
+		case "left_button_is_down":
+			return bool2str(ustat.buttons.equals("left") ||
+					ustat.buttons.equals("l+r"));
+		case "right_button_is_down":
+			return bool2str(ustat.buttons.equals("right") ||
+					ustat.buttons.equals("l+r"));
+		case "read_light_sensor":
+			return String.valueOf(ustat.light);
+		case "get_fault":
+			return String.valueOf(0); // TODO dispatch to DCF77SIM
+		default:
+			outLog.accept("[ERROR   ] Unknown call: " + msg);
+			return null;
+		}
 	}
 
-	private void procReadLine(String line) throws IOException {
-		switch(line) {	
-		case "ll_input_read_sensor":
-			outLine.writeLine(String.format(
-				"REPL,ll_input_read_sensor,%02x", ustat.light));
+	private static String bool2str(boolean value) {
+		return value ? "0" : "1";
+	}
+
+	private void handleCast(String type, String args) {
+		switch (type) {
+		case "set_buzzer_enabled":
+			ustat.buzzer = str2bool(args);
 			break;
-		case "ll_input_read_buttons":
-			outLine.writeLine(String.format(
-				"REPL,ll_input_read_buttons,%02x",
-				ustat.buttons));
+		case "set_alarm_led_enabled":
+			ustat.alarmLED = str2bool(args);
 			break;
-		case "ll_input_read_mode":
-			outLine.writeLine(String.format(
-				"REPL,ll_input_read_mode,%02x", ustat.wheel));
+		case "log":
+			outLog.accept("[ADALOG  ] " + args);
 			break;
 		default:
-			outLog.accept("[WARNING ] ComProc.procMsg: " +
-						"unknown line: " + line);
+			outLog.accept("[ERROR   ] Unknown cast: " + type +
+							" (args=" + args + ")");
 		}
 	}
 
-	private void procKV(String key, String val) throws IOException {
-		switch(key) {
-		case "ll_delay_ms":
-			outRequestDelay.accept(Integer.parseInt(val));
-			break;
-		case "ll_out_display":
-			processDisplay(val);
-			break;
-		case "ll_out_buzzer":
-			ustat.buzzer = val.equals("1");
-			outLine.writeLine("ACK,ll_out_buzzer");
-			break;
-		case "ERROR":
-			outLog.accept("[ERROR   ] ComProc.procKV: " + val);
-			break;
-		default:
-			outLog.accept("[WARNING ] ComProc.procKV: " +
-					"unknown KV: k=" + key + ",v=" + val);
-			break;
+	private static boolean str2bool(String value) {
+		switch (value) {
+		case "0": return false;
+		case "1": return true;
+		default:  throw new RuntimeException("Unknown bool value: " +
+						value + ", expected 0 or 1");
 		}
-	}
-
-	private void processDisplay(String val) throws IOException {
-		try {
-			int idx = val.indexOf(',');
-			boolean ctrl = val.substring(0, idx).equals("1");
-			int data = Integer.parseInt(val.substring(idx + 1));
-			outSerial.accept(ctrl, data);
-		} catch(RuntimeException ex) {
-			outLog.accept("[WARNING ] ComProc.processDisplay: " +
-								ex.toString());
-		}
-		// in any case: ack the message
-		outLine.writeLine("ACK,ll_out_display");
 	}
 
 }
