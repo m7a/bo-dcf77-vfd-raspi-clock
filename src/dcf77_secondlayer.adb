@@ -3,6 +3,10 @@ use  DCF77_Functions; -- Inc_Saturated
 
 package body DCF77_Secondlayer is
 
+	-- TODO ASTAT SOME LEADING “threes” in test data cause this to not
+	--      receive the first minute correctly. Need to analyzed why that
+	--      would be... Only syncs after the 2nd minute...
+
 	--procedure Debug_Dump_State(Ctx: in Secondlayer) is
 	--	procedure Print(S: in String) renames Ada.Text_IO.Put_Line;
 
@@ -91,10 +95,6 @@ package body DCF77_Secondlayer is
 		-- Cursor fixed at last bit index
 		Ctx.Lines(Ctx.Line_Current).Value(Sec_Per_Min - 1) := Val;
 
-		-- assert cursor > 0
-		-- TODO CSTAT NB: IF A MALICIOUS SENDER IS SENDING ALL ZEROES THIS HERE GOES NEGATIVE. TRIGGER RESET AND FAULT IN SUCH CASES! / ADDITIONALLY THERE IS THE ISSUE IF WE START PERFECTLY ALIGNED OR ONE OFF (AS IN SIMULATION...) -> CHECK IT!
-		Ctx.Line_Cursor := Ctx.Line_Cursor - 1;
-
 		if Val = No_Signal then
 			-- No signal might indicate: end of minute.
 			-- Start a new line and switch to aligned mode.
@@ -110,10 +110,10 @@ package body DCF77_Secondlayer is
 				-- current position until the very beginning (0)
 				-- and write one bit each
 				loop
+					Ctx.Line_Cursor := Ctx.Line_Cursor - 1;
 					Ctx.Lines(Ctx.Line_Current).Value(
 						Ctx.Line_Cursor) := No_Signal;
 					exit when Ctx.Line_Cursor = 0;
-					Ctx.Line_Cursor := Ctx.Line_Cursor - 1;
 				end loop;
 				-- Else: special case: The first telegram
 				-- started with its first bit. Hence, we already
@@ -151,6 +151,7 @@ package body DCF77_Secondlayer is
 		else
 			-- Now that we have added our input, move bits and
 			-- increase number of bits in line.
+			Ctx.Line_Cursor := Ctx.Line_Cursor - 1;
 			Ctx.Shift_Existing_Bits_To_The_Left;
 		end if;
 	end In_Backward;

@@ -41,9 +41,9 @@ package body DCF77VFD_OO is
 
 		-- TODO x Quick and dirty triple conversion...
 		function BCD_To_Char(Offset: in Natural; Length: in Natural)
-								return Character is
+							return Character is
 			function Decode_BCD(Data: in DCF77_Secondlayer.Bits)
-								return Natural is
+							return Natural is
 				Mul:  Natural := 1;
 				Rslt: Natural := 0;
 			begin
@@ -57,7 +57,7 @@ package body DCF77VFD_OO is
 			end Decode_BCD;
 		begin
 			case Decode_BCD(Secondlayer_Telegram_1.Value(Offset ..
-									Length)) is
+							Offset + Length - 1)) is
 			when 0      => return '0';
 			when 1      => return '1';
 			when 2      => return '2';
@@ -80,10 +80,10 @@ package body DCF77VFD_OO is
 		Bitlayer.Init(LL);
 		Secondlayer.Init;
 
-		LL.Log("BEFORE CTR=34");
+		LL.Log("BEFORE CTR=38");
 		Disp.Update((
 			1 => (X => 16, Y => 16, F => DCF77_Display.Small,
-			Msg => DCF77_Display.SB.To_Bounded_String("INIT CTR=34"))
+			Msg => DCF77_Display.SB.To_Bounded_String("INIT CTR=38"))
 		));
 
 		loop
@@ -91,7 +91,7 @@ package body DCF77VFD_OO is
 
 			Bitlayer_Reading := Bitlayer.Update;
 			Secondlayer.Process(Bitlayer_Reading,
-					Secondlayer_Telegram_1, Secondlayer_Telegram_2);
+				Secondlayer_Telegram_1, Secondlayer_Telegram_2);
 
 			-- BEGIN EXPERIMENTAL STUFF --
 			New_Time := LL.Get_Time_Micros;
@@ -103,35 +103,35 @@ package body DCF77VFD_OO is
 			if Secondlayer_Telegram_1.Valid =
 						DCF77_Secondlayer.Valid_60 then
 				Date(Date'First + 2) := BCD_To_Char(
-						Offset_Year_Tens, Length_Year_Tens);
+					Offset_Year_Tens, Length_Year_Tens);
 				Date(Date'First + 3) := BCD_To_Char(
-						Offset_Year_Ones, Length_Year_Ones);
+					Offset_Year_Ones, Length_Year_Ones);
 				Date(Date'First + 5) := BCD_To_Char(
-						Offset_Month_Tens, Length_Month_Tens);
+					Offset_Month_Tens, Length_Month_Tens);
 				Date(Date'First + 6) := BCD_To_Char(
-						Offset_Month_Ones, Length_Month_Ones);
+					Offset_Month_Ones, Length_Month_Ones);
 				Date(Date'First + 8) := BCD_To_Char(
-						Offset_Day_Tens, Length_Day_Tens);
+					Offset_Day_Tens, Length_Day_Tens);
 				Date(Date'First + 9) := BCD_To_Char(
-						Offset_Day_Ones, Length_Day_Ones);
+					Offset_Day_Ones, Length_Day_Ones);
 				Prefix(Prefix'First + 0) := BCD_To_Char(
-						Offset_Hour_Tens, Length_Hour_Tens);
+					Offset_Hour_Tens, Length_Hour_Tens);
 				Prefix(Prefix'First + 1) := BCD_To_Char(
-						Offset_Hour_Ones, Length_Hour_Ones);
+					Offset_Hour_Ones, Length_Hour_Ones);
 				Prefix(Prefix'First + 3) := BCD_To_Char(
-						Offset_Minute_Tens, Length_Minute_Tens);
+					Offset_Minute_Tens, Length_Minute_Tens);
 				Prefix(Prefix'First + 4) := BCD_To_Char(
-						Offset_Minute_Ones, Length_Minute_Ones);
+					Offset_Minute_Ones, Length_Minute_Ones);
 				LL.Log("DATE=" & Date & ", PREFIX=" & Prefix);
-				Date_B   := DCF77_Display.SB.To_Bounded_String(Date);
-				Prefix_B := DCF77_Display.SB.To_Bounded_String(Prefix);
+				Date_B   := DCF77_Display.SB.To_Bounded_String(
+									Date);
+				Prefix_B := DCF77_Display.SB.To_Bounded_String(
+									Prefix);
 				Second   := 0;
 				Secondlayer_Telegram_1.Valid :=
-							DCF77_Secondlayer.Invalid;
+						DCF77_Secondlayer.Invalid;
 			end if;
 			if Bitlayer_Reading /= No_Update then
-				LL.Log("BITLAYER " &
-					DCF77_Types.Reading'Image(Bitlayer_Reading));
 				Last_Reading := Bitlayer_Reading;
 			end if;
 

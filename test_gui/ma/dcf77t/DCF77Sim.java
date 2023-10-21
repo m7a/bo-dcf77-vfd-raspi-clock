@@ -90,8 +90,9 @@ class DCF77Sim {
 		if (start == null)
 			return null;
 
+		int j = start[1];
 		for (int i = start[0]; i < getMinutes(); i++) {
-			for (int j = start[1]; j < getSeconds(i); j++) {
+			for (; j < getSeconds(i); j++) {
 				int sec = getSecond(i, j);
 				if ((sec & PROCESSING_STATE_MASK) ==
 							PROCESSING_STATE_NONE &&
@@ -99,7 +100,9 @@ class DCF77Sim {
 							VALUE_NONE)
 					return new int[] { i, j };
 			}
+			j = 0;
 		}
+
 		return null; // nothing found
 	}
 
