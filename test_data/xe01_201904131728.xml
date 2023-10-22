@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- xeliminiate_testcases.h:0 -->
+<dcf77testdata descr="xe01_201904131728">
+	<usefor test="xeliminate" descr="17:28 -&gt; 17:29 eliminates correctly"/>
+	<input>
+		<!-- 13.04.19 17:28 -->
+		<tel val="222222222222222222222222222221110100110010011001001001100013"/>
+		<!-- 17:29 -->
+		<tel val="010111011010111001001100101011110100110010011001001001100013"/>
+	</input>
+	<!-- printf "%s" "0xee,0xef,0xbb,0xbf,0xae,0xaf,0xbb,0xff,0xae,0xaf,0xeb,0xeb,0xba,0xbe,0x7a" | sed 's/0x//g' | ./decode_telegram_bin | tr -d , -->
+	<output recovery_ok="1">
+		<tel val="010111011010111001001100101011110100110010011001001001100013"/>
+	</output>
+</dcf77testdata>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- xeliminiate_testcases.h:5 -->
+<dcf77testdata descr="xe06_201904131728_stf">
+	<usefor test="xeliminate" descr="17:28 -> 17:29 summertime recovery fails if both defunct"/>
+	<input>
+		<!-- 13.04.19 17:28 -->
+		<tel val="222222222222222222222222222221110100110010011001001001100013"/>
+		<!-- 17:29 bits 17+18 defunct -->
+		<tel val="010111011010111003301100101011110100110010011001001001100013"/>
+	</input>
+	<output recovery_ok="1">
+		<tel val="010111011010111003301100101011110100110010011001001001100013"/>
+	</output>
+</dcf77testdata>

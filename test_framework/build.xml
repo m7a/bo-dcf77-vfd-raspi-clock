@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="build">
+
+<property name="masysma.target" value="dcf77_test_runner"/> 
+
+<target name="masysma_internal_build_ada">
+	<dirname property="local.root" file="${ant.file}"/>
+	<exec executable="gnatmake" failonerror="true">
+		<arg value="-Wall"/>
+		<arg value="-O3"/>
+		<arg value="-I${local.root}/../src_simulated"/>
+		<arg value="-aI/usr/share/ada/adainclude/xmlada_sax"/>
+		<arg value="-aO/usr/lib/x86_64-linux-gnu/ada/adalib/xmlada_sax"/>
+		<arg value="-aI/usr/share/ada/adainclude/xmlada_input"/>
+		<arg value="-aO/usr/lib/x86_64-linux-gnu/ada/adalib/xmlada_input"/>
+		<arg value="-aI/usr/share/ada/adainclude/xmlada_unicode"/>
+		<arg value="-aO/usr/lib/x86_64-linux-gnu/ada/adalib/xmlada_unicode"/>
+		<arg value="-o"/>
+		<arg value="${masysma.target}"/>
+		<arg value="${masysma.target}.adb"/>
+		<arg value="-largs"/> <!-- begin of linker args -->
+		<arg value="-lxmlada_sax"/>
+		<arg value="-lxmlada_input"/>
+		<arg value="-lxmlada_unicode"/>
+	</exec>
+</target>
+
+<!-- CONSTANT TPL IMPORT -->
+<property environment="env"/>
+<condition property="masysma.internal.includepath.rel" value="${env.MDVL_CI_PHOENIX_ROOT}" else="/data/main/120_mdvl_rr"><isset property="env.MDVL_CI_PHOENIX_ROOT"/></condition>
+<property name="masysma.internal.includepath" location="${masysma.internal.includepath.rel}"/>
+<property name="masysma.internal.loadpath" value="${masysma.internal.includepath}/co-build/ant-build-template.xml"/>
+<condition property="masysma.internal.load" value="file://${masysma.internal.loadpath}" else="https://raw.githubusercontent.com/m7a/co-build/master/ant-build-template.xml"><resourceexists><file file="${masysma.internal.loadpath}"/></resourceexists></condition>
+<import><url url="${masysma.internal.load}"/></import>
+
+</project>
