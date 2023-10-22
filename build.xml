@@ -14,9 +14,16 @@
 
 <target name="clean">
 	<delete dir="obj"/>
+	<subant target="clean" failonerror="true">
+		<fileset dir="." includes="*/build.xml"/>
+	</subant>
 </target>
 <target name="dist-clean" depends="clean">
 	<delete dir="bin"/>
+	<delete dir="cov"/>
+	<subant target="dist-clean" failonerror="true">
+		<fileset dir="." includes="*/build.xml"/>
+	</subant>
 </target>
 
 </project>
