@@ -48,14 +48,12 @@ c_%:
 	make -C $* CC=$(CC) "CFLAGS=$(CFLAGS)"
 
 clean: cc_ll_test cc_test_auto cc_main cc_src cc_ll_hw
-	cd test_gui && ant clean
 
 cc_%:
 	make -C $* CC=$(CC) "CFLAGS=$(CFLAGS)" clean
 
 dist-clean: clean
 	make -C test_auto dist-clean
-	cd telegram_editor && ant dist-clean
 	-rm a.out > /dev/null 2>&1
 	-rm -r report_cov > /dev/null 2>&1
 
