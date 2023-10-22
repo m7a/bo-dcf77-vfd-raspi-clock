@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project default="build">
 
+<!-- Build-Depends: libxmlada-sax7 libxmlada-sax12-dev -->
 <property name="masysma.target" value="dcf77_test_runner"/> 
 
 <target name="masysma_internal_build_ada">
