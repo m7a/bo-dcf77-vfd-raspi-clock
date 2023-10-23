@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<!-- minutes that do not come imediately after each other -->
 <dcf77testdata descr="xs02_20120701_inv">
-	<usefor test="secondlayer" descr="01:49, 01:57, 02:01, 02:02 - minutes that do not come immediately after each other. invalid data."/>
+	<usefor test="secondlayer" descr="01:49, 01:57, 02:01, 02:02 - invalid sequence"/>
 	<input>
 		<tel val="001001000111011001011100100111000001100000111111000100100013"/> <!-- 6  So 01.07.12 01:49:00 SZ   Einfügen einer Schaltsekunde angekündigt -->
 		<tel val="011100000111000001011111010111000001100000111111000100100013"/> <!-- 14 So 01.07.12 01:57:00 SZ   Einfügen einer Schaltsekunde angekündigt -->

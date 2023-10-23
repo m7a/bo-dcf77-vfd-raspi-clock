@@ -2,7 +2,8 @@
 
 <!-- xeliminiate_testcases.h:3 -->
 <dcf77testdata descr="xe04_201904131728_st1">
-	<usefor test="xeliminate" descr="17:28 -> 17:29 recover summertime bit 17 from 18"/>
+	<usefor test="xeliminate"  descr="17:28 -> 17:29 recover summertime bit 17 from 18"/>
+	<usefor test="secondlayer" descr="17:28 -> 17:29 recover summertime bit 17 from 18"/>
 	<input>
 		<!-- 13.04.19 17:28 -->
 		<tel val="222222222222222222222222222221110100110010011001001001100013"/>

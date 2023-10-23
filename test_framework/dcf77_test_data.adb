@@ -26,8 +26,10 @@ package body DCF77_Test_Data is
 			Descr              => RD.Descr,
 			Use_For            => RD.Use_For,
 			Input              => To_Array(RD.Input),
+			Input_Offset       => RD.Input_Offset,
 			Output             => To_Array(RD.Output),
 			Output_Recovery_OK => RD.Output_Recovery_OK,
+			Output_Faults      => RD.Output_Faults,
 			Checkpoints        => To_Array(RD.Checkpoints)
 		);
 	end Parse;
@@ -66,6 +68,8 @@ package body DCF77_Test_Data is
 			return X_Eliminate;
 		elsif S = "secondlayer" then
 			return Secondlayer;
+		elsif S = "checkbcd" then
+			return Check_BCD;
 		else
 			raise Constraint_Error with "Unsupported usage: """ &
 								S & """.";
@@ -89,6 +93,10 @@ package body DCF77_Test_Data is
 		elsif Lname = "input" then
 			Assert(Handler.State = Invalid);
 			Handler.State := Input;
+			if Atts.Get_Index("offset") >= 0 then
+				Handler.Input_Offset := Natural'Value(
+						Atts.Get_Value("offset"));
+			end if;
 		elsif Lname = "tel" then
 			case Handler.State is
 			when Invalid => raise Assertion_Error with
@@ -104,6 +112,11 @@ package body DCF77_Test_Data is
 			Handler.State := Output;
 			Handler.Output_Recovery_OK :=
 				Atts.Get_Value_As_Boolean("recovery_ok");
+			if Atts.Get_Index("fault_reset_num_allowed") >= 0 then
+				Handler.Output_Faults := Natural'Value(
+						Atts.Get_Value(
+						"fault_reset_num_allowed"));
+			end if;
 		elsif Lname = "checkpoint" then
 			Check_Vec.Append(Handler.Checkpoints,
 						XML_To_Checkpoint(Atts));

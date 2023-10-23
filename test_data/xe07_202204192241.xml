@@ -9,7 +9,8 @@
 	22:53 000000111111111001001110010100100010010001100001001001100013
 -->
 <dcf77testdata descr="xe07_202204192241">
-	<usefor test="xeliminate" descr="22:41 -> 22:49 complete correct entries recover to latest entry"/>
+	<usefor test="xeliminate"  descr="22:41 -> 22:49 complete correct entries recover to latest entry"/>
+	<usefor test="secondlayer" descr="22:41 -> 22:49 complete correct entries recover to latest entry"/>
 	<input>
 		<!-- 22.04.19 22:41 -->
 		<tel val="000010001011000001001100000100100010010001100001001001100013"/>

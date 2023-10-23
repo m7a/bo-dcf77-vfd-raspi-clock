@@ -13,7 +13,7 @@ package DCF77_Test_Data is
 	package ST is new Ada.Strings.Bounded.Generic_Bounded_Length(Max => 128);
 	Empty: ST.Bounded_String renames ST.Null_Bounded_String;
 
-	type Uses is (None, X_Eliminate, Secondlayer);
+	type Uses is (None, X_Eliminate, Secondlayer, Check_BCD);
 
 	type Tel is record
 		Len: Natural := 60;
@@ -36,8 +36,10 @@ package DCF77_Test_Data is
 		Descr:              ST.Bounded_String;
 		Use_For:            Use_Array;
 		Input:              Tel_Array(1 .. Num_In);
+		Input_Offset:       Natural;
 		Output:             Tel_Array(1 .. Num_Out);
 		Output_Recovery_OK: Boolean;
+		Output_Faults:      Natural;
 		Checkpoints:        Checkpoint_Array(1 .. Num_Checkpoints);
 	end record;
 
@@ -58,8 +60,10 @@ private
 		Descr:              ST.Bounded_String := Empty;
 		Use_For:            Use_Array := (others => Empty);
 		Input:              Tel_Vec.Vector;
-		Output_Recovery_OK: Boolean := True;
+		Input_Offset:       Natural := 0;
 		Output:             Tel_Vec.Vector;
+		Output_Recovery_OK: Boolean := True;
+		Output_Faults:      Natural := 0;
 		Checkpoints:        Check_Vec.Vector;
 	end record;
 

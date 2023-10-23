@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+	This may fail and it is then not really a bug, but a missing feature: If
+	some initial bits are missing, we should be able to display a data after
+	1min already if we received the “end” part successfully and wholly.
+-->
+<dcf77testdata descr="xs03_20120701005500_impr">
+	<usefor test="secondlayer" descr="00:55 with no-signal in front syncs after one minute already"/>
+	<input>
+		<!-- So, 01.07.12 00:55:00, SZ -->
+		<tel val="333333333333011001011100100111000001100000111111000100100013"/>
+	</input>
+	<output recovery_ok="1">
+		<tel val="033333333333011001011100100111000001100000111111000100100013"/>
+	</output>
+</dcf77testdata>

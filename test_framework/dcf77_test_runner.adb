@@ -7,6 +7,7 @@ with Ada.Containers.Indefinite_Vectors;
 
 with DCF77_Test_Data;
 
+with DCF77_Offsets;
 with DCF77_Types;
 with DCF77_Secondlayer;
 with DCF77_Secondlayer.Testing;
@@ -53,15 +54,85 @@ procedure DCF77_Test_Runner is
 
 	---------------------------------------------------------[ Test Uses ]--
 
-	procedure Run_Secondlayer(Spec: in DCF77_Test_Data.Spec) is
+	procedure Run_Check_BCD(Spec: in DCF77_Test_Data.Spec) is
+		-- inefficient, but may work
+		Empty_Bits: constant DCF77_Secondlayer.Bits(1 .. 0) :=
+					(others => DCF77_Types.No_Update);
+		function Flatten(B: in DCF77_Test_Data.Tel_Array)
+						return DCF77_Secondlayer.Bits is
+				(if B'Length = 0 then Empty_Bits else
+				B(B'First).Val(0 .. B(B'First).Len - 1) &
+				Flatten(B(B'First + 1 .. B'Last)));
+
 		Prefix: constant String := DCF77_Test_Data.ST.To_String(
-				Spec.Use_For(DCF77_Test_Data.Secondlayer));
+				Spec.Use_For(DCF77_Test_Data.Check_BCD));
+		Got: constant Boolean :=
+			DCF77_Secondlayer.Testing.Check_BCD_Correct_Telegram(
+				Flatten(Spec.Input), Spec.Input_Offset);
 	begin
-		if not Spec.Output_Recovery_OK then
-			-- TODO x skip secondlayer tests which fail xeliminate
-			return;
+		if Got = Spec.Output_Recovery_OK then
+			Test_Pass(Prefix);
+		else
+			Test_Fail(Prefix &
+				" -- checkbcd inverted result, expected=" &
+				Boolean'Image(Spec.Output_Recovery_OK) &
+				", got=" & Boolean'Image(Got));
 		end if;
-		Test_Fail(Prefix & " -- not implemented!!!");
+	end Run_Check_BCD;
+
+	procedure Run_Secondlayer(Spec: in DCF77_Test_Data.Spec) is
+		Cmp_Mask: constant array (0 .. DCF77_Offsets.Sec_Per_Min) of
+			Integer :=
+				(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				 1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,
+				 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0);
+
+		procedure Mask_Tel(Tel: in out DCF77_Secondlayer.Bits) is
+		begin
+			for I in Tel'Range loop
+				if Cmp_Mask(I) = 0 then
+					Tel(I) := DCF77_Types.No_Update;
+				end if;
+			end loop;
+		end Mask_Tel;
+
+		Prefix:   constant String := DCF77_Test_Data.ST.To_String(
+				Spec.Use_For(DCF77_Test_Data.Secondlayer));
+		Expect:   DCF77_Secondlayer.Bits :=
+					Spec.Output(Spec.Output'Last).Val;
+		Ctx:      DCF77_Secondlayer.Secondlayer;
+		Cmp_Buf:  DCF77_Secondlayer.Telegram := (others => <>);
+		Tel_1:    DCF77_Secondlayer.Telegram := (others => <>);
+		Tel_2:    DCF77_Secondlayer.Telegram := (others => <>);
+	begin
+		DCF77_Secondlayer.Init(Ctx);
+		for Line of Spec.Input loop
+			for I in  0 .. Line.Len - 1 loop
+				DCF77_Secondlayer.Process(Ctx, Line.Val(I),
+							Tel_1, Tel_2);
+				if Tel_1.Valid /= DCF77_Secondlayer.Invalid then
+					Cmp_Buf := Tel_1;
+					Tel_1   := (others => <>);
+					Tel_2   := (others => <>);
+				end if;
+			end loop;
+		end loop;
+		-- now compare
+		Mask_Tel(Expect);
+		Mask_Tel(Cmp_Buf.Value);
+		if Expect(0 .. DCF77_Offsets.Sec_Per_Min - 1) /=
+							Cmp_Buf.Value then
+			Test_Fail(Prefix & " -- expected=" & Tel_Dump(Expect) &
+					", got=" & Tel_Dump(Cmp_Buf.Value));
+		elsif DCF77_Secondlayer.Get_Fault(Ctx) /=
+							Spec.Output_Faults then
+			Test_Fail(Prefix & " -- mismatching number of faults" &
+				", expected=" & Natural'Image(
+				Spec.Output_Faults) & ", got=" & Natural'Image(
+				DCF77_Secondlayer.Get_Fault(Ctx)));
+		else
+			Test_Pass(Prefix);
+		end if;
 	end Run_Secondlayer;
 
 	procedure Run_X_Eliminate(Spec: in DCF77_Test_Data.Spec) is
@@ -187,6 +258,7 @@ procedure DCF77_Test_Runner is
 		case T is
 		when DCF77_Test_Data.X_Eliminate => Run_X_Eliminate(Spec);
 		when DCF77_Test_Data.Secondlayer => Run_Secondlayer(Spec);
+		when DCF77_Test_Data.Check_BCD   => Run_Check_BCD(Spec);
 		when others => raise Constraint_Error with
 				"Cannot run test """ &
 				DCF77_Test_Data.ST.To_String(Spec.Descr) &

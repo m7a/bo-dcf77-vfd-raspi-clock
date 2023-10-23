@@ -3,10 +3,6 @@ use  DCF77_Functions; -- Inc_Saturated
 
 package body DCF77_Secondlayer is
 
-	-- TODO ASTAT SOME LEADING “threes” in test data cause this to not
-	--      receive the first minute correctly. Need to analyzed why that
-	--      would be... Only syncs after the 2nd minute...
-
 	--procedure Debug_Dump_State(Ctx: in Secondlayer) is
 	--	procedure Print(S: in String) renames Ada.Text_IO.Put_Line;
 
@@ -47,7 +43,7 @@ package body DCF77_Secondlayer is
 
 	procedure Reset(Ctx: in out Secondlayer) is
 	begin
-		Ctx.Inmode               := In_Backward;
+		Ctx.Inmode               := In_No_Signal;
 		-- Initialize the buffer to all NO_UPDATE/empty (00)
 		Ctx.Lines                := (others => (others => <>));
 		Ctx.Line_Current         := 0;
@@ -81,14 +77,27 @@ package body DCF77_Secondlayer is
 		Val: in Reading; Telegram_1, Telegram_2: in out Telegram) is
 	begin
 		case Ctx.Inmode is
-		when In_Backward => Ctx.In_Backward(
-						Val, Telegram_1, Telegram_2);
-		when In_Forward  => Ctx.In_Forward(Val, Telegram_1, Telegram_2);
+		when In_No_Signal => Ctx.In_No_Signal(Val, Telegram_1,
+								Telegram_2);
+		when In_Backward  => Ctx.In_Backward(Val, Telegram_1,
+								Telegram_2);
+		when In_Forward   => Ctx.In_Forward(Val, Telegram_1,
+								Telegram_2);
 		end case;
 	end Automaton_Case_Specific_Handling;
 
+	procedure In_No_Signal(Ctx: in out Secondlayer; Val: in Reading;
+				Telegram_1, Telegram_2: in out Telegram) is
+	begin
+		-- Align processing to antenna delivering signals
+		if Val /= No_Signal then
+			Ctx.Inmode := In_Backward;
+			Ctx.In_Backward(Val, Telegram_1, Telegram_2);
+		end if;
+	end In_No_Signal;
+
 	procedure In_Backward(Ctx: in out Secondlayer; Val: in Reading;
-			Telegram_1, Telegram_2: in out Telegram) is
+				Telegram_1, Telegram_2: in out Telegram) is
 		Current_Line_Is_Full: constant Boolean :=
 			Ctx.Lines(Ctx.Line_Current).Value(0) /= No_Update;
 	begin
@@ -957,5 +966,8 @@ package body DCF77_Secondlayer is
 		Ctx.Automaton_Case_Specific_Handling(Val, Telegram_1,
 								Telegram_2);
 	end Complex_Reorganization;
+
+	function Get_Fault(Ctx: in Secondlayer) return Natural is
+							(Ctx.Fault_Reset);
 
 end DCF77_Secondlayer;

@@ -26,6 +26,12 @@
 	</exec>
 </target>
 
+<target name="run" depends="build">
+	<apply executable="${local.root}/dcf77_test_runner" parallel="true">
+		<fileset dir="../test_data" includes="*.xml"/>
+	</apply>
+</target>
+
 <target name="cov">
 	<exec executable="gnatmake" failonerror="true">
 		<arg value="-Wall"/>

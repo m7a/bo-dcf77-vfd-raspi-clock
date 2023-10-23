@@ -2,7 +2,8 @@
 
 <!-- xeliminiate_testcases.h:10 -->
 <dcf77testdata descr="xe11_201904222250">
-	<usefor test="xeliminate" descr="17:30 on empty eliminates correctly (prepare for next)"/>
+	<usefor test="xeliminate"  descr="17:30 on empty eliminates correctly (prepare for next)"/>
+	<usefor test="secondlayer" descr="17:30 on empty eliminates correctly (prepare for next)"/>
 	<input>
 		<!-- empty -->
 		<tel val="333333333333333333333333333333333333333333333333333333333333"/>

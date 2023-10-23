@@ -2,7 +2,8 @@
 
 <!-- xeliminiate_testcases.h:7 -->
 <dcf77testdata descr="xe08_202204192241_noi">
-	<usefor test="xeliminate" descr="22:41 -> 22:49 noisy entries recover to full entry"/>
+	<usefor test="xeliminate"  descr="22:41 -> 22:49 noisy entries recover to full entry"/>
+	<usefor test="secondlayer" descr="22:41 -> 22:49 noisy entries recover to full entry"/>
 	<input>
 		<!--
 			22.04.19 22:41 all weather information deleted.

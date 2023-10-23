@@ -17,6 +17,7 @@ package DCF77_Secondlayer is
 	procedure Init(Ctx: in out Secondlayer);
 	procedure Process(Ctx: in out Secondlayer; Val: in Reading;
 					Telegram_1, Telegram_2: out Telegram);
+	function Get_Fault(Ctx: in Secondlayer) return Natural;
 
 private
 
@@ -26,8 +27,9 @@ private
 	Noleap:          constant Natural := 0;
 
 	type Input_Mode is (
-		In_Backward, -- Init mode. Push data backwards
-		In_Forward   -- Aligned+Unknown mode. Push data forwards
+		In_No_Signal, -- Only ever saw no signal / antenna is adjusting
+		In_Backward,  -- First minute. Push data backwards
+		In_Forward    -- Aligned+Unknown mode. Push data forwards
 	);
 
 	type Line_Num is mod Lines;
@@ -84,6 +86,8 @@ private
 	procedure Decrease_Leap_Second_Expectation(Ctx: in out Secondlayer);
 	procedure Automaton_Case_Specific_Handling(Ctx: in out Secondlayer;
 		Val: in Reading; Telegram_1, Telegram_2: in out Telegram);
+	procedure In_No_Signal(Ctx: in out Secondlayer; Val: in Reading;
+				Telegram_1, Telegram_2: in out Telegram);
 	procedure In_Backward(Ctx: in out Secondlayer; Val: in Reading;
 				Telegram_1, Telegram_2: in out Telegram);
 	procedure Process_Telegrams(Ctx: in out Secondlayer;
