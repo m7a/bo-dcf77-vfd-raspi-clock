@@ -104,12 +104,18 @@ procedure DCF77_Test_Runner is
 		Cmp_Buf:  DCF77_Secondlayer.Telegram := (others => <>);
 		Tel_1:    DCF77_Secondlayer.Telegram := (others => <>);
 		Tel_2:    DCF77_Secondlayer.Telegram := (others => <>);
+
+		--Seq:    Natural := 1;
 	begin
 		DCF77_Secondlayer.Init(Ctx);
 		for Line of Spec.Input loop
 			for I in  0 .. Line.Len - 1 loop
 				DCF77_Secondlayer.Process(Ctx, Line.Val(I),
 							Tel_1, Tel_2);
+				--Ada.Text_IO.Put_Line("SEQ >" &
+				--		Natural'Image(Seq) & "<");
+				--Seq := Seq + 1;
+				--DCF77_Secondlayer.Testing.Debug_Dump_State(Ctx);
 				if Tel_1.Valid /= DCF77_Secondlayer.Invalid then
 					Cmp_Buf := Tel_1;
 					Tel_1   := (others => <>);

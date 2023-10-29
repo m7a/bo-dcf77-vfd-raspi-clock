@@ -106,7 +106,8 @@ private
 							Mov: in Natural);
 	function Check_BCD_Correct_Telegram(Ctx: in out Secondlayer;
 			Start_Line: in Line_Num;
-			Start_Offset_In_Line: in Natural) return Boolean;
+			Start_Offset_In_Line: in Natural;
+			Ignore_EOM: Boolean := False) return Boolean;
 	function Decode_BCD(Data: in Bits; Parity: in out Parity_State)
 							return Natural;
 	procedure Update_Parity(Val: in Reading; Parity: in out Parity_State);

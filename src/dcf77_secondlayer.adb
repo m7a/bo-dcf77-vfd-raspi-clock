@@ -3,37 +3,6 @@ use  DCF77_Functions; -- Inc_Saturated
 
 package body DCF77_Secondlayer is
 
-	--procedure Debug_Dump_State(Ctx: in Secondlayer) is
-	--	procedure Print(S: in String) renames Ada.Text_IO.Put_Line;
-
-	--	Bitmap: String(1 .. 61);
-	--	K: Integer;
-	--begin
-	--	Print("Inmode = " & Input_Mode'Image(Ctx.Inmode));
-	--	Print("HasLIL = " & Boolean'Image(Ctx.Has_Leap_In_Line));
-	--	Print("   LiL = " & Line_Num'Image(Ctx.Leap_In_Line));
-	--	Print("LExpec = " & Natural'Image(Ctx.Leap_Second_Expected));
-	--	Print("FaultR = " & Natural'Image(Ctx.Fault_Reset));
-	--	Bitmap := (others => ' ');
-	--	Bitmap(Ctx.Line_Cursor + 2) := 'v';
-	--	Print(Bitmap);
-	--	for I in Ctx.Lines'Range loop
-	--		Bitmap(Bitmap'First) :=
-	--			(if I = Ctx.Line_Current then '>' else ' ');
-	--		K := Bitmap'First + 1;
-	--		for J of Ctx.Lines(I).Value loop
-	--			case J is
-	--			when Bit_0     => Bitmap(K) := '0';
-	--			when Bit_1     => Bitmap(K) := '1';
-	--			when No_Update => Bitmap(K) := '2';
-	--			when No_Signal => Bitmap(K) := '3';
-	--			end case;
-	--			K := K + 1;
-	--		end loop;
-	--		Print(Bitmap);
-	--	end loop;
-	--end Debug_Dump_State;
-
 	procedure Init(Ctx: in out Secondlayer) is
 	begin
 		Ctx.Reset;
@@ -165,45 +134,8 @@ package body DCF77_Secondlayer is
 		end if;
 	end In_Backward;
 
-	-- TODO z might be possible to simplify this procedure by making
-	-- Merge_Result items appear at the top level of the procedure as
-	-- regular variables, because it seems that only one instance of it
-	-- is ever created. do this once tests are in place.
 	procedure Process_Telegrams(Ctx: in out Secondlayer;
 				Telegram_1, Telegram_2: in out Telegram) is
-		type Merge_Result is record
-			Match:           Boolean := True;
-			Is_Leap_In_Line: Boolean := False;
-			Line:            Line_Num;
-		end record;
-
-		function Try_Merge(Merge_Line: in Line_Num;
-					Backup_Before_Eliminate: in Boolean)
-					return Merge_Result is
-			RV: Merge_Result := (Line => Merge_Line, others => <>);
-		begin
-			loop
-				RV.Line := RV.Line + 1;
-				-- ignore empty lines
-				if Ctx.Lines(RV.Line).Valid /= Invalid then
-					-- backup contents before processing
-					if Backup_Before_Eliminate then
-						Telegram_2 := Telegram_1;
-					end if;
-					RV.Is_Leap_In_Line := 
-						Ctx.Has_Leap_In_Line and
-						RV.Line = Ctx.Leap_In_Line;
-					RV.Match := X_Eliminate(
-						RV.Is_Leap_In_Line,
-						Ctx.Lines(RV.Line),
-						Telegram_1
-					);
-				end if;
-				exit when RV.Line = Ctx.Line_Current or
-								not RV.Match;
-			end loop;
-			return RV;
-		end Try_Merge;
 
 		-- this is not a "proper" X-elimination but copies minute value
 		-- bits, leap second announce bit and minute parity from the
@@ -238,12 +170,6 @@ package body DCF77_Secondlayer is
 			end if;
 		end Check_For_Leapsec_Announce;
 
-		procedure Postprocess(Line: in Line_Num) is
-		begin
-			Add_Missing_Bits(Telegram_1, Ctx.Lines(Line));
-			Check_For_Leapsec_Announce;
-		end Postprocess;
-
 		procedure Advance_To_Next_Line is
 		begin
 			Ctx.Line_Cursor  := 0;
@@ -252,15 +178,45 @@ package body DCF77_Secondlayer is
 			Ctx.Lines(Ctx.Line_Current).Valid := Invalid;
 		end Advance_To_Next_Line;
 
+		-- Merge result keeps state of Try_Merge.
+		-- Any Try_Merge operation populates these values and overwrites
+		-- the previous contents.
+		Match:           Boolean;
+		Is_Leap_In_Line: Boolean;
+		Line:            Line_Num := Ctx.Line_Current;
+
+		procedure Try_Merge is
+		begin
+			Match           := True;
+			Is_Leap_In_Line := False;
+			loop
+				Line := Line + 1;
+				-- ignore empty lines
+				if Ctx.Lines(Line).Valid /= Invalid then
+					Is_Leap_In_Line := Ctx.Has_Leap_In_Line
+						and Line = Ctx.Leap_In_Line;
+					Match := X_Eliminate(Is_Leap_In_Line,
+						Ctx.Lines(Line), Telegram_1);
+				end if;
+				exit when Line = Ctx.Line_Current or not Match;
+			end loop;
+		end Try_Merge;
+
+		procedure Postprocess is
+		begin
+			Add_Missing_Bits(Telegram_1, Ctx.Lines(Line));
+			Check_For_Leapsec_Announce;
+		end Postprocess;
+
 		-- No mismatch at all means: No minute tens change in buffer.
 		-- E.g. 13:00, 13:01, 13:02, 13:03, 13:04, ... 13:08
-		procedure No_Mismatch(RV: in Merge_Result) is
+		procedure No_Mismatch is
 		begin
-			Postprocess(RV.Line);
-			Telegram_1.Valid := (if RV.Is_Leap_In_Line
-						then Valid_61 else Valid_60);
+			Postprocess;
+			Telegram_1.Valid := (if Is_Leap_In_Line then Valid_61
+								else Valid_60);
 			Telegram_2.Valid := Invalid;
-			if not RV.Is_Leap_In_Line then
+			if not Is_Leap_In_Line then
 				Advance_To_Next_Line;
 			end if;
 		end No_Mismatch;
@@ -268,8 +224,7 @@ package body DCF77_Secondlayer is
 		-- Single mismatch means: Minute tens change in buffer. This
 		-- may at most happen once.
 		-- E.g.: 13:05, 13:06, 13:07, 13:08, 13:09, 13:10, ... 13:13
-		procedure Single_Mismatch(Line: in Line_Num) is
-			RV: Merge_Result;
+		procedure Single_Mismatch is
 		begin
 			-- Second telegram now contains previous minute (the
 			-- data from begin of buffer up until mismatch
@@ -282,17 +237,18 @@ package body DCF77_Secondlayer is
 
 			-- Repeat and write to actual output line is now one
 			-- before the line that failed and which we reprocess.
-			RV := Try_Merge(Line - 1, False);
-			if RV.Match then
+			Line := Line - 1;
+			Try_Merge;
+			if Match then
 				-- no further mismatch. Data in the buffer is
 				-- fully consistent. Can output this as truth.
-				Telegram_1.Valid := (if RV.Is_Leap_In_Line
+				Telegram_1.Valid := (if Is_Leap_In_Line
 						then Valid_61 else Valid_60);
-				Postprocess(RV.Line);
+				Postprocess;
 				-- Do not advance cursor if we have a leap
 				-- second because cursor will stay in same line
 				-- and reach index 60 next second.
-				if not RV.Is_Leap_In_Line then
+				if not Is_Leap_In_Line then
 					Advance_To_Next_Line;
 				end if;
 			else
@@ -305,24 +261,26 @@ package body DCF77_Secondlayer is
 		end Single_Mismatch;
 
 		procedure Correct_Minute is
-			RV: Merge_Result;
 		begin
 			-- first clear buffers to no signal
 			Telegram_1.Value := (others => No_Signal);
 			Telegram_2.Value := (others => No_Signal);
 
 			-- then merge till mismatch
-			RV := Try_Merge(Ctx.Line_Current, False);
-			if RV.Match then
-				No_Mismatch(RV);
+			Try_Merge;
+			if Match then
+				No_Mismatch;
 			else
-				Single_Mismatch(RV.Line);
+				Single_Mismatch;
 			end if;
 		end Correct_Minute;
 	begin
 		Telegram_1.Valid := Invalid;
 		Telegram_2.Valid := Invalid;
-		if Check_BCD_Correct_Telegram(Ctx, Ctx.Line_Current, 0) then
+		-- Must ignore EOM here to accept leap second case
+		if Check_BCD_Correct_Telegram(Ctx, Ctx.Line_Current,
+				Start_Offset_In_Line => 0, Ignore_EOM => True)
+		then
 			Correct_Minute;
 		else
 			-- received data is invalid. This requires us to perform
@@ -691,7 +649,8 @@ package body DCF77_Secondlayer is
 
 	function Check_BCD_Correct_Telegram(Ctx: in out Secondlayer;
 			Start_Line: in Line_Num;
-			Start_Offset_In_Line: in Natural) return Boolean is
+			Start_Offset_In_Line: in Natural;
+			Ignore_EOM: Boolean := False) return Boolean is
 		Next_Line:     constant Line_Num := Start_Line + 1;
 		Is_Next_Empty: constant Boolean :=
 					Ctx.Lines(Next_Line).Valid = Invalid;
@@ -895,7 +854,8 @@ package body DCF77_Secondlayer is
 			end case;
 		end Check_End_Of_Minute;
 	begin
-		return Check_Ignore_EOM_Inner and then Check_End_Of_Minute = OK;
+		return Check_Ignore_EOM_Inner and then (Ignore_EOM or else
+						Check_End_Of_Minute = OK);
 	end Check_BCD_Correct_Telegram;
 
 	-- When beginning to decode, supply Parity = Parity_Sum_Even_Pass
