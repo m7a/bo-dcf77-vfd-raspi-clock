@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dcf77testdata descr="bcdt1_06">
+	<usefor test="checkbcd" descr="T1 invalid ones fields"/>
+	<input offset="0">
+		<tel val="033333333333333333331333333333333301110100010110100101110013"/>
+	</input>
+	<output recovery_ok="0"/>
+</dcf77testdata>

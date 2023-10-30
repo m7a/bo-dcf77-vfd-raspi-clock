@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dcf77testdata descr="bcdt1_05">
+	<usefor test="checkbcd" descr="T1 invalid EOM 2"/>
+	<input offset="0">
+		<tel val="333333333333333333333330000000000000000001311010000010000101"/>
+	</input>
+	<output recovery_ok="0"/>
+</dcf77testdata>

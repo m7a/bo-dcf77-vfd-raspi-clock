@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dcf77testdata descr="bcdt2_06">
+	<usefor test="checkbcd" descr="T2 E4 minute ones 11 > 9"/>
+	<input offset="0">
+		<tel val="010101010010111001001110100011000010110000111100000110100013"/>
+	</input>
+	<output recovery_ok="0"/>
+</dcf77testdata>

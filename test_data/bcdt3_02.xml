@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dcf77testdata descr="bcdt3_02">
+	<usefor test="checkbcd" descr="T3 offset 40 passes"/>
+	<input offset="40">
+		<tel val="333333333333333333333333333333333333333300000000000000000013"/>
+		<tel val="110100000100001011000011110000011010001300000000000000000010"/>
+	</input>
+	<output recovery_ok="1"/>
+</dcf77testdata>

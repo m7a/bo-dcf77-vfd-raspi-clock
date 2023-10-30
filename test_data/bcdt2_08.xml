@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dcf77testdata descr="bcdt2_08">
+	<usefor test="checkbcd" descr="T2 E6 minute parity fails"/>
+	<input offset="0">
+		<tel val="010101010010111001001100100011000010110000111100000110100013"/>
+	</input>
+	<output recovery_ok="0"/>
+</dcf77testdata>

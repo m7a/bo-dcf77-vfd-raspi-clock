@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dcf77testdata descr="bcdt2_05">
+	<usefor test="checkbcd" descr="T2 E3 missing constant begin of time 1"/>
+	<input offset="0">
+		<tel val="010101010010111000100100100001000010110000111100000110100013"/>
+	</input>
+	<output recovery_ok="0"/>
+</dcf77testdata>

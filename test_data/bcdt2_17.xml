@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dcf77testdata descr="bcdt2_17">
+	<usefor test="checkbcd" descr="T2 E12 year ones 14 > 9"/>
+	<input offset="0">
+		<tel val="000000000000000001001100100001100011110000010101000111100013"/>
+	</input>
+	<output recovery_ok="0"/>
+</dcf77testdata>

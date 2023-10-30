@@ -99,6 +99,48 @@ static struct checkbcd_test_case TEST_CASES[] = {
 
 #define NUM_TEST_CASES (sizeof(TEST_CASES)/sizeof(struct checkbcd_test_case))
 
+/*
+static void printtel(unsigned char *tel)
+{
+	const static int map[] = { 2, 3, 0, 1 };
+	unsigned int i;
+	unsigned int j;
+	printf("\t\t<tel val=\"");
+	for (i = 0; i < 15; i++)
+		for (j = 0; j < 8; j += 2)
+			printf("%d", map[(tel[i] & (3 << j)) >> j]);
+	puts("\"/>");
+}
+
+int main(int argc, char** argv)
+{
+	int tctr = 1;
+	int tnum = 1;
+	unsigned int i;
+
+	for(i = 0; i < NUM_TEST_CASES; i++) {
+		int cnum = TEST_CASES[i].description[1] - '0';
+		if (cnum != tnum) {
+			tnum = cnum;
+			tctr = 1;
+		}
+
+		puts("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+		printf("<dcf77testdata descr=\"bcdt%d_%02d\">\n", tnum, tctr);
+		printf("\t<usefor test=\"checkbcd\" descr=\"%s\"/>\n",
+						TEST_CASES[i].description);
+		printf("\t<input offset=\"%d\">\n", TEST_CASES[i].offset);
+		printtel(TEST_CASES[i].telegram);
+		printtel(TEST_CASES[i].telegram + 15);
+		printf("\t<output recovery_ok=\"%d\"/>\n",
+						TEST_CASES[i].expect_is_valid);
+		puts("</dcf77testdata>");
+
+		tctr++;
+	}
+}
+*/
+
 int main(int argc, char** argv)
 {
 	struct dcf77_secondlayer ctx;
