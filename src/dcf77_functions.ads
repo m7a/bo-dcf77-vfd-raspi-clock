@@ -1,6 +1,7 @@
 package DCF77_Functions is
 
 	procedure Inc_Saturated(Ctr: in out Natural; Lim: in Natural);
+	procedure Inc_Saturated_Int(Ctr: in out Integer; Lim: in Integer);
 
 private
 
