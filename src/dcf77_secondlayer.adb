@@ -733,7 +733,7 @@ package body DCF77_Secondlayer is
 				return Error_7;
 			-- 33-34 -- hour tens range from 0..2
 			-- (anything but 11 = 3 is valid)
-			elsif Hour_Tens > 3 then
+			elsif Hour_Tens > 2 then
 				return Error_8;
 			-- If hour tens is 2 then hour ones may at most be 3
 			elsif Hour_Tens = 2 and Hour_Ones > 3 then
@@ -761,8 +761,7 @@ package body DCF77_Secondlayer is
 				return Error_10;
 			-- 40-41 -- all day tens are valid (0..3)
 			-- If day tens is 0 then day ones must not be 0
-			elsif Day_Tens_Bits = (Bit_0, Bit_0, Bit_0) and
-					Day_Ones_Bits =
+			elsif Day_Tens_Bits = (Bit_0, Bit_0) and Day_Ones_Bits =
 					(Bit_0, Bit_0, Bit_0, Bit_0) then
 				return Error_10b;
 			-- 42-44 -- all day of week (1-7) are valid except "0"
