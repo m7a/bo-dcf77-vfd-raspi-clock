@@ -7,7 +7,6 @@ package DCF77_Secondlayer is
 
 	type Secondlayer    is tagged limited private;
 	type Telegram_State is (Invalid, Valid_60, Valid_61);
-	type Bits           is array (Natural range <>) of Reading;
 
 	type Telegram is record
 		Valid: Telegram_State := Invalid;
@@ -18,6 +17,10 @@ package DCF77_Secondlayer is
 	procedure Process(Ctx: in out Secondlayer; Val: in Reading;
 					Telegram_1, Telegram_2: out Telegram);
 	function Get_Fault(Ctx: in Secondlayer) return Natural;
+
+	function X_Eliminate(Telegram_1_Is_Leap: in Boolean;
+				Telegram_1: in Telegram;
+				Telegram_2: in out Telegram) return Boolean;
 
 private
 
@@ -92,9 +95,6 @@ private
 				Telegram_1, Telegram_2: in out Telegram);
 	procedure Process_Telegrams(Ctx: in out Secondlayer;
 				Telegram_1, Telegram_2: in out Telegram);
-	function X_Eliminate(Telegram_1_Is_Leap: in Boolean;
-				Telegram_1: in Telegram;
-				Telegram_2: in out Telegram) return Boolean;
 	procedure X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading);
 	function X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading)
 							return Boolean;

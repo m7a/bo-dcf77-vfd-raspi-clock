@@ -6,7 +6,6 @@ with Sax.Attributes;
 with Unicode.CES;
 
 with DCF77_Types;
-with DCF77_Secondlayer;
 
 package DCF77_Test_Data is
 
@@ -17,7 +16,7 @@ package DCF77_Test_Data is
 
 	type Tel is record
 		Len: Natural := 60;
-		Val: DCF77_Secondlayer.Bits(0 .. 60) := (others =>
+		Val: DCF77_Types.Bits(0 .. 60) := (others =>
 							DCF77_Types.No_Update);
 	end record;
 

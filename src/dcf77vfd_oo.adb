@@ -3,6 +3,7 @@ with DCF77_Ticker;
 with DCF77_Types;
 with DCF77_Bitlayer;
 with DCF77_Secondlayer;
+with DCF77_Timelayer;
 
 with DCF77_Functions; -- TODO z TMP
 use  DCF77_Functions;
@@ -28,6 +29,7 @@ package body DCF77VFD_OO is
 		Secondlayer:            aliased DCF77_Secondlayer.Secondlayer;
 		Secondlayer_Telegram_1: DCF77_Secondlayer.Telegram;
 		Secondlayer_Telegram_2: DCF77_Secondlayer.Telegram;
+		Timelayer:              aliased DCF77_Timelayer.Timelayer;
 
 		-- TMP BEGIN EXPERIMENTAL STUFF
 		Date:      String := "20YY-MM-DD";
@@ -42,8 +44,7 @@ package body DCF77VFD_OO is
 		-- TODO x Quick and dirty triple conversion...
 		function BCD_To_Char(Offset: in Natural; Length: in Natural)
 							return Character is
-			function Decode_BCD(Data: in DCF77_Secondlayer.Bits)
-							return Natural is
+			function Decode_BCD(Data: in Bits) return Natural is
 				Mul:  Natural := 1;
 				Rslt: Natural := 0;
 			begin
@@ -79,8 +80,9 @@ package body DCF77VFD_OO is
 		Ticker.Init(LL);
 		Bitlayer.Init(LL);
 		Secondlayer.Init;
+		Timelayer.Init;
 
-		LL.Log("BEFORE CTR=38");
+		LL.Log("BEFORE CTR=39");
 		Disp.Update((
 			1 => (X => 16, Y => 16, F => DCF77_Display.Small,
 			Msg => DCF77_Display.SB.To_Bounded_String("INIT CTR=38"))

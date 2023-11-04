@@ -1,4 +1,7 @@
 with DCF77_Secondlayer;
+use  DCF77_Secondlayer;
+with DCF77_Types;
+use  DCF77_Types;
 
 package DCF77_Timelayer is
 
@@ -32,13 +35,13 @@ package DCF77_Timelayer is
 	procedure Process(Ctx: in out Timelayer;
 			Has_New_Bitlayer_Signal: in Boolean;
 			Telegram_1, Telegram_2: in DCF77_Secondlayer.Telegram);
-	function Get_Current(Ctx: in Timelayer) return TM is (Ctx.Current);
+	function Get_Current(Ctx: in Timelayer) return TM;
 	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS;
 
 private
 
-	Prev_Unknown: constant Integer := -1;
-	Prev_Max:     constant Integer := 32767; -- historical value per int16_t
+	Unknown:  constant Integer := -1;
+	Prev_Max: constant Integer := 32767; -- historical value per int16_t
 
 	-- DST_Applied: If we have just switched betwen DST/regular then ignore
 	-- announce bit for this very minute to not switch backwards again in
@@ -47,11 +50,11 @@ private
 								DST_Applied);
 
 	-- 10 = last minute buf len
-	type Minute_Buf_Idx is mod 10;
-	type Minute_Buf: array (Minute_Buf_Idx) of
-					DCF77_Secondlayer.Bits(0 .. 4);
+	type    Minute_Buf_Idx is mod 10;
+	subtype BCD_Digit      is Bits(0 .. 3);
+	type    Minute_Buf     is array (Minute_Buf_Idx) of BCD_Digit;
 
-	type Timelayer is record
+	type Timelayer is tagged limited record
 		-- Ring buffer of last minute ones bits.
 		Preceding_Minute_Ones:  Minute_Buf;
 		Preceding_Minute_Idx:   Minute_Buf_Idx;
@@ -70,7 +73,7 @@ private
 		EOH_DST_Switch:         DST_Switch;
 	end record;
 
-	Month_Lengths: constant Integer(0 .. 12) := (
+	Month_Lengths: constant array (0 .. 12) of Integer := (
 		29, --  0: leap year February
 		31, --  1: January
 		28, --  2: February
@@ -91,5 +94,47 @@ private
 
 	-- reference time point
 	TM0: constant TM := Time_Of_Compilation;
+
+	BCD_Comparison_Sequence: Minute_Buf := (
+		-- Internal                   -- Decimal - Binary
+		(Bit_0, Bit_0, Bit_0, Bit_0), -- 0       - 0 0 0 0
+		(Bit_0, Bit_0, Bit_0, Bit_1), -- 1       - 0 0 0 1
+		(Bit_0, Bit_0, Bit_1, Bit_0), -- 2       - 0 0 1 0
+		(Bit_0, Bit_0, Bit_1, Bit_1), -- 3       - 0 0 1 1
+		(Bit_0, Bit_1, Bit_0, Bit_0), -- 4       - 0 1 0 0
+		(Bit_0, Bit_1, Bit_0, Bit_1), -- 5       - 0 1 0 1
+		(Bit_0, Bit_1, Bit_1, Bit_0), -- 6       - 0 1 1 0
+		(Bit_0, Bit_1, Bit_1, Bit_1), -- 7       - 0 1 1 1
+		(Bit_1, Bit_0, Bit_0, Bit_0), -- 8       - 1 0 0 0
+		(Bit_1, Bit_0, Bit_0, Bit_1)  -- 9       - 1 0 0 1
+	);
+
+	procedure Next_Minute_Coming(Ctx: in out Timelayer; Telegram_1,
+						Telegram_2: in Telegram);
+	function TM_To_Telegram_10min(T: in TM) return Telegram;
+	procedure WMBC(TR: in out Telegram; Offset, Length, Value: in Natural);
+	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural);
+	function Is_Leap_Year(Y: in Natural) return Boolean;
+	procedure Process_New_Telegram(Ctx: in out Timelayer; Telegram_1_In,
+						Telegram_2_In: in Telegram);
+	function Recover_BCD(Tel: in out Telegram) return Recovery;
+	procedure Drain_Assert(X: in Boolean);
+	function Has_Minute_Tens(Tel: in Telegram) return Boolean;
+	procedure Add_Minute_Ones_To_Buffer(Ctx: in out Timelayer;
+							Tel: in Telegram);
+	procedure Decode_And_Populate_DST_Switch(Ctx: in out Timelayer;
+							Tel: in Telegram);
+	function Decode_Tens(Tel: in Telegram) return TM;
+	procedure Discard_Ones(T: in out TM);
+	function Decode(Tel: in Telegram) return TM;
+	function Decode_Check(Current: in out TM; Tel: in Telegram)
+								return Boolean;
+	function Recover_Ones(Ctx: in out Timelayer) return Integer;
+	function Are_Ones_Compatible(AD, BD: in BCD_Digit) return Boolean;
+	function Check_If_Current_Compat_By_X_Eliminate(Ctx: in out Timelayer;
+					Telegram_2: in Telegram) return Boolean;
+	function TM_To_Telegram(T: in TM) return Telegram;
+	function Cross_Check_By_X_Eliminate(Ctx: in out Timelayer;
+				Telegram_1: in out Telegram) return Boolean;
 
 end DCF77_Timelayer;

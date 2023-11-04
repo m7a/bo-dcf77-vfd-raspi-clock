@@ -24,6 +24,7 @@ package DCF77_Offsets is
 	Offset_Parity_Date:          constant Natural := 58;
 	Offset_Endmarker_Regular:    constant Natural := 59;
 
+	Length_Daylight_Saving_Time: constant Natural := 2;
 	Length_Minute_Ones:          constant Natural := 4;
 	Length_Minute_Tens:          constant Natural := 3;
 	Length_Hour_Ones:            constant Natural := 4;

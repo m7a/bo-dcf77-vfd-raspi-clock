@@ -9,5 +9,11 @@ package DCF77_Types is
 
 	-- logical types
 	type Reading is (Bit_0, Bit_1, No_Signal, No_Update);
+	type Bits    is array (Natural range <>) of Reading;
+
+	-- http://computer-programming-forum.com/44-ada/0771fd8bfc850971.htm
+	-- Perform static asserts as follows:
+	-- A: constant Static_Assert := Static_Assert'(EXPRESSION);
+	subtype Static_Assert is Boolean range True..True;
 
 end DCF77_Types;

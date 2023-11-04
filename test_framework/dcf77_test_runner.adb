@@ -19,7 +19,7 @@ procedure DCF77_Test_Runner is
 	use type DCF77_Test_Data.Spec;
 	use type DCF77_Test_Data.Uses;
 	use type DCF77_Test_Data.ST.Bounded_String;
-	use type DCF77_Secondlayer.Bits;
+	use type DCF77_Types.Bits;
 	use type DCF77_Secondlayer.Telegram_State;
 
 	procedure Invocation_Failed is
@@ -33,7 +33,7 @@ procedure DCF77_Test_Runner is
 		Invocation_Failed;
 	end Test_Fail;
 
-	function Tel_Dump(B: in DCF77_Secondlayer.Bits) return String is
+	function Tel_Dump(B: in DCF77_Types.Bits) return String is
 		RS: String(1 .. B'Length);
 	begin
 		for I in RS'Range loop
@@ -56,10 +56,10 @@ procedure DCF77_Test_Runner is
 
 	procedure Run_Check_BCD(Spec: in DCF77_Test_Data.Spec) is
 		-- inefficient, but may work
-		Empty_Bits: constant DCF77_Secondlayer.Bits(1 .. 0) :=
+		Empty_Bits: constant DCF77_Types.Bits(1 .. 0) :=
 					(others => DCF77_Types.No_Update);
 		function Flatten(B: in DCF77_Test_Data.Tel_Array)
-						return DCF77_Secondlayer.Bits is
+						return DCF77_Types.Bits is
 				(if B'Length = 0 then Empty_Bits else
 				B(B'First).Val(0 .. B(B'First).Len - 1) &
 				Flatten(B(B'First + 1 .. B'Last)));
@@ -87,7 +87,7 @@ procedure DCF77_Test_Runner is
 				 1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,
 				 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0);
 
-		procedure Mask_Tel(Tel: in out DCF77_Secondlayer.Bits) is
+		procedure Mask_Tel(Tel: in out DCF77_Types.Bits) is
 		begin
 			for I in Tel'Range loop
 				if Cmp_Mask(I) = 0 then
@@ -98,8 +98,7 @@ procedure DCF77_Test_Runner is
 
 		Prefix:   constant String := DCF77_Test_Data.ST.To_String(
 				Spec.Use_For(DCF77_Test_Data.Secondlayer));
-		Expect:   DCF77_Secondlayer.Bits :=
-					Spec.Output(Spec.Output'Last).Val;
+		Expect:   DCF77_Types.Bits := Spec.Output(Spec.Output'Last).Val;
 		Ctx:      DCF77_Secondlayer.Secondlayer;
 		Cmp_Buf:  DCF77_Secondlayer.Telegram := (others => <>);
 		Tel_1:    DCF77_Secondlayer.Telegram := (others => <>);
@@ -168,8 +167,7 @@ procedure DCF77_Test_Runner is
 		Tel_In  := Spec_To_Tel(Spec.Input(1));
 		for I in 2 .. Spec.Input'Length loop
 			Tel_Out := Spec_To_Tel(Spec.Input(I));
-			Last_RS := DCF77_Secondlayer.Testing.X_Eliminate
-					(Tel_In.Valid =
+			Last_RS := DCF77_Secondlayer.X_Eliminate (Tel_In.Valid =
 					DCF77_Secondlayer.Valid_61, Tel_In,
 					Tel_Out);
 			Tel_In := Tel_Out;

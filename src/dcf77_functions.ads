@@ -1,7 +1,13 @@
+with DCF77_Types;
+use  DCF77_Types;
+
 package DCF77_Functions is
 
 	procedure Inc_Saturated(Ctr: in out Natural; Lim: in Natural);
+
 	procedure Inc_Saturated_Int(Ctr: in out Integer; Lim: in Integer);
+
+	function Decode_BCD(Data: in Bits) return Natural;
 
 private
 
