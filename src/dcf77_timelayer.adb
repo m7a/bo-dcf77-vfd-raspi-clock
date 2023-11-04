@@ -232,6 +232,7 @@ package body DCF77_Timelayer is
 				Ctx.Seconds_Since_Prev := Unknown;
 			end if;
 			Ctx.Current_QOS := QOS1;
+			return;
 		end if;
 
 		-- 3.
