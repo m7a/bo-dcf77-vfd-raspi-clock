@@ -209,7 +209,7 @@ package body DCF77_Timelayer is
 					else Data_Incomplete_For_Multiple);
 		Has_Out_2_Tens: constant Boolean :=
 				 Out_2_Recovery = Data_Complete or else
-				(Out_2_Recovery = Data_Incomplete_For_Multiple
+				(Out_2_Recovery = Data_Incomplete_For_Minute
 					and then Has_Minute_Tens(Telegram_2));
 	begin
 		Ctx.Add_Minute_Ones_To_Buffer(Telegram_1);
@@ -227,8 +227,8 @@ package body DCF77_Timelayer is
 		-- 2.
 		if Out_1_Recovery = Data_Complete then
 			if not Decode_Check(Ctx.Current, Telegram_1) and
-				Out_2_Recovery = Data_Incomplete_For_Multiple
-			then
+					Out_2_Recovery =
+					Data_Incomplete_For_Multiple then
 				Ctx.Seconds_Since_Prev := Unknown;
 			end if;
 			Ctx.Current_QOS := QOS1;

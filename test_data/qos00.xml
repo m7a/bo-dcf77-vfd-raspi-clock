@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dcf77testdata descr="qos00">
+	<usefor test="qos" descr="13.04.2019 17:00:00-17:01:01 undisturbed test at EOM"/>
+	<input offset="0">
+		<!-- 13.04.2019 17:00:00 -->
+		<tel val="000000000000000000101000000001110100110010011001001001100013"/>
+		<!-- 13.04.2019 17:01:00 -->
+		<tel val="000000000000000000101100000011110100110010011001001001100013"/>
+		<!-- 13.04.2019 17:01:01 -->
+		<tel val="0"/>
+	</input>
+	<output recovery_ok="1">
+		<tel val="000000000000000000101100000011110100110010011001001001100013"/>
+	</output>
+	<checkpoint loc="59"  val="2019-04-13 17:00:00" qos="QOS1"/>
+	<checkpoint loc="119" val="2019-04-13 17:01:00" qos="QOS1"/>
+	<checkpoint loc="120" val="2019-04-13 17:01:01" qos="QOS1"/>
+</dcf77testdata>

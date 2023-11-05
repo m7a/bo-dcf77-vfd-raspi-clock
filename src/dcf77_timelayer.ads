@@ -47,16 +47,17 @@ package DCF77_Timelayer is
 	type Minute_Buf     is array (Minute_Buf_Idx) of BCD_Digit;
 
 	BCD_Comparison_Sequence: Minute_Buf := (
+		-- Remember that DCF77 is all be encoding!
 		-- Internal                   -- Decimal - Binary
 		(Bit_0, Bit_0, Bit_0, Bit_0), -- 0       - 0 0 0 0
-		(Bit_0, Bit_0, Bit_0, Bit_1), -- 1       - 0 0 0 1
-		(Bit_0, Bit_0, Bit_1, Bit_0), -- 2       - 0 0 1 0
-		(Bit_0, Bit_0, Bit_1, Bit_1), -- 3       - 0 0 1 1
-		(Bit_0, Bit_1, Bit_0, Bit_0), -- 4       - 0 1 0 0
-		(Bit_0, Bit_1, Bit_0, Bit_1), -- 5       - 0 1 0 1
+		(Bit_1, Bit_0, Bit_0, Bit_0), -- 1       - 0 0 0 1
+		(Bit_0, Bit_1, Bit_0, Bit_0), -- 2       - 0 0 1 0
+		(Bit_1, Bit_1, Bit_0, Bit_0), -- 3       - 0 0 1 1
+		(Bit_0, Bit_0, Bit_1, Bit_0), -- 4       - 0 1 0 0
+		(Bit_1, Bit_0, Bit_1, Bit_0), -- 5       - 0 1 0 1
 		(Bit_0, Bit_1, Bit_1, Bit_0), -- 6       - 0 1 1 0
-		(Bit_0, Bit_1, Bit_1, Bit_1), -- 7       - 0 1 1 1
-		(Bit_1, Bit_0, Bit_0, Bit_0), -- 8       - 1 0 0 0
+		(Bit_1, Bit_1, Bit_1, Bit_0), -- 7       - 0 1 1 1
+		(Bit_0, Bit_0, Bit_0, Bit_1), -- 8       - 1 0 0 0
 		(Bit_1, Bit_0, Bit_0, Bit_1)  -- 9       - 1 0 0 1
 	);
 

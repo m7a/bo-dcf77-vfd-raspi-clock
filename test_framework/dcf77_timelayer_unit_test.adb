@@ -4,8 +4,6 @@ with DCF77_Secondlayer;
 with DCF77_Timelayer;
 use  DCF77_Timelayer;
 with DCF77_Timelayer.Testing;
-with DCF77_Functions;
-use  DCF77_Functions;
 
 with DCF77_Test_Data; -- String_To_Tel
 with DCF77_Test_Support;
@@ -183,7 +181,7 @@ package body DCF77_Timelayer_Unit_Test is
 		end record;
 		BCD: Minute_Buf renames DCF77_Timelayer.BCD_Comparison_Sequence;
 		Nothing: constant BCD_Digit := (others => No_Signal);
-		Test_Vector: constant array (1 .. 17) of TV := (
+		Test_Vector: constant array (1 .. 18) of TV := (
 			-- test 1-3: recover from all-complete BCDs
 			 1 => (0, (BCD(0), BCD(1), BCD(2), BCD(3), BCD(4),
 				   BCD(5), BCD(6), BCD(7), BCD(8), BCD(9)), 0),
@@ -215,27 +213,30 @@ package body DCF77_Timelayer_Unit_Test is
 			12 => (0, (0 => BCD(0), others => Nothing), 0),
 			-- test 13: sequence 0000 7x_ 1___ is for 0..8
 			13 => (0, (0 => BCD(0),
-			       8 => (Bit_1, No_Signal, No_Signal, No_Signal),
+			       8 => (No_Signal, No_Signal, No_Signal, Bit_1),
 			       others => Nothing), 0),
 			-- test 14: sequence 0000 8x_ 1___ is for 0..9
 			14 => (0, (0 => BCD(0),
-			       9 => (Bit_1, No_Signal, No_Signal, No_Signal),
+			       9 => (No_Signal, No_Signal, No_Signal, Bit_1),
 			       others => Nothing), 0),
 			-- test 15: sequence 0000 7x_ 1___ 1___ is for 0..9
 			15 => (0, (0 => BCD(0),
-				8 => (Bit_1, No_Signal, No_Signal, No_Signal),
-				9 => (Bit_1, No_Signal, No_Signal, No_Signal),
+				8 => (No_Signal, No_Signal, No_Signal, Bit_1),
+				9 => (No_Signal, No_Signal, No_Signal, Bit_1),
 				others => Nothing), 0),
 			-- test 16: sequence 010_ ___1 is for 4..5
 			16 => (0, (
-				0 => (Bit_0,     Bit_1,     Bit_0, No_Signal),
-				1 => (No_Signal, No_Signal, No_Signal, Bit_1),
+				0 => (No_Signal, Bit_0, Bit_1,     Bit_0),
+				1 => (Bit_1, No_Signal, No_Signal, No_Signal),
 				others => Nothing), 4),
 			-- test 17: sequence 0___ 1___ is for 7..8
 			17 => (0, (
-				0 => (Bit_0, No_Signal, No_Signal, No_Signal),
-				1 => (Bit_1, No_Signal, No_Signal, No_Signal),
-				others => Nothing), 7)
+				0 => (No_Signal, No_Signal, No_Signal, Bit_0),
+				1 => (No_Signal, No_Signal, No_Signal, Bit_1),
+				others => Nothing), 7),
+			-- test 18: sequence 1 ____ is not 9!
+			18 => (0, (0 => (Bit_1, Bit_0, Bit_0, Bit_0),
+				others => Nothing), 1)
 		);
 		Prefix: constant String := "recover ones test";
 		Result: Integer;

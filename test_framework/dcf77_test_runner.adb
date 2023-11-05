@@ -21,6 +21,7 @@ procedure DCF77_Test_Runner is
 	use type DCF77_Test_Data.Uses;
 	use type DCF77_Test_Data.ST.Bounded_String;
 	use type DCF77_Types.Bits;
+	use type DCF77_Types.Reading;
 	use type DCF77_Secondlayer.Telegram_State;
 
 	---------------------------------------------------------[ Test Uses ]--
@@ -30,7 +31,7 @@ procedure DCF77_Test_Runner is
 		use type DCF77_Timelayer.QOS;
 
 		Prefix: constant String := DCF77_Test_Data.ST.To_String(
-				Spec.Use_For(DCF77_Test_Data.Check_BCD));
+					Spec.Use_For(DCF77_Test_Data.Test_QOS));
 
 		Active: Boolean := True;
 		TL:     DCF77_Timelayer.Timelayer;
@@ -41,14 +42,18 @@ procedure DCF77_Test_Runner is
 			if TL.Get_Current /= Spec.Checkpoints(Ch).Val then
 				Test_Fail(Prefix & " at loc=" &
 					Natural'Image(Spec.Checkpoints(CH).Loc)
-					& "expected " &
+					& " expected " &
 					TM_To_String(Spec.Checkpoints(Ch).Val) &
 					", got " &
-					TM_To_String(TL.Get_Current));
+					TM_To_String(TL.Get_Current) & " at " &
+					DCF77_Timelayer.QOS'Image(
+					TL.Get_Quality_Of_Service));
 				Active := False;
 			elsif TL.Get_Quality_Of_Service /=
 						Spec.Checkpoints(Ch).Q then
-				Test_Fail(Prefix & " expected QOS " &
+				Test_Fail(Prefix & " at loc=" &
+					Natural'Image(Spec.Checkpoints(CH).Loc)
+					& " expected " &
 					DCF77_Timelayer.QOS'Image(
 					Spec.Checkpoints(Ch).Q) & ", but found "
 					& DCF77_Timelayer.QOS'Image(
@@ -66,6 +71,10 @@ procedure DCF77_Test_Runner is
 		for Line of Spec.Input loop
 			for I in  0 .. Line.Len - 1 loop
 				SL.Process(Line.Val(I), T1, T2);
+				-- TODO FOR DEBUG
+				--if T1.Valid /= DCF77_Secondlayer.Invalid then
+				--	Ada.Text_IO.Put_Line("DEBUG OUTPUT OF SECONDLAYER = " & Tel_Dump(T1.Value));
+				--end if;
 				TL.Process(True, T1, T2);
 				if Ch < Spec.Checkpoints'Last and then
 						Pos = Spec.Checkpoints(Ch).Loc
@@ -151,7 +160,25 @@ procedure DCF77_Test_Runner is
 				end if;
 			end loop;
 		end loop;
-		-- now compare
+		-- pre-mask comparison detects if the secondlayer outputs
+		-- anything where reference data says it must be absent!
+		for I in Expect'Range loop
+			if Expect(I) = DCF77_Types.No_Signal and then
+					Cmp_Mask(I) = 0 and then
+					(Cmp_Buf.Value(I) =
+					DCF77_Types.Bit_0 or Cmp_Buf.Value(I) =
+					DCF77_Types.Bit_1) then
+				Test_Fail(Prefix &
+					" -- pre-mask comparison failed, " &
+					"secondlayer making stronger claim " &
+					"than possible according to expected " &
+					"output. expected=" & Tel_Dump(Expect) &
+					", got=" & Tel_Dump(Cmp_Buf.Value) &
+					", idx=" & Natural'Image(I));
+				return;
+			end if;
+		end loop;
+		-- now compare masked
 		Mask_Tel(Expect);
 		Mask_Tel(Cmp_Buf.Value);
 		if Expect(0 .. DCF77_Offsets.Sec_Per_Min - 1) /=
