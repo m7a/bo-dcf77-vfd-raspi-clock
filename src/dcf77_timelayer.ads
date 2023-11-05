@@ -38,6 +38,28 @@ package DCF77_Timelayer is
 	function Get_Current(Ctx: in Timelayer) return TM;
 	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS;
 
+-- Exported for testing --
+
+	subtype BCD_Digit is Bits(0 .. 3);
+
+	-- 10 = last minute buf len
+	type Minute_Buf_Idx is mod 10;
+	type Minute_Buf     is array (Minute_Buf_Idx) of BCD_Digit;
+
+	BCD_Comparison_Sequence: Minute_Buf := (
+		-- Internal                   -- Decimal - Binary
+		(Bit_0, Bit_0, Bit_0, Bit_0), -- 0       - 0 0 0 0
+		(Bit_0, Bit_0, Bit_0, Bit_1), -- 1       - 0 0 0 1
+		(Bit_0, Bit_0, Bit_1, Bit_0), -- 2       - 0 0 1 0
+		(Bit_0, Bit_0, Bit_1, Bit_1), -- 3       - 0 0 1 1
+		(Bit_0, Bit_1, Bit_0, Bit_0), -- 4       - 0 1 0 0
+		(Bit_0, Bit_1, Bit_0, Bit_1), -- 5       - 0 1 0 1
+		(Bit_0, Bit_1, Bit_1, Bit_0), -- 6       - 0 1 1 0
+		(Bit_0, Bit_1, Bit_1, Bit_1), -- 7       - 0 1 1 1
+		(Bit_1, Bit_0, Bit_0, Bit_0), -- 8       - 1 0 0 0
+		(Bit_1, Bit_0, Bit_0, Bit_1)  -- 9       - 1 0 0 1
+	);
+
 private
 
 	Unknown:  constant Integer := -1;
@@ -48,11 +70,6 @@ private
 	-- the next minute.
 	type DST_Switch is (DST_No_Change, DST_To_Summer, DST_To_Winter,
 								DST_Applied);
-
-	-- 10 = last minute buf len
-	type    Minute_Buf_Idx is mod 10;
-	subtype BCD_Digit      is Bits(0 .. 3);
-	type    Minute_Buf     is array (Minute_Buf_Idx) of BCD_Digit;
 
 	type Timelayer is tagged limited record
 		-- Ring buffer of last minute ones bits.
@@ -94,20 +111,6 @@ private
 
 	-- reference time point
 	TM0: constant TM := Time_Of_Compilation;
-
-	BCD_Comparison_Sequence: Minute_Buf := (
-		-- Internal                   -- Decimal - Binary
-		(Bit_0, Bit_0, Bit_0, Bit_0), -- 0       - 0 0 0 0
-		(Bit_0, Bit_0, Bit_0, Bit_1), -- 1       - 0 0 0 1
-		(Bit_0, Bit_0, Bit_1, Bit_0), -- 2       - 0 0 1 0
-		(Bit_0, Bit_0, Bit_1, Bit_1), -- 3       - 0 0 1 1
-		(Bit_0, Bit_1, Bit_0, Bit_0), -- 4       - 0 1 0 0
-		(Bit_0, Bit_1, Bit_0, Bit_1), -- 5       - 0 1 0 1
-		(Bit_0, Bit_1, Bit_1, Bit_0), -- 6       - 0 1 1 0
-		(Bit_0, Bit_1, Bit_1, Bit_1), -- 7       - 0 1 1 1
-		(Bit_1, Bit_0, Bit_0, Bit_0), -- 8       - 1 0 0 0
-		(Bit_1, Bit_0, Bit_0, Bit_1)  -- 9       - 1 0 0 1
-	);
 
 	procedure Next_Minute_Coming(Ctx: in out Timelayer; Telegram_1,
 						Telegram_2: in Telegram);

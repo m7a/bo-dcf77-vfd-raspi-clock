@@ -6,13 +6,16 @@ with Sax.Attributes;
 with Unicode.CES;
 
 with DCF77_Types;
+with DCF77_Secondlayer;
+with DCF77_Timelayer;
 
 package DCF77_Test_Data is
 
 	package ST is new Ada.Strings.Bounded.Generic_Bounded_Length(Max => 128);
 	Empty: ST.Bounded_String renames ST.Null_Bounded_String;
 
-	type Uses is (None, X_Eliminate, Secondlayer, Check_BCD);
+	type Uses is (None, X_Eliminate, Secondlayer, Check_BCD, Test_QOS,
+			Unit);
 
 	type Tel is record
 		Len: Natural := 60;
@@ -22,8 +25,8 @@ package DCF77_Test_Data is
 
 	type Checkpoint is record
 		Loc: Natural;
-		Val: Natural; -- TODO DATETIME
-		QoS: Natural; -- TODO ENUM QOS once available
+		Val: DCF77_Timelayer.TM;
+		Q:   DCF77_Timelayer.QOS;
 	end record;
 
 	type Tel_Array        is array (Natural range <>) of Tel;
@@ -44,6 +47,12 @@ package DCF77_Test_Data is
 
 	function Parse(XML_File: in String) return Spec;
 	function XML_To_Use(S: in String) return Uses;
+
+	function String_To_Tel(Val: in String) return Tel;
+	function Length_To_Validity(Len: in Natural)
+					return DCF77_Secondlayer.Telegram_State;
+	function Tel_To_Telegram(Spt: in DCF77_Test_Data.Tel)
+					return DCF77_Secondlayer.Telegram;
 
 private
 

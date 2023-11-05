@@ -315,9 +315,9 @@ static char test_recover_ones()
 		0, /* 12 */
 		0, /* 13 */
 		0, /* 14 */
-		0, /* 14 */
-		4, /* 15 */
-		7, /* 16 */
+		0, /* 15 */
+		4, /* 16 */
+		7, /* 17 */
 	};
 	/* end test data */
 	char test_pass = 1;
@@ -749,7 +749,7 @@ static char test_quality_of_service()
 			59,
 			119,
 			120,
-			1024,
+			1024,	 /* seems to be end marker */
 		},
 		/* test 1 */
 		{

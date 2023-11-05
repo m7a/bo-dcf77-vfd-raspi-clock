@@ -133,7 +133,7 @@ package body DCF77_Timelayer is
 					Offset, Length, Value: in Natural) is
 		Val_Rem: Natural := Value;
 	begin
-		for I in reverse Offset .. Offset + Length - 1 loop
+		for I in Offset .. Offset + Length - 1 loop
 			TR.Value(I) := (if (Val_Rem mod 2) = 1
 					then Bit_1 else Bit_0);
 			Val_Rem := Val_Rem / 2;
@@ -598,8 +598,8 @@ package body DCF77_Timelayer is
 	-- Returns 0 if they must represent different numbers.
 	function Are_Ones_Compatible(AD, BD: in BCD_Digit) return Boolean is
 		function Is_Bit_Conflict(A, B: in Reading) return Boolean is
-					(not ((A = Bit_0 and B = Bit_1) or
-					      (A = Bit_1 and B = Bit_0)));
+						((A = Bit_0 and B = Bit_1) or
+						 (A = Bit_1 and B = Bit_0));
 	begin
 		for I in BCD_Digit'Range loop
 			if Is_Bit_Conflict(AD(I), BD(I)) then

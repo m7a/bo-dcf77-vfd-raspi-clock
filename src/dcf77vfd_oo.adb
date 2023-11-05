@@ -34,20 +34,6 @@ package body DCF77VFD_OO is
 		Time_B:       DCF77_Display.SB.Bounded_String;
 		Last_Reading: DCF77_Types.Reading := DCF77_Types.No_Update;
 
-		function Nat_To_S(N: in Natural; W: in Natural) return String is
-			Digit_TBL: constant array (0 .. 9) of Character :=
-						('0', '1', '2', '3', '4',
-						 '5', '6', '7', '8', '9');
-			NC: Natural := N;
-			RV: String(1 .. W);
-		begin
-			for I in reverse RV'Range loop
-				RV(I) := Digit_TBL(NC mod 10);
-				NC := NC / 10;
-			end loop;
-			return RV;
-		end Nat_To_S;
-
 		function Describe_QOS(Q: in DCF77_Timelayer.QOS)
 							return String is
 		begin
@@ -101,12 +87,12 @@ package body DCF77VFD_OO is
 			--Date_S := Nat_To_S(Datetime.Y, 4) & "-" &
 			--		Nat_To_S(Datetime.M, 2) & "-" &
 			--		Nat_To_S(Datetime.D, 2);
-			Date_S := Nat_To_S(Datetime.Y, 4) & 
-					Nat_To_S(Datetime.M, 2) &
-					Nat_To_S(Datetime.D, 2);
-			Time_S := Nat_To_S(Datetime.H, 2) & ":" &
-					Nat_To_S(Datetime.I, 2) & ":" &
-					Nat_To_S(Datetime.S, 2);
+			Date_S := Num_To_Str_L4(Datetime.Y) &
+					Num_To_Str_L2(Datetime.M) &
+					Num_To_Str_L2(Datetime.D);
+			Time_S := Nat_To_Str_L2(Datetime.H) & ":" &
+					Nat_To_Str_L2(Datetime.I) & ":" &
+					Nat_To_Str_L2(Datetime.S);
 			Date_B := DCF77_Display.SB.To_Bounded_String(Date_S);
 			Time_B := DCF77_Display.SB.To_Bounded_String(Time_S);
 

@@ -70,6 +70,10 @@ package body DCF77_Test_Data is
 			return Secondlayer;
 		elsif S = "checkbcd" then
 			return Check_BCD;
+		elsif S = "qos" then
+			return Test_QOS;
+		elsif S = "unit" then
+			return Unit;
 		else
 			raise Constraint_Error with "Unsupported usage: """ &
 								S & """.";
@@ -127,7 +131,9 @@ package body DCF77_Test_Data is
 	end Start_Element;
 
 	function XML_To_Tel(Atts: in Sax.Attributes.Attributes'Class)
-								return Tel is
+			return Tel is (String_To_Tel(Atts.Get_Value("val")));
+
+	function String_To_Tel(Val: in String) return Tel is
 		function Conv(Chr: in Character) return DCF77_Types.Reading is
 		begin
 			case Chr is
@@ -140,9 +146,6 @@ package body DCF77_Test_Data is
 					"'. Must be one of {0, 1, 2, 3}.";
 			end case;
 		end Conv;
-
-		Val: constant Unicode.CES.Byte_Sequence :=
-							Atts.Get_Value("val");
 	begin
 		return T: Tel do
 			Assert(Val'Length <= 61);
@@ -152,15 +155,30 @@ package body DCF77_Test_Data is
 						Conv(Val(Val'First + I));
 			end loop;
 		end return;
-	end XML_To_Tel;
+	end String_To_Tel;
 
 	function XML_To_Checkpoint(Atts: in Sax.Attributes.Attributes'Class)
 							return Checkpoint is
+		function String_To_TM(S: in String) return DCF77_Timelayer.TM
+						with Pre => S'Length = 19 is
+			S0: constant Integer := S'First;
+		begin
+			-- 2023-11-05 17:31:22
+			-- 0123456789abcdefXYZ
+			--            bc = 11 .. 12
+			--               ef = 14 .. 15
+			--                  YZ = 17 .. 18
+			return (Y => Natural'Value(S(S0 +  0 .. S0 + 3)),
+				M => Natural'Value(S(S0 +  5 .. S0 + 6)),
+				D => Natural'Value(S(S0 +  8 .. S0 + 9)),
+				H => Natural'Value(S(S0 + 11 .. S0 + 12)),
+				I => Natural'Value(S(S0 + 14 .. S0 + 15)),
+				S => Natural'Value(S(S0 + 17 .. S0 + 18)));
+		end String_To_TM;
 	begin
-		return C: Checkpoint do
-			C.Loc := Natural'Value(Atts.Get_Value("loc"));
-			-- TODO x ASSIGN THE OTHER ATTRIBUTES AS SOON AS FMT IS KNOWN
-		end return;
+		return (Loc => Natural'Value(Atts.Get_Value("loc")),
+			Val => String_To_TM(Atts.Get_Value("val")),
+			Q => DCF77_Timelayer.QOS'Value(Atts.Get_Value("qos")));
 	end XML_To_Checkpoint;
 
 	procedure End_Element(Handler: in out Reader;
@@ -176,5 +194,21 @@ package body DCF77_Test_Data is
 			Handler.State := Invalid;
 		end if;
 	end End_Element;
+
+	function Length_To_Validity(Len: in Natural) return
+					DCF77_Secondlayer.Telegram_State is
+	begin
+		case Len is
+		when 60 => return DCF77_Secondlayer.Valid_60;
+		when 61 => return DCF77_Secondlayer.Valid_61;
+		-- when others => Invalid; -- not here, see Assert
+		when others => raise Assertion_Error with
+			"Length must be 60 or 61. Found " & Natural'Image(Len);
+		end case;
+	end Length_To_Validity;
+
+	function Tel_To_Telegram(Spt: in DCF77_Test_Data.Tel)
+				return DCF77_Secondlayer.Telegram is
+				(Length_To_Validity(Spt.Len), Spt.Val(0 .. 59));
 
 end DCF77_Test_Data;

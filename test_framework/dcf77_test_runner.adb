@@ -1,20 +1,21 @@
 with Ada.Text_IO;
-use  Ada.Text_IO;
 with Ada.Assertions;
 use  Ada.Assertions;
 with Ada.Command_Line;
 with Ada.Containers.Indefinite_Vectors;
 
-with DCF77_Test_Data;
-
 with DCF77_Offsets;
 with DCF77_Types;
 with DCF77_Secondlayer;
 with DCF77_Secondlayer.Testing;
+with DCF77_Timelayer;
+
+with DCF77_Test_Support;
+use  DCF77_Test_Support;
+with DCF77_Test_Data;
+with DCF77_Timelayer_Unit_Test;
 
 procedure DCF77_Test_Runner is
-
-	----------------------------------------------[ Generic Test Support ]--
 
 	use type DCF77_Test_Data.Spec;
 	use type DCF77_Test_Data.Uses;
@@ -22,37 +23,65 @@ procedure DCF77_Test_Runner is
 	use type DCF77_Types.Bits;
 	use type DCF77_Secondlayer.Telegram_State;
 
-	procedure Invocation_Failed is
-	begin
-		Ada.Command_Line.Set_Exit_Status(Ada.Command_Line.Failure);
-	end Invocation_Failed;
-
-	procedure Test_Fail(Msg: in String) is
-	begin
-		Put_Line("    [FAIL] " & Msg);
-		Invocation_Failed;
-	end Test_Fail;
-
-	function Tel_Dump(B: in DCF77_Types.Bits) return String is
-		RS: String(1 .. B'Length);
-	begin
-		for I in RS'Range loop
-			case B(B'First + I - 1) is
-			when DCF77_Types.Bit_0     => RS(I) := '0';
-			when DCF77_Types.Bit_1     => RS(I) := '1';
-			when DCF77_Types.No_Update => RS(I) := '2';
-			when DCF77_Types.No_Signal => RS(I) := '3';
-			end case;
-		end loop;
-		return RS;
-	end Tel_Dump;
-
-	procedure Test_Pass(Msg: in String) is
-	begin
-		Put_Line("    [ OK ] " & Msg);
-	end Test_Pass;
-
 	---------------------------------------------------------[ Test Uses ]--
+
+	procedure Run_QOS(Spec: in DCF77_Test_Data.Spec) is
+		use type DCF77_Timelayer.TM;
+		use type DCF77_Timelayer.QOS;
+
+		Prefix: constant String := DCF77_Test_Data.ST.To_String(
+				Spec.Use_For(DCF77_Test_Data.Check_BCD));
+
+		Active: Boolean := True;
+		TL:     DCF77_Timelayer.Timelayer;
+		Ch:     Natural := 1;
+
+		procedure Eval_At_Checkpoint is
+		begin
+			if TL.Get_Current /= Spec.Checkpoints(Ch).Val then
+				Test_Fail(Prefix & " at loc=" &
+					Natural'Image(Spec.Checkpoints(CH).Loc)
+					& "expected " &
+					TM_To_String(Spec.Checkpoints(Ch).Val) &
+					", got " &
+					TM_To_String(TL.Get_Current));
+				Active := False;
+			elsif TL.Get_Quality_Of_Service /=
+						Spec.Checkpoints(Ch).Q then
+				Test_Fail(Prefix & " expected QOS " &
+					DCF77_Timelayer.QOS'Image(
+					Spec.Checkpoints(Ch).Q) & ", but found "
+					& DCF77_Timelayer.QOS'Image(
+					TL.Get_Quality_Of_Service));
+				Active := False;
+			end if;
+		end Eval_At_Checkpoint;
+
+		Pos:    Natural := 0;
+		T1, T2: DCF77_Secondlayer.Telegram := (others => <>);
+		SL:     DCF77_Secondlayer.Secondlayer;
+	begin
+		SL.Init;
+		TL.Init;
+		for Line of Spec.Input loop
+			for I in  0 .. Line.Len - 1 loop
+				SL.Process(Line.Val(I), T1, T2);
+				TL.Process(True, T1, T2);
+				if Ch < Spec.Checkpoints'Last and then
+						Pos = Spec.Checkpoints(Ch).Loc
+						then
+					Eval_At_Checkpoint;
+					Ch := Ch + 1;
+				end if;
+				Pos := Pos + 1;
+				exit when not Active;
+			end loop;
+			exit when not Active;
+		end loop;
+		if Active then
+			Test_Pass(Prefix);
+		end if;
+	end Run_QOS;
 
 	procedure Run_Check_BCD(Spec: in DCF77_Test_Data.Spec) is
 		-- inefficient, but may work
@@ -141,22 +170,6 @@ procedure DCF77_Test_Runner is
 	end Run_Secondlayer;
 
 	procedure Run_X_Eliminate(Spec: in DCF77_Test_Data.Spec) is
-		function Length_To_Validity(Len: in Natural) return
-					DCF77_Secondlayer.Telegram_State is
-		begin
-			case Len is
-			when 60 => return DCF77_Secondlayer.Valid_60;
-			when 61 => return DCF77_Secondlayer.Valid_61;
-			-- when others => Invalid; -- not here, see Assert
-			when others => raise Assertion_Error with
-					"Length must be 60 or 61. Found " &
-					Natural'Image(Len);
-			end case;
-		end Length_To_Validity;
-
-		function Spec_To_Tel(Spt: in DCF77_Test_Data.Tel)
-					return DCF77_Secondlayer.Telegram is
-			(Length_To_Validity(Spt.Len), Spt.Val(0 .. 59));
 
 		Tel_Out: DCF77_Secondlayer.Telegram;
 		Tel_In:  DCF77_Secondlayer.Telegram;
@@ -164,10 +177,11 @@ procedure DCF77_Test_Runner is
 		Prefix: constant String := DCF77_Test_Data.ST.To_String(
 				Spec.Use_For(DCF77_Test_Data.X_Eliminate));
 	begin
-		Tel_In  := Spec_To_Tel(Spec.Input(1));
+		Tel_In  := DCF77_Test_Data.Tel_To_Telegram(Spec.Input(1));
 		for I in 2 .. Spec.Input'Length loop
-			Tel_Out := Spec_To_Tel(Spec.Input(I));
-			Last_RS := DCF77_Secondlayer.X_Eliminate (Tel_In.Valid =
+			Tel_Out := DCF77_Test_Data.Tel_To_Telegram(
+								Spec.Input(I));
+			Last_RS := DCF77_Secondlayer.X_Eliminate(Tel_In.Valid =
 					DCF77_Secondlayer.Valid_61, Tel_In,
 					Tel_Out);
 			Tel_In := Tel_Out;
@@ -183,8 +197,8 @@ procedure DCF77_Test_Runner is
 			Test_Fail(Prefix & " -- output mismatch: expected=" &
 					Tel_Dump(Spec.Output(1).Val(0 .. 59)) &
 					", got=" & Tel_Dump(Tel_Out.Value));
-		elsif Length_To_Validity(Spec.Output(1).Len) /= Tel_Out.Valid
-									then
+		elsif DCF77_Test_Data.Length_To_Validity(Spec.Output(1).Len) /=
+							Tel_Out.Valid then
 			Test_Fail(Prefix &
 				" -- output validity mismatch: expected=" &
 				Natural'Image(Spec.Output(1).Len) & ", got=" &
@@ -194,6 +208,11 @@ procedure DCF77_Test_Runner is
 			Test_Pass(Prefix);
 		end if;
 	end Run_X_Eliminate;
+
+	procedure Run_Unit_Tests is
+	begin
+		DCF77_Timelayer_Unit_Test.Run;
+	end Run_Unit_Tests;
 
 	----------------------------------------------------[ Runner Details ]--
 
@@ -206,6 +225,7 @@ procedure DCF77_Test_Runner is
 	Filter_Test:   DCF77_Test_Data.Uses := DCF77_Test_Data.None;
 
 	procedure Help is
+		use Ada.Text_IO;
 	begin
 		Continue_Run := False;
 		Put_Line("Ma_Sys.ma DCF77 VFD Raspi Clock Test Runner " &
@@ -263,6 +283,7 @@ procedure DCF77_Test_Runner is
 		when DCF77_Test_Data.X_Eliminate => Run_X_Eliminate(Spec);
 		when DCF77_Test_Data.Secondlayer => Run_Secondlayer(Spec);
 		when DCF77_Test_Data.Check_BCD   => Run_Check_BCD(Spec);
+		when DCF77_Test_Data.Test_QOS    => Run_QOS(Spec);
 		when others => raise Constraint_Error with
 				"Cannot run test """ &
 				DCF77_Test_Data.ST.To_String(Spec.Descr) &
@@ -279,7 +300,11 @@ procedure DCF77_Test_Runner is
 		if T = DCF77_Test_Data.None then
 			return;
 		end if;
-		Put_Line(DCF77_Test_Data.Uses'Image(T));
+		Ada.Text_IO.Put_Line(DCF77_Test_Data.Uses'Image(T));
+		if T = DCF77_Test_Data.Unit then
+			Run_Unit_Tests;
+			return;
+		end if;
 		while I <= Natural(Specs.Length) loop
 			declare
 				Spec: constant DCF77_Test_Data.Spec :=
