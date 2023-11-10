@@ -30,15 +30,8 @@ package body DCF77_Functions is
 		return Rslt;
 	end Decode_BCD;
 
-	function Num_To_Str_L4(Num: in Natural) return String is
-			(Digit_Lut(Num / 1000), Digit_Lut((Num mod 1000) / 100),
-			Digit_Lut((Num mod 100) / 10), Digit_Lut(Num mod 10));
-
-	function Num_To_Str_L2(Num: in Natural) return String is
-			(Digit_Lut(Num / 10), Digit_Lut(Num mod 10));
-
 	--function Num_To_Str(Num: in Natural; W: in Natural) return String is
-	--	NC: Natural := N;
+	--	NC: Natural := Num;
 	--	RV: String(1 .. W);
 	--begin
 	--	for I in reverse RV'Range loop
@@ -47,5 +40,12 @@ package body DCF77_Functions is
 	--	end loop;
 	--	return RV;
 	--end Num_To_Str;
+
+	function Num_To_Str_L4(Num: in Natural) return String is
+			(Digit_Lut(Num / 1000), Digit_Lut((Num mod 1000) / 100),
+			Digit_Lut((Num mod 100) / 10), Digit_Lut(Num mod 10));
+
+	function Num_To_Str_L2(Num: in Natural) return String is
+			(Digit_Lut(Num / 10), Digit_Lut(Num mod 10));
 
 end DCF77_Functions;

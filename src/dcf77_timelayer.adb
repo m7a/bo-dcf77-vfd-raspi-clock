@@ -275,7 +275,8 @@ package body DCF77_Timelayer is
 			-- NB: Writes to Prev_Telegram in order to make it as
 			--     precise as possible. Need to consider this when
 			--     handling subsequent QOS5 case.
-			X_Eliminate_Prev := B2T(DCF77_Secondlayer.X_Eliminate(
+			X_Eliminate_Prev := B2T(Telegram_2.Valid /= Invalid
+					and then DCF77_Secondlayer.X_Eliminate(
 					False, Telegram_2, Ctx.Prev_Telegram));
 			if X_Eliminate_Prev = B_True then
 				Ctx.Current := Ctx.Prev;
@@ -295,7 +296,8 @@ package body DCF77_Timelayer is
 		end if;
 
 		-- 4.
-		if Ctx.Check_If_Current_Compat_By_X_Eliminate(Telegram_2) then
+		if Telegram_2.Valid /= Invalid and then
+		Ctx.Check_If_Current_Compat_By_X_Eliminate(Telegram_2) then
 			-- QOS5: The automatically computed time is compatible
 			-- with the received (possibly incomplete) telegram.
 			-- Hence we now run on our own clock but know that the
@@ -330,7 +332,8 @@ package body DCF77_Timelayer is
 			end if;
 			-- 5ABC: Spot misalignments.
 			-- If xeliminate_prev fails, then do some cross checks
-			if Ctx.Cross_Check_By_X_Eliminate(Telegram_1) then
+			if Ctx.Prev_Telegram.Valid /= Invalid and then
+			Ctx.Cross_Check_By_X_Eliminate(Telegram_1) then
 				-- Time adjustments performed in
 				-- cross_check_by_xeliminate
 				return;

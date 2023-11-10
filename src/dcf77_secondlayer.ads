@@ -95,9 +95,12 @@ private
 				Telegram_1, Telegram_2: in out Telegram);
 	procedure Process_Telegrams(Ctx: in out Secondlayer;
 				Telegram_1, Telegram_2: in out Telegram);
+	function "not"(R: in Reading) return Reading;
 	procedure X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading);
 	function X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading)
 							return Boolean;
+	procedure Cross_Out_Areas_With_Change_To_Zero(From, To: in Telegram;
+						Telegram_1: in out Telegram);
 	procedure Shift_Existing_Bits_To_The_Left(Ctx: in out Secondlayer);
 	procedure In_Forward(Ctx: in out Secondlayer; Val: in Reading;
 				Telegram_1, Telegram_2: in out Telegram);

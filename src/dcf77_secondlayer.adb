@@ -183,6 +183,7 @@ package body DCF77_Secondlayer is
 		-- the previous contents.
 		Match:           Boolean;
 		Is_Leap_In_Line: Boolean;
+		Line_Prev:       Line_Num := Ctx.Line_Current;
 		Line:            Line_Num := Ctx.Line_Current;
 
 		procedure Try_Merge is
@@ -190,6 +191,9 @@ package body DCF77_Secondlayer is
 			Match           := True;
 			Is_Leap_In_Line := False;
 			loop
+				if Ctx.Lines(Line).Valid /= Invalid then
+					Line_Prev := Line;
+				end if;
 				Line := Line + 1;
 				-- ignore empty lines
 				if Ctx.Lines(Line).Valid /= Invalid then
@@ -212,6 +216,12 @@ package body DCF77_Secondlayer is
 		-- E.g. 13:00, 13:01, 13:02, 13:03, 13:04, ... 13:08
 		procedure No_Mismatch is
 		begin
+			if Line_Prev /= Ctx.Line_Current then
+				Cross_Out_Areas_With_Change_To_Zero(
+					Ctx.Lines(Line_Prev),
+					Ctx.Lines(Ctx.Line_Current),
+					Telegram_1);
+			end if;
 			Postprocess;
 			Telegram_1.Valid := (if Is_Leap_In_Line then Valid_61
 								else Valid_60);
@@ -329,15 +339,6 @@ package body DCF77_Secondlayer is
 			return OK;
 		end Match;
 
-		function "not"(R: in Reading) return Reading is
-		begin
-			case R is
-			when Bit_0  => return Bit_1;
-			when Bit_1  => return Bit_0;
-			when others => return R;
-			end case;
-		end "not";
-
 		-- 17+18: needs to be 10 or 01
 		function Daylight_Saving_Time return Inner_Checkresult is
 			DST1: constant Reading := Telegram_2.Value(
@@ -409,6 +410,15 @@ package body DCF77_Secondlayer is
 			End_Of_Minute                           = OK;
 	end X_Eliminate;
 
+	function "not"(R: in Reading) return Reading is
+	begin
+		case R is
+		when Bit_0  => return Bit_1;
+		when Bit_1  => return Bit_0;
+		when others => return R;
+		end case;
+	end "not";
+
 	procedure X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading) is
 	begin
 		if TVO = No_Signal or TVO = No_Update then
@@ -431,6 +441,77 @@ package body DCF77_Secondlayer is
 			return False;
 		end if;
 	end X_Eliminate_Entry;
+
+	-- Special handling for No_Mismatch case: When no mismatch is detected
+	-- we may have missed it due to many “unset” values in our input (bad
+	-- signal strength so to say). It could then happeh that xeliminate has
+	-- reconstructed wrong values from prior to the switch. So if the last
+	-- two lines processed indicate that one of the date or time fields has
+	-- switched from non-zero to logical zero (0 for time and year,
+	-- 1 for month and day fields) then we must not output these fields from
+	-- that point upwards until there is at least one field which
+	-- definitely has not switched to logical zero (the first one where this
+	-- is the case still must not be reported since even if its non-zero its
+	-- represented value may be off by one). Since xeliminate does not
+	-- distinguish this, this dedicated procedure cleans up the result from
+	-- xeliminate by removing from the output telegram all of the affected
+	-- fields and setting them to the unfiltered values from the input
+	-- telegram (Ctx.Lines(Ctx.Line_Current)) instead.
+	procedure Cross_Out_Areas_With_Change_To_Zero(From, To: in Telegram;
+						Telegram_1: in out Telegram) is
+		type Check_Part is record
+			Offset: Natural;
+			Length: Natural;
+			L0_Lsb: Reading; -- L0 := Logic 0
+		end record;
+
+		-- avoid propagating No_Update / epsilon values
+		procedure Cross_Out_Part(C: in Check_Part) is
+		begin
+			for I in C.Offset .. C.Offset + C.Length - 1 loop
+				Telegram_1.Value(I) := (if (To.Value(I) = Bit_0
+					or To.Value(I) = Bit_1) then To.Value(I)
+					else No_Signal);
+			end loop;
+		end Cross_Out_Part;
+
+		Check_Places: constant array (1..10) of Check_Part := (
+			(Offset_Minute_Ones, Length_Minute_Ones, Bit_0),
+			(Offset_Minute_Tens, Length_Minute_Tens, Bit_0),
+			(Offset_Hour_Ones,   Length_Hour_Ones,   Bit_0),
+			(Offset_Hour_Tens,   Length_Hour_Tens,   Bit_0),
+			(Offset_Day_Ones,    Length_Day_Ones,    Bit_1),
+			(Offset_Day_Tens,    Length_Day_Tens,    Bit_0),
+			(Offset_Month_Ones,  Length_Month_Ones,  Bit_1),
+			(Offset_Month_Tens,  Length_Month_Tens,  Bit_0),
+			(Offset_Year_Ones,   Length_Year_Ones,   Bit_0),
+			(Offset_Year_Tens,   Length_Year_Tens,   Bit_0)
+		);
+		From_Is_L0:      Boolean;
+		To_Pot_L0:       Boolean;
+		Crossout_Active: Boolean := False;
+	begin
+		for C of Check_Places loop
+			if Crossout_Active then
+				Cross_Out_Part(C);
+			end if;
+			From_Is_L0 := From.Value(C.Offset) = C.L0_Lsb;
+			To_Pot_L0  := To.Value(C.Offset)  /= not C.L0_Lsb;
+			for I in C.Offset + 1 .. C.Offset + C.Length - 1 loop
+				From_Is_L0 := From_Is_L0 and From.Value(I) =
+									Bit_0;
+				To_Pot_L0  := To_Pot_L0  and To.Value(I)
+								/= Bit_1;
+			end loop;
+			if (not From_Is_L0) and To_Pot_L0 then
+				Cross_Out_Part(C);
+				Crossout_Active := True;
+			elsif Crossout_Active then
+				-- The crossout area must always be continuous
+				exit;
+			end if;
+		end loop;
+	end Cross_Out_Areas_With_Change_To_Zero;
 
 	procedure Shift_Existing_Bits_To_The_Left(Ctx: in out Secondlayer) is
 	begin
