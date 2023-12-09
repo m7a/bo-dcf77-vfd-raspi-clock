@@ -475,7 +475,7 @@ package body DCF77_Secondlayer is
 			end loop;
 		end Cross_Out_Part;
 
-		Check_Places: constant array (1..10) of Check_Part := (
+		Check_Places: constant array (1 .. 10) of Check_Part := (
 			(Offset_Minute_Ones, Length_Minute_Ones, Bit_0),
 			(Offset_Minute_Tens, Length_Minute_Tens, Bit_0),
 			(Offset_Hour_Ones,   Length_Hour_Ones,   Bit_0),
