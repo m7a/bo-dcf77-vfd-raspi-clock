@@ -217,10 +217,8 @@ package body DCF77_Secondlayer is
 		procedure No_Mismatch is
 		begin
 			if Line_Prev /= Ctx.Line_Current then
-				Cross_Out_Areas_With_Change_To_Zero(
-					Ctx.Lines(Line_Prev),
-					Ctx.Lines(Ctx.Line_Current),
-					Telegram_1);
+				Cross_Out_V2_Simple(Ctx.Lines(Ctx.Line_Current),
+								Telegram_1);
 			end if;
 			Postprocess;
 			Telegram_1.Valid := (if Is_Leap_In_Line then Valid_61
@@ -445,19 +443,54 @@ package body DCF77_Secondlayer is
 	-- Special handling for No_Mismatch case: When no mismatch is detected
 	-- we may have missed it due to many “unset” values in our input (bad
 	-- signal strength so to say). It could then happeh that xeliminate has
-	-- reconstructed wrong values from prior to the switch. So if the last
-	-- two lines processed indicate that one of the date or time fields has
-	-- switched from non-zero to logical zero (0 for time and year,
-	-- 1 for month and day fields) then we must not output these fields from
-	-- that point upwards until there is at least one field which
-	-- definitely has not switched to logical zero (the first one where this
-	-- is the case still must not be reported since even if its non-zero its
-	-- represented value may be off by one). Since xeliminate does not
-	-- distinguish this, this dedicated procedure cleans up the result from
-	-- xeliminate by removing from the output telegram all of the affected
-	-- fields and setting them to the unfiltered values from the input
-	-- telegram (Ctx.Lines(Ctx.Line_Current)) instead.
-	procedure Cross_Out_Areas_With_Change_To_Zero(From, To: in Telegram;
+	-- reconstructed wrong values from prior to the mismatch.
+	--
+	-- The recovery can only be wrong in case a field has changed from a
+	-- logical non-zero to logical zero value. Logical zero means e.g.
+	-- 0 for a hour field or 1 for a month ones field. E.g. 01 aka. Januaray
+	-- is the “zero” month that you reach by going from YYYY-12-31 23:59 to
+	-- YY+1-01-01 00:00.
+	--
+	-- We know that only the change from non-0 to 0 is relevant hence we can
+	-- just check in our most recent (Raw) telegram whether any of its
+	-- fields could have the logical-0 value. If this is the case we need
+	-- to be careful with blindly outputting the xeliminate result data and
+	-- rather cross out the values for which correctness of recovery cannot
+	-- be assurred.
+	--
+	-- The “cross out v2 simple” algorithm for this is as follows:
+	--
+	--  * Operate from Minute Tens upwards to Year Tens
+	--  * Check if a value could be logical 0 in raw
+	--     - if no, then we cannot tell anything about the current value
+	--       due to the fact that it could be assembled from mixing
+	--       pre-mismatch and current telegrams, but we know for sure that
+	--       all “higher” parts of the telegram are valid to be recovered
+	--       through xeliminate and can cancel the cross-out.
+	--     - If yes, then we must cross-out the current value and check
+	--       the next value upwards
+	--
+	-- The cross-out always has to be continuous because if an intermediate
+	-- value is known non-logical-0, then we can trust all values up from it
+	-- (exclusive)
+	--
+	-- Minute ones are not part of the consideration because even if
+	-- non-logical-0 we cannot tell anything regarding the upper fields
+	-- since they may have changed some telegrams ago which would cause
+	-- logical-0 values there but not necessary in the minute ones.
+	--
+	-- Why is this the “simple” algorithm? We could envision a more complex
+	-- (less destructive) “complex cross out v2” as follows: In event of
+	-- a logical 0 rather than blindly crossing out that value and not
+	-- trusting the upwards values until a known non-logical-0 value is
+	-- found we could do xelminate over fewer telegrams in the sense that if
+	-- the current field has a “could be logical 0” then perform an
+	-- xeliminate stating from the oldest telegram that has a “guranteed
+	-- logical 0” for that field. The results of that xeliminate would
+	-- probably recover more data than the cross out (which just copies from
+	-- raw), but it would require more bookkeeping in the first xeliminate
+	-- pass and also require that we re-do xeliminates here.
+	procedure Cross_Out_V2_Simple(Raw: in Telegram;
 						Telegram_1: in out Telegram) is
 		type Check_Part is record
 			Offset: Natural;
@@ -465,18 +498,39 @@ package body DCF77_Secondlayer is
 			L0_Lsb: Reading; -- L0 := Logic 0
 		end record;
 
-		-- avoid propagating No_Update / epsilon values
+		-- opposite of could be L0 is “guranteed to not be L0”
+		function Could_Be_L0(Tel: in Telegram; C: in Check_Part)
+							return Boolean is
+		begin
+			-- it can be 0 when the lsb is “logical 0” value
+			-- i.e. 1 or 0 depending on which field is under
+			-- consideration.
+			if Tel.Value(C.Offset) = not C.L0_Lsb then
+				return False;
+			end if;
+			-- If any of the higher-valued bits is 1 this is
+			-- definitely not a “logical 0” value.
+			for I in C.Offset + 1 .. C.Offset + C.Length loop
+				if Tel.Value(I) = Bit_1 then
+					return False;
+				end if;
+			end loop;
+			-- Otherwise it could be a logical 0.
+			return True;
+		end Could_Be_L0;
+
+		-- crossout := replace with value from raw
 		procedure Cross_Out_Part(C: in Check_Part) is
 		begin
 			for I in C.Offset .. C.Offset + C.Length - 1 loop
-				Telegram_1.Value(I) := (if (To.Value(I) = Bit_0
-					or To.Value(I) = Bit_1) then To.Value(I)
-					else No_Signal);
+				Telegram_1.Value(I) := (if (Raw.Value(I) = Bit_0
+							or Raw.Value(I) = Bit_1)
+							then Raw.Value(I)
+							else No_Signal);
 			end loop;
 		end Cross_Out_Part;
 
-		Check_Places: constant array (1 .. 10) of Check_Part := (
-			(Offset_Minute_Ones, Length_Minute_Ones, Bit_0),
+		Check_Places: constant array (1 .. 9) of Check_Part := (
 			(Offset_Minute_Tens, Length_Minute_Tens, Bit_0),
 			(Offset_Hour_Ones,   Length_Hour_Ones,   Bit_0),
 			(Offset_Hour_Tens,   Length_Hour_Tens,   Bit_0),
@@ -487,31 +541,14 @@ package body DCF77_Secondlayer is
 			(Offset_Year_Ones,   Length_Year_Ones,   Bit_0),
 			(Offset_Year_Tens,   Length_Year_Tens,   Bit_0)
 		);
-		From_Is_L0:      Boolean;
-		To_Pot_L0:       Boolean;
-		Crossout_Active: Boolean := False;
 	begin
 		for C of Check_Places loop
-			if Crossout_Active then
-				Cross_Out_Part(C);
-			end if;
-			From_Is_L0 := From.Value(C.Offset) = C.L0_Lsb;
-			To_Pot_L0  := To.Value(C.Offset)  /= not C.L0_Lsb;
-			for I in C.Offset + 1 .. C.Offset + C.Length - 1 loop
-				From_Is_L0 := From_Is_L0 and From.Value(I) =
-									Bit_0;
-				To_Pot_L0  := To_Pot_L0  and To.Value(I)
-								/= Bit_1;
-			end loop;
-			if (not From_Is_L0) and To_Pot_L0 then
-				Cross_Out_Part(C);
-				Crossout_Active := True;
-			elsif Crossout_Active then
-				-- The crossout area must always be continuous
+			Cross_Out_Part(C);
+			if not Could_Be_L0(Raw, C) then
 				exit;
 			end if;
 		end loop;
-	end Cross_Out_Areas_With_Change_To_Zero;
+	end Cross_Out_V2_Simple;
 
 	procedure Shift_Existing_Bits_To_The_Left(Ctx: in out Secondlayer) is
 	begin
