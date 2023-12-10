@@ -106,6 +106,7 @@ package body DCF77_Timelayer is
 		elsif (Ctx.Current.I mod 10) = 9 then
 			Ctx.Seconds_Since_Prev := 0;
 			Ctx.Prev               := Ctx.Current;
+			Ctx.Prev.S             := 0;
 			Ctx.Prev_Telegram := TM_To_Telegram_10min(Ctx.Prev);
 		end if;
 	end Next_Minute_Coming;
@@ -221,6 +222,7 @@ package body DCF77_Timelayer is
 		if Has_Out_2_Tens then
 			Ctx.Prev               := Decode_Tens(Telegram_2);
 			Ctx.Prev_Telegram      := Telegram_2;
+			-- TODO x likely to have an error here: Would this not need to be incremented by the current minute ones * 60 as to account for how long this “prev” stuff is in the past?
 			Ctx.Seconds_Since_Prev := 0;
 		end if;
 
@@ -247,7 +249,7 @@ package body DCF77_Timelayer is
 								Sec_Per_Min);
 				if Intermediate /= Ctx.Current then
 					Ctx.Current := Intermediate;
-					-- TODO TOO DEEPLY NESTED
+					-- too deeply nested
 					if Out_2_Recovery =
 					Data_Incomplete_For_Multiple then
 						-- discard pot. invalid prev
@@ -296,8 +298,7 @@ package body DCF77_Timelayer is
 		end if;
 
 		-- 4.
-		if Telegram_2.Valid /= Invalid and then
-		Ctx.Check_If_Current_Compat_By_X_Eliminate(Telegram_2) then
+		if Ctx.Check_If_Current_Compat_By_X_Eliminate(Telegram_1) then
 			-- QOS5: The automatically computed time is compatible
 			-- with the received (possibly incomplete) telegram.
 			-- Hence we now run on our own clock but know that the

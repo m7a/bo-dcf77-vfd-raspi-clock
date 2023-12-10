@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<dcf77testdata descr="qos04">
-	<usefor test="qos" descr="22.04.2019 22:41:00-22:42:01 with tens unchanged QOS5"/>
+<dcf77testdata descr="qos04tens">
+	<usefor test="qos" descr="22.04.2019 22:41:00-22:42:01 with tens present QOS2"/>
 	<input offset="0">
 		<!-- 22.04.2019 22:41:00 -->
 		<tel val="000010001011000001001100000100100010010001100001001001100013"/>
-		<!-- 22.04.2019 22:__:00, missing minute tens make this QOS5 -->
-		<tel val="000000000000000001001333333330100010010001100001001001100013"/>
+		<!-- 22.04.2019 22:4_:00 -->
+		<tel val="000000000000000001001333300130100010010001100001001001100013"/>
 		<!-- 12.04.2019 22:42:01 -->
 		<tel val="0"/>
 	</input>
@@ -13,6 +13,6 @@
 		<tel val="000000000000000001001333300100100010010001100001001001100013"/>
 	</output>
 	<checkpoint loc="59"  val="2019-04-22 22:41:00" qos="QOS1"/>
-	<checkpoint loc="119" val="2019-04-22 22:42:00" qos="QOS5"/>
-	<checkpoint loc="120" val="2019-04-22 22:42:01" qos="QOS5"/>
+	<checkpoint loc="119" val="2019-04-22 22:42:00" qos="QOS2"/>
+	<checkpoint loc="120" val="2019-04-22 22:42:01" qos="QOS2"/>
 </dcf77testdata>
