@@ -41,6 +41,6 @@
 	<checkpoint loc="479" val="2019-04-22 22:48:00" qos="QOS1"/>
 	<checkpoint loc="539" val="2019-04-22 22:49:00" qos="QOS1"/>
 	<checkpoint loc="599" val="2019-04-22 22:50:00" qos="QOS1"/>
-	<checkpoint loc="659" val="2019-04-22 22:51:00" qos="QOS4"/>
+	<checkpoint loc="659" val="2019-04-22 22:51:00" qos="QOS3"/>
 	<checkpoint loc="719" val="2019-04-22 22:52:00" qos="QOS4"/>
 </dcf77testdata>

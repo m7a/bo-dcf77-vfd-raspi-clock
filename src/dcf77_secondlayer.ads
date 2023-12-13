@@ -99,7 +99,7 @@ private
 	procedure X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading);
 	function X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading)
 							return Boolean;
-	procedure Cross_Out_V2_Simple(Raw: in Telegram;
+	procedure Cross_Out_V2_Simple(Raw: in Telegram; Check: in Telegram;
 						Telegram_1: in out Telegram);
 	procedure Shift_Existing_Bits_To_The_Left(Ctx: in out Secondlayer);
 	procedure In_Forward(Ctx: in out Secondlayer; Val: in Reading;

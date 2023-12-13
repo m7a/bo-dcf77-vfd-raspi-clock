@@ -218,7 +218,8 @@ package body DCF77_Secondlayer is
 		begin
 			if Line_Prev /= Ctx.Line_Current then
 				Cross_Out_V2_Simple(Ctx.Lines(Ctx.Line_Current),
-								Telegram_1);
+						Ctx.Lines(Ctx.Line_Current),
+						Telegram_1);
 			end if;
 			Postprocess;
 			Telegram_1.Valid := (if Is_Leap_In_Line then Valid_61
@@ -243,6 +244,32 @@ package body DCF77_Secondlayer is
 			-- Clear mismatching out_telegram_1, otherwise the
 			-- xeliminates in try_merge might fail.
 			Telegram_1.Value := (others => No_Signal);
+
+			-- It is possible that single mismatch was detected but
+			-- that the point at which we detected is is not exactly
+			-- the same as it should have been recognized had the
+			-- signal been received entirely undisturbed. IOW, we
+			-- may have missed the actual “turning” point and as a
+			-- result might have accumulated a mix of “prev” and
+			-- “now” data in Telegram_2 value. The correct way to
+			-- fix this would be to explicitly detect this
+			-- uncertainity by checking from which telegrams the
+			-- bytes in conflict stem. This is harder to implement
+			-- than the simple solution implemented here, though.
+			--   Here, we take a peek at the conflict-provoking line
+			-- (Ctx.Lines(Line)) and then cross-out from Telegram_2
+			-- such places that may have changed with the switch to
+			-- Ctx.Lines(Line) i.e. cross out the data that may be
+			-- wrong due to conflation of prev and now entries.
+			--   While the input for checking comes from Line we
+			-- are still talking about fixing it as to resemble a
+			-- “prev” telegram, hence whenever crossing-out
+			-- something we copy data from Line_Prev rather than
+			-- Line
+			if Line_Prev /= Ctx.Line_Current then
+				Cross_Out_V2_Simple(Ctx.Lines(Line_Prev),
+						Ctx.Lines(Line), Telegram_2);
+			end if;
 
 			-- Repeat and write to actual output line is now one
 			-- before the line that failed and which we reprocess.
@@ -491,7 +518,7 @@ package body DCF77_Secondlayer is
 	-- probably recover more data than the cross out (which just copies from
 	-- raw), but it would require more bookkeeping in the first xeliminate
 	-- pass and also require that we re-do xeliminates here.
-	procedure Cross_Out_V2_Simple(Raw: in Telegram;
+	procedure Cross_Out_V2_Simple(Raw: in Telegram; Check: in Telegram;
 						Telegram_1: in out Telegram) is
 		type Check_Part is record
 			Offset: Natural;
@@ -545,7 +572,7 @@ package body DCF77_Secondlayer is
 	begin
 		for C of Check_Places loop
 			Cross_Out_Part(C);
-			if not Could_Be_L0(Raw, C) then
+			if not Could_Be_L0(Check, C) then
 				exit;
 			end if;
 		end loop;
