@@ -238,6 +238,7 @@ package body DCF77_Secondlayer is
 			-- data from begin of buffer up until mismatch
 			-- exclusive) generically write 60...
 			Telegram_2.Valid := Valid_60;
+			Telegram_2.Value := Telegram_1.Value;
 
 			-- Clear mismatching out_telegram_1, otherwise the
 			-- xeliminates in try_merge might fail.
