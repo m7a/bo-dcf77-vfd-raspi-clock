@@ -5,19 +5,13 @@ use  DCF77_ST_Layer_Shared;
 
 package DCF77_Timelayer is
 
-	-- TODO x The value of QOS6 is debatable because it detects a mismatch
-	--        by xeliminate and then counts forwards from the prev telegram.
-	--        Problem is: In realy, if this happens, it means the clock is
-	--        displaying a time in conflict of what was received but found
-	--        a way to nonetheless justify this display. Maybe it would be
-	--        better to skip this case altogether?
 	type QOS is (
 		QOS1,       -- +1 -- perfectly synchronized
 		QOS2,       -- +2 -- synchr. w/ minor disturbance
 		QOS3,       -- +3 -- synchronized from prev data
 		QOS4,       -- o4 -- recovered from prev
 		QOS5,       -- o5 -- async telegram match
-		QOS6,       -- -6 -- count from prev (xelimiate mismatch!)
+		QOS6,       -- o6 -- count from prev (fishy, see code!)
 		QOS7,       -- -7 -- async might match -1
 		QOS8,       -- -8 -- async might match +1
 		QOS9_ASYNC  -- -9 -- async count from last
@@ -141,9 +135,12 @@ private
 								return Boolean;
 	function Recover_Ones(Ctx: in out Timelayer) return Integer;
 	function Are_Ones_Compatible(AD, BD: in BCD_Digit) return Boolean;
-	function Check_If_Current_Compat_By_X_Eliminate(Ctx: in out Timelayer;
-					Telegram_1: in Telegram) return Boolean;
+	function Check_If_Compat_By_X_Eliminate(
+				Virtual_Telegram: in out Telegram;
+				Telegram_1: in Telegram) return Boolean;
 	function TM_To_Telegram(T: in TM) return Telegram;
+	function Try_QOS6(Ctx: in out Timelayer; Telegram_1: in Telegram)
+							return Boolean;
 	function Cross_Check_By_X_Eliminate(Ctx: in out Timelayer;
 				Telegram_1: in out Telegram) return Boolean;
 

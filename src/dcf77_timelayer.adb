@@ -211,6 +211,8 @@ package body DCF77_Timelayer is
 				 Out_2_Recovery = Data_Complete or else
 				(Out_2_Recovery = Data_Incomplete_For_Minute
 					and then Has_Minute_Tens(Telegram_2));
+
+		Virtual_Telegram: Telegram := TM_To_Telegram(Ctx.Current);
 	begin
 		Ctx.Add_Minute_Ones_To_Buffer(Telegram_1);
 		Ctx.Seconds_Left_In_Minute := (if Telegram_1.Valid = Valid_60
@@ -219,13 +221,8 @@ package body DCF77_Timelayer is
 
 		-- 1a. pre-adjust previous in case we can safely decode it
 		if Has_Out_2_Tens then
-			Ctx.Prev               := Decode_Tens(Telegram_2);
-			Ctx.Prev_Telegram      := Telegram_2;
-			-- TODO x likely to have an error here: Would this not
-			--        need to be incremented by the current minute
-			--        ones * 60 as to account for how long this
-			--        “prev” stuff is in the past?
-			Ctx.Seconds_Since_Prev := 0;
+			Ctx.Prev          := Decode_Tens(Telegram_2);
+			Ctx.Prev_Telegram := Telegram_2;
 		end if;
 
 		-- 2.
@@ -300,7 +297,8 @@ package body DCF77_Timelayer is
 		end if;
 
 		-- 4.
-		if Ctx.Check_If_Current_Compat_By_X_Eliminate(Telegram_1) then
+		if Check_If_Compat_By_X_Eliminate(Virtual_Telegram,
+								Telegram_1) then
 			-- QOS5: The automatically computed time is compatible
 			-- with the received (possibly incomplete) telegram.
 			-- Hence we now run on our own clock but know that the
@@ -319,22 +317,8 @@ package body DCF77_Timelayer is
 				X_Eliminate_Prev := B2T(X_Eliminate(False,
 						Telegram_2, Ctx.Prev_Telegram));
 			end if;
-			-- TODO PROBLEM: THIS CAN INDEED PRODUCE DATA IN
-			--      CONFLICT WITH WHAT WE RECEIVED. WE MUST NEVER
-			--      OUTPUT SOMETHING “KNOWINGLY WRONG”. HENCE NEED
-			--      TO DO SOMETHING LIKE THE CURRENT COMPAT BY
-			--      XELIMINATE WITH THE CONSTRUCTED CURRENT AND NOT
-			--      BLINDLY OVERWRITE IT JUST YET.
-			if X_Eliminate_Prev = B_True then
-				Ctx.Current := Ctx.Prev;
-				-- use prev tens ignore ones
-				Discard_Ones(Ctx.Current);
-				-- current = prev tens + 10min + num seconds sin
-				Advance_TM_By_Sec(Ctx.Current, 10 * Sec_Per_Min
-						+ Ctx.Seconds_Since_Prev);
-				Ctx.Seconds_Since_Prev := Ctx.Seconds_Since_Prev
-						+ 10 * Sec_Per_Min;
-				Ctx.Current_QOS := QOS6;
+			if X_Eliminate_Prev = B_True
+					and then Ctx.Try_QOS6(Telegram_1) then
 				return;
 			end if;
 			-- 5ABC: Spot misalignments.
@@ -623,28 +607,21 @@ package body DCF77_Timelayer is
 		return True;
 	end Are_Ones_Compatible;
 
-	function Check_If_Current_Compat_By_X_Eliminate(Ctx: in out Timelayer;
+	function Check_If_Compat_By_X_Eliminate(
+				Virtual_Telegram: in out Telegram;
 				Telegram_1: in Telegram) return Boolean is
-		Virtual_Telegram: Telegram := TM_To_Telegram(Ctx.Current);
-	begin
-		return
-			X_Eliminate(False, Telegram_1, Virtual_Telegram)
-		and then
-			-- 0 to not skip anything
-			X_Eliminate_Match(Telegram_1, Virtual_Telegram,
+		(X_Eliminate(False, Telegram_1, Virtual_Telegram) and then
+		-- 0 to not skip anything
+		X_Eliminate_Match(Telegram_1, Virtual_Telegram,
 				Offset_Minute_Ones, Offset_Minute_Ones +
-				Length_Minute_Ones - 1, 0)
-		and then
-			BCD_Check_Minute(
-				Virtual_Telegram.Value(Offset_Minute_Ones ..
-						Offset_Minute_Ones +
-							Length_Minute_Ones - 1),
-				Virtual_Telegram.Value(Offset_Minute_Tens ..
-						Offset_Minute_Tens +
-							Length_Minute_Tens - 1),
-				Virtual_Telegram.Value(Offset_Parity_Minute)
-			) = OK;
-	end Check_If_Current_Compat_By_X_Eliminate;
+				Length_Minute_Ones - 1, 0) and then
+		BCD_Check_Minute(
+			Virtual_Telegram.Value(Offset_Minute_Ones ..
+				Offset_Minute_Ones + Length_Minute_Ones - 1),
+			Virtual_Telegram.Value(Offset_Minute_Tens ..
+				Offset_Minute_Tens + Length_Minute_Tens - 1),
+			Virtual_Telegram.Value(Offset_Parity_Minute)
+		) = OK);
 
 	function TM_To_Telegram(T: in TM) return Telegram is
 		TR: Telegram := TM_To_Telegram_10min(T);
@@ -652,6 +629,35 @@ package body DCF77_Timelayer is
 		WMBC(TR, Offset_Minute_Ones, Length_Minute_Ones, T.I mod 10);
 		return TR;
 	end TM_To_Telegram;
+
+	-- The value of QOS6 is debatable because it detects a mismatch
+	-- by xeliminate and then counts forwards from the prev telegram.
+	-- Problem is: In realy, all cases seem to be covered by QOS5.
+	-- We leave it enabled for now despite the fact that there is no known
+	-- case to “need” this for recovery...
+	function Try_QOS6(Ctx: in out Timelayer; Telegram_1: in Telegram)
+							return Boolean is
+		Try_Time:         TM := Ctx.Prev;
+		Virtual_Telegram: Telegram;
+	begin
+		-- use prev tens ignore ones
+		Discard_Ones(Try_Time);
+		-- current = prev tens + 10min + num seconds sin
+		Advance_TM_By_Sec(Try_Time, 10 * Sec_Per_Min
+						+ Ctx.Seconds_Since_Prev);
+		Virtual_Telegram := TM_To_Telegram(Try_Time);
+
+		if Check_If_Compat_By_X_Eliminate(Virtual_Telegram,
+								Telegram_1) then
+			Ctx.Current            := Try_Time;
+			Ctx.Seconds_Since_Prev := Ctx.Seconds_Since_Prev
+							+ 10 * Sec_Per_Min;
+			Ctx.Current_QOS        := QOS6;
+			return True;
+		else
+			return False;
+		end if;
+	end Try_QOS6;
 
 	-- 5A: xeliminate(secondlayer current, ctx prev) if matches
 	--     then let time = ctx prev.
@@ -666,28 +672,37 @@ package body DCF77_Timelayer is
 	--        additional copy of the input.
 	function Cross_Check_By_X_Eliminate(Ctx: in out Timelayer;
 				Telegram_1: in out Telegram) return Boolean is
+		Current_Minus_One:                 TM := Ctx.Prev;
 		Current_Plus_One:                  TM := Ctx.Current;
+		Virtual_Telegram_Minus_1_Min:      Telegram;
 		Virtual_Telegram_Plus_1_Min:       Telegram;
 		Eliminates_For_One_Minute_Back:    Boolean;
 		Eliminates_For_One_Minute_Forward: Boolean;
 	begin
+		Discard_Ones(Current_Minus_One);
+		Advance_TM_By_Sec(Current_Minus_One, 9 * Sec_Per_Min +
+							Ctx.Seconds_Since_Prev);
 		Advance_TM_By_Sec(Current_Plus_One, Sec_Per_Min);
-		Virtual_Telegram_Plus_1_Min := TM_To_Telegram(Current_Plus_One);
 
-		Eliminates_For_One_Minute_Forward := X_Eliminate(False,
-				Telegram_1, Virtual_Telegram_Plus_1_Min);
-		Eliminates_For_One_Minute_Back := X_Eliminate(False,
-				Ctx.Prev_Telegram, Telegram_1);
+		Virtual_Telegram_Minus_1_Min :=
+					TM_To_Telegram(Current_Minus_One);
+		Virtual_Telegram_Plus_1_Min :=
+					TM_To_Telegram(Current_Plus_One);
+
+		Eliminates_For_One_Minute_Forward :=
+				Check_If_Compat_By_X_Eliminate(
+				Virtual_Telegram_Plus_1_Min,
+				Telegram_1);
+		Eliminates_For_One_Minute_Back :=
+				Check_If_Compat_By_X_Eliminate(
+				Telegram_1, Virtual_Telegram_Minus_1_Min);
 
 		if Eliminates_For_One_Minute_Forward and
 					Eliminates_For_One_Minute_Back then
 			return False; -- 5C
 		elsif Eliminates_For_One_Minute_Back then
 			-- 5A
-			-- TODO PROBLEM: PREV CAN BE 10min AWAY NOT JUST ONE.
-			--      HENCE NO WAY TO DO IT THIS WAY HERE!!!
-			--      WRONG CODE!
-			Ctx.Current            := Ctx.Prev;
+			Ctx.Current            := Current_Minus_One;
 			Ctx.Seconds_Since_Prev := Unknown;
 			Ctx.Current_QOS        := QOS7; -- backward
 			return True;
