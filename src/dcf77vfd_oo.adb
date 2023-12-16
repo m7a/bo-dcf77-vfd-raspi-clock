@@ -2,9 +2,13 @@ with DCF77_Display;
 with DCF77_Ticker;
 with DCF77_Types;
 with DCF77_Bitlayer;
+with DCF77_ST_Layer_Shared;
 with DCF77_Secondlayer;
 with DCF77_Timelayer;
 with DCF77_Low_Level;
+
+with DCF77_Functions;
+use  DCF77_Functions; -- x Num_To_Str_L2, L4
 
 use type DCF77_Types.Reading;
 use type DCF77_Low_Level.Time;
@@ -21,8 +25,8 @@ package body DCF77VFD_OO is
 
 		-- Software only
 		Secondlayer:            aliased DCF77_Secondlayer.Secondlayer;
-		Secondlayer_Telegram_1: DCF77_Secondlayer.Telegram;
-		Secondlayer_Telegram_2: DCF77_Secondlayer.Telegram;
+		Secondlayer_Telegram_1: DCF77_ST_Layer_Shared.Telegram;
+		Secondlayer_Telegram_2: DCF77_ST_Layer_Shared.Telegram;
 		Timelayer:              aliased DCF77_Timelayer.Timelayer;
 
 		Bitlayer_Has_New: Boolean;
@@ -90,9 +94,9 @@ package body DCF77VFD_OO is
 			Date_S := Num_To_Str_L4(Datetime.Y) &
 					Num_To_Str_L2(Datetime.M) &
 					Num_To_Str_L2(Datetime.D);
-			Time_S := Nat_To_Str_L2(Datetime.H) & ":" &
-					Nat_To_Str_L2(Datetime.I) & ":" &
-					Nat_To_Str_L2(Datetime.S);
+			Time_S := Num_To_Str_L2(Datetime.H) & ":" &
+					Num_To_Str_L2(Datetime.I) & ":" &
+					Num_To_Str_L2(Datetime.S);
 			Date_B := DCF77_Display.SB.To_Bounded_String(Date_S);
 			Time_B := DCF77_Display.SB.To_Bounded_String(Time_S);
 

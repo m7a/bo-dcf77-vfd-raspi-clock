@@ -6,7 +6,7 @@ with Sax.Attributes;
 with Unicode.CES;
 
 with DCF77_Types;
-with DCF77_Secondlayer;
+with DCF77_ST_Layer_Shared;
 with DCF77_Timelayer;
 
 package DCF77_Test_Data is
@@ -50,9 +50,9 @@ package DCF77_Test_Data is
 
 	function String_To_Tel(Val: in String) return Tel;
 	function Length_To_Validity(Len: in Natural)
-					return DCF77_Secondlayer.Telegram_State;
+				return DCF77_ST_Layer_Shared.Telegram_State;
 	function Tel_To_Telegram(Spt: in DCF77_Test_Data.Tel)
-					return DCF77_Secondlayer.Telegram;
+				return DCF77_ST_Layer_Shared.Telegram;
 
 private
 

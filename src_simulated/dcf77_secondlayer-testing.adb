@@ -1,4 +1,6 @@
 with Ada.Text_IO;
+with DCF77_Offsets;
+use  DCF77_Offsets;
 
 package body DCF77_Secondlayer.Testing is
 

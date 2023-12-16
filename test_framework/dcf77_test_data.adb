@@ -196,11 +196,11 @@ package body DCF77_Test_Data is
 	end End_Element;
 
 	function Length_To_Validity(Len: in Natural) return
-					DCF77_Secondlayer.Telegram_State is
+					DCF77_ST_Layer_Shared.Telegram_State is
 	begin
 		case Len is
-		when 60 => return DCF77_Secondlayer.Valid_60;
-		when 61 => return DCF77_Secondlayer.Valid_61;
+		when 60 => return DCF77_ST_Layer_Shared.Valid_60;
+		when 61 => return DCF77_ST_Layer_Shared.Valid_61;
 		-- when others => Invalid; -- not here, see Assert
 		when others => raise Assertion_Error with
 			"Length must be 60 or 61. Found " & Natural'Image(Len);
@@ -208,7 +208,7 @@ package body DCF77_Test_Data is
 	end Length_To_Validity;
 
 	function Tel_To_Telegram(Spt: in DCF77_Test_Data.Tel)
-				return DCF77_Secondlayer.Telegram is
+				return DCF77_ST_Layer_Shared.Telegram is
 				(Length_To_Validity(Spt.Len), Spt.Val(0 .. 59));
 
 end DCF77_Test_Data;

@@ -18,9 +18,8 @@ package body DCF77_Timelayer is
 	end Init;
 
 	procedure Process(Ctx: in out Timelayer;
-			Has_New_Bitlayer_Signal: in Boolean;
-			Telegram_1, Telegram_2: in DCF77_Secondlayer.Telegram)
-			is
+					Has_New_Bitlayer_Signal: in Boolean;
+					Telegram_1, Telegram_2: in Telegram) is
 	begin
 		-- Always handle second if detected
 		if Has_New_Bitlayer_Signal then
@@ -222,7 +221,10 @@ package body DCF77_Timelayer is
 		if Has_Out_2_Tens then
 			Ctx.Prev               := Decode_Tens(Telegram_2);
 			Ctx.Prev_Telegram      := Telegram_2;
-			-- TODO x likely to have an error here: Would this not need to be incremented by the current minute ones * 60 as to account for how long this “prev” stuff is in the past?
+			-- TODO x likely to have an error here: Would this not
+			--        need to be incremented by the current minute
+			--        ones * 60 as to account for how long this
+			--        “prev” stuff is in the past?
 			Ctx.Seconds_Since_Prev := 0;
 		end if;
 
@@ -278,8 +280,8 @@ package body DCF77_Timelayer is
 			--     precise as possible. Need to consider this when
 			--     handling subsequent QOS5 case.
 			X_Eliminate_Prev := B2T(Telegram_2.Valid /= Invalid
-					and then DCF77_Secondlayer.X_Eliminate(
-					False, Telegram_2, Ctx.Prev_Telegram));
+					and then X_Eliminate(False, Telegram_2,
+					Ctx.Prev_Telegram));
 			if X_Eliminate_Prev = B_True then
 				Ctx.Current := Ctx.Prev;
 				-- use prev tens ignore ones
@@ -314,10 +316,15 @@ package body DCF77_Timelayer is
 			if X_Eliminate_Prev = Unset then
 				-- means we did not do xeliminate for prev yet,
 				-- do it now
-				X_Eliminate_Prev := B2T(DCF77_Secondlayer.
-						X_Eliminate(False, Telegram_2,
-						Ctx.Prev_Telegram));
+				X_Eliminate_Prev := B2T(X_Eliminate(False,
+						Telegram_2, Ctx.Prev_Telegram));
 			end if;
+			-- TODO PROBLEM: THIS CAN INDEED PRODUCE DATA IN
+			--      CONFLICT WITH WHAT WE RECEIVED. WE MUST NEVER
+			--      OUTPUT SOMETHING “KNOWINGLY WRONG”. HENCE NEED
+			--      TO DO SOMETHING LIKE THE CURRENT COMPAT BY
+			--      XELIMINATE WITH THE CONSTRUCTED CURRENT AND NOT
+			--      BLINDLY OVERWRITE IT JUST YET.
 			if X_Eliminate_Prev = B_True then
 				Ctx.Current := Ctx.Prev;
 				-- use prev tens ignore ones
@@ -325,7 +332,6 @@ package body DCF77_Timelayer is
 				-- current = prev tens + 10min + num seconds sin
 				Advance_TM_By_Sec(Ctx.Current, 10 * Sec_Per_Min
 						+ Ctx.Seconds_Since_Prev);
-				-- TODO z IS THIS CORRECT (COPIED FROM C)?
 				Ctx.Seconds_Since_Prev := Ctx.Seconds_Since_Prev
 						+ 10 * Sec_Per_Min;
 				Ctx.Current_QOS := QOS6;
@@ -410,6 +416,7 @@ package body DCF77_Timelayer is
 			end if;
 		end Recover_Bit;
 
+		Ign_Parity: Parity_State := Parity_Sum_Undefined;
 		RV: Recovery := Data_Complete;
 	begin
 		-- 21-28: Minute recovery
@@ -454,7 +461,7 @@ package body DCF77_Timelayer is
 		--      both lower bits set then recover month tens to 0.
 		if Tel.Value(Offset_Month_Tens) = No_Signal and then
 				Decode_BCD(Read_Multiple(Offset_Month_Ones,
-						Length_Month_Ones)) > 2 then
+					Length_Month_Ones), Ign_Parity) > 2 then
 			Tel.Value(Offset_Month_Tens) := Bit_0;
 		end if;
 
@@ -529,9 +536,12 @@ package body DCF77_Timelayer is
 	end Discard_Ones;
 
 	function Decode(Tel: in Telegram) return TM is
+		Ign_Parity: Parity_State := Parity_Sum_Undefined;
+
 		-- Read and Decode
 		function RD(Offset, Length: in Natural) return Natural is
-			(Decode_BCD(Tel.Value(Offset .. Offset + Length - 1)));
+			(Decode_BCD(Tel.Value(Offset .. Offset + Length - 1),
+			Ign_Parity));
 	begin
 		return (Y => (TM0.Y / 100) * 100 +
 			     RD(Offset_Year_Tens,   Length_Year_Tens) * 10 +
@@ -614,11 +624,26 @@ package body DCF77_Timelayer is
 	end Are_Ones_Compatible;
 
 	function Check_If_Current_Compat_By_X_Eliminate(Ctx: in out Timelayer;
-				Telegram_2: in Telegram) return Boolean is
+				Telegram_1: in Telegram) return Boolean is
 		Virtual_Telegram: Telegram := TM_To_Telegram(Ctx.Current);
 	begin
-		return DCF77_Secondlayer.X_Eliminate(False, Telegram_2,
-							Virtual_Telegram);
+		return
+			X_Eliminate(False, Telegram_1, Virtual_Telegram)
+		and then
+			-- 0 to not skip anything
+			X_Eliminate_Match(Telegram_1, Virtual_Telegram,
+				Offset_Minute_Ones, Offset_Minute_Ones +
+				Length_Minute_Ones - 1, 0)
+		and then
+			BCD_Check_Minute(
+				Virtual_Telegram.Value(Offset_Minute_Ones ..
+						Offset_Minute_Ones +
+							Length_Minute_Ones - 1),
+				Virtual_Telegram.Value(Offset_Minute_Tens ..
+						Offset_Minute_Tens +
+							Length_Minute_Tens - 1),
+				Virtual_Telegram.Value(Offset_Parity_Minute)
+			) = OK;
 	end Check_If_Current_Compat_By_X_Eliminate;
 
 	function TM_To_Telegram(T: in TM) return Telegram is
@@ -649,18 +674,19 @@ package body DCF77_Timelayer is
 		Advance_TM_By_Sec(Current_Plus_One, Sec_Per_Min);
 		Virtual_Telegram_Plus_1_Min := TM_To_Telegram(Current_Plus_One);
 
-		Eliminates_For_One_Minute_Forward := DCF77_Secondlayer.
-						X_Eliminate(False, Telegram_1,
-						Virtual_Telegram_Plus_1_Min);
-		Eliminates_For_One_Minute_Back := DCF77_Secondlayer.X_Eliminate(
-						False, Ctx.Prev_Telegram,
-						Telegram_1);
+		Eliminates_For_One_Minute_Forward := X_Eliminate(False,
+				Telegram_1, Virtual_Telegram_Plus_1_Min);
+		Eliminates_For_One_Minute_Back := X_Eliminate(False,
+				Ctx.Prev_Telegram, Telegram_1);
 
 		if Eliminates_For_One_Minute_Forward and
 					Eliminates_For_One_Minute_Back then
 			return False; -- 5C
 		elsif Eliminates_For_One_Minute_Back then
 			-- 5A
+			-- TODO PROBLEM: PREV CAN BE 10min AWAY NOT JUST ONE.
+			--      HENCE NO WAY TO DO IT THIS WAY HERE!!!
+			--      WRONG CODE!
 			Ctx.Current            := Ctx.Prev;
 			Ctx.Seconds_Since_Prev := Unknown;
 			Ctx.Current_QOS        := QOS7; -- backward

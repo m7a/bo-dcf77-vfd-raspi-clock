@@ -1,6 +1,6 @@
 with DCF77_Types;
 use  DCF77_Types;
-with DCF77_Secondlayer;
+with DCF77_ST_Layer_Shared;
 with DCF77_Timelayer;
 use  DCF77_Timelayer;
 with DCF77_Timelayer.Testing;
@@ -285,14 +285,14 @@ package body DCF77_Timelayer_Unit_Test is
 	end Test_Decode;
 
 	procedure Test_Telegram_Identity is
-		use type DCF77_Secondlayer.Telegram;
+		use type DCF77_ST_Layer_Shared.Telegram;
 
 		Test_Vector: constant array (1 .. 1) of Tel_Conv_TV := (
 			1 => ("333333333333333333333100000030110103100001333010000100000033", (2002, 2, 21, 16, 1, 0))
 		);
 		Prefix: constant String := "encode/identity ";
-		Result: DCF77_Secondlayer.Telegram;
-		Expect: DCF77_Secondlayer.Telegram;
+		Result: DCF77_ST_Layer_Shared.Telegram;
+		Expect: DCF77_ST_Layer_Shared.Telegram;
 	begin
 		for I in Test_Vector'Range loop
 			Expect := DCF77_Test_Data.Tel_To_Telegram(

@@ -1,17 +1,23 @@
-with DCF77_Secondlayer;
-use  DCF77_Secondlayer;
 with DCF77_Types;
 use  DCF77_Types;
+with DCF77_ST_Layer_Shared;
+use  DCF77_ST_Layer_Shared;
 
 package DCF77_Timelayer is
 
+	-- TODO x The value of QOS6 is debatable because it detects a mismatch
+	--        by xeliminate and then counts forwards from the prev telegram.
+	--        Problem is: In realy, if this happens, it means the clock is
+	--        displaying a time in conflict of what was received but found
+	--        a way to nonetheless justify this display. Maybe it would be
+	--        better to skip this case altogether?
 	type QOS is (
 		QOS1,       -- +1 -- perfectly synchronized
 		QOS2,       -- +2 -- synchr. w/ minor disturbance
 		QOS3,       -- +3 -- synchronized from prev data
 		QOS4,       -- o4 -- recovered from prev
 		QOS5,       -- o5 -- async telegram match
-		QOS6,       -- o6 -- count from prev
+		QOS6,       -- -6 -- count from prev (xelimiate mismatch!)
 		QOS7,       -- -7 -- async might match -1
 		QOS8,       -- -8 -- async might match +1
 		QOS9_ASYNC  -- -9 -- async count from last
@@ -33,8 +39,8 @@ package DCF77_Timelayer is
 
 	procedure Init(Ctx: in out Timelayer);
 	procedure Process(Ctx: in out Timelayer;
-			Has_New_Bitlayer_Signal: in Boolean;
-			Telegram_1, Telegram_2: in DCF77_Secondlayer.Telegram);
+					Has_New_Bitlayer_Signal: in Boolean;
+					Telegram_1, Telegram_2: in Telegram);
 	function Get_Current(Ctx: in Timelayer) return TM;
 	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS;
 
@@ -78,7 +84,7 @@ private
 		Preceding_Minute_Idx:   Minute_Buf_Idx;
 
 		Prev:                   TM;
-		Prev_Telegram:          DCF77_Secondlayer.Telegram;
+		Prev_Telegram:          DCF77_ST_Layer_Shared.Telegram;
 
 		Seconds_Since_Prev:     Integer; -- -1 = unknown
 		Seconds_Left_In_Minute: Natural; -- 0 = next minute
@@ -136,7 +142,7 @@ private
 	function Recover_Ones(Ctx: in out Timelayer) return Integer;
 	function Are_Ones_Compatible(AD, BD: in BCD_Digit) return Boolean;
 	function Check_If_Current_Compat_By_X_Eliminate(Ctx: in out Timelayer;
-					Telegram_2: in Telegram) return Boolean;
+					Telegram_1: in Telegram) return Boolean;
 	function TM_To_Telegram(T: in TM) return Telegram;
 	function Cross_Check_By_X_Eliminate(Ctx: in out Timelayer;
 				Telegram_1: in out Telegram) return Boolean;

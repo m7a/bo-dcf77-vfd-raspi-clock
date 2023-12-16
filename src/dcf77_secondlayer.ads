@@ -1,26 +1,16 @@
 with DCF77_Types;
 use  DCF77_Types;
-with DCF77_Offsets;
-use  DCF77_Offsets;  -- Sec_Per_Min
+with DCF77_ST_Layer_Shared;
+use  DCF77_ST_Layer_Shared;
 
 package DCF77_Secondlayer is
 
-	type Secondlayer    is tagged limited private;
-	type Telegram_State is (Invalid, Valid_60, Valid_61);
+	type Secondlayer is tagged limited private;
 
-	type Telegram is record
-		Valid: Telegram_State := Invalid;
-		Value: Bits(0 .. Sec_Per_Min - 1) := (others => No_Update);
-	end record;
-	
 	procedure Init(Ctx: in out Secondlayer);
 	procedure Process(Ctx: in out Secondlayer; Val: in Reading;
 					Telegram_1, Telegram_2: out Telegram);
 	function Get_Fault(Ctx: in Secondlayer) return Natural;
-
-	function X_Eliminate(Telegram_1_Is_Leap: in Boolean;
-				Telegram_1: in Telegram;
-				Telegram_2: in out Telegram) return Boolean;
 
 private
 
@@ -37,16 +27,6 @@ private
 
 	type Line_Num is mod Lines;
 	type Telegram_Data is array (Line_Num) of Telegram;
-
-	type Inner_Checkresult is (
-		OK,        Error_1,  Error_2,   Error_3,  Error_4,  Error_5,
-		Error_6,   Error_7,  Error_8,   Error_8b, Error_9,  Error_10,
-		Error_10b, Error_11, Error_11b, Error_12, Error_13, Error_14,
-		Error_15
-	);
-
-	type Parity_State is (Parity_Sum_Even_Pass, Parity_Sum_Odd_Mismatch,
-							Parity_Sum_Undefined);
 
 	type Secondlayer is tagged limited record
 		Inmode:       Input_Mode;
@@ -95,10 +75,6 @@ private
 				Telegram_1, Telegram_2: in out Telegram);
 	procedure Process_Telegrams(Ctx: in out Secondlayer;
 				Telegram_1, Telegram_2: in out Telegram);
-	function "not"(R: in Reading) return Reading;
-	procedure X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading);
-	function X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading)
-							return Boolean;
 	procedure Cross_Out_V2_Simple(Raw: in Telegram; Check: in Telegram;
 						Telegram_1: in out Telegram);
 	procedure Shift_Existing_Bits_To_The_Left(Ctx: in out Secondlayer);
@@ -111,10 +87,6 @@ private
 			Start_Line: in Line_Num;
 			Start_Offset_In_Line: in Natural;
 			Ignore_EOM: Boolean := False) return Boolean;
-	function Decode_BCD(Data: in Bits; Parity: in out Parity_State)
-							return Natural;
-	procedure Update_Parity(Val: in Reading; Parity: in out Parity_State);
-	function "not"(Parity: in Parity_State) return Parity_State;
 	procedure Process_Telegrams_Advance_To_Next_Line(
 						Ctx: in out Secondlayer);
 	procedure Complex_Reorganization(Ctx: in out Secondlayer;
