@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<dcf77testdata descr="xe17_fail_end_marker_leapsec">
+	<usefor test="xeliminate" descr="Violate leap sec end marker constraint"/>
+	<input>
+		<!-- 22.04.2019 22:50 with end marker 10 (invalid, expect 3) -->
+		<tel val="0110110111011110010010000101001000100100011000010010011000110"/>
+		<!-- empty -->
+		<tel val="333333333333333333333333333333333333333333333333333333333333"/>
+	</input>
+	<output recovery_ok="0"/>
+</dcf77testdata>

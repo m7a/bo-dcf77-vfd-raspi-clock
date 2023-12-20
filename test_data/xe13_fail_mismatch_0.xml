@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<dcf77testdata descr="xe13_fail_mismatch_0">
+	<usefor test="xeliminate" descr="Violate constant 0 constraint by mismatch"/>
+	<input>
+		<!-- empty -->
+		<tel val="033333333333333333333333333333333333333333333333333333333333"/>
+		<!-- 22.04.2019 22:50 with leading 1 (wrong) -->
+		<tel val="111011011101111001001000010100100010010001100001001001100013"/>
+	</input>
+	<output recovery_ok="0"/>
+</dcf77testdata>
