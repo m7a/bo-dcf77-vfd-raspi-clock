@@ -26,6 +26,20 @@ package body DCF77_ST_Layer_Shared is
 			end if;
 		end Begin_Of_Minute;
 
+		function DST_Announce return Inner_Checkresult is
+		begin
+			X_Eliminate_Entry(Telegram_1.Value(Offset_DST_Announce),
+					Telegram_2.Value(Offset_DST_Announce));
+			-- The interesting thing about DST_Announce is that it
+			-- can persist one minute after the actual change. Hence
+			-- we really cannot use this for conflict recognition
+			-- and hence always return OK and only take value from
+			-- preceding telegram to replace current one as
+			-- necessary but never report anything about perceived
+			-- conflicts...
+			return OK;
+		end DST_Announce;
+
 		function Match(From, To, Except: in Natural)
 					return Inner_Checkresult is
 			(if X_Eliminate_Match(Telegram_1, Telegram_2,
@@ -95,7 +109,8 @@ package body DCF77_ST_Layer_Shared is
 
 	begin
 		return  Begin_Of_Minute                         = OK and then
-			Match(16, 20, Offset_Leap_Sec_Announce) = OK and then
+			DST_Announce                            = OK and then
+			Match(17, 20, Offset_Leap_Sec_Announce) = OK and then
 			Daylight_Saving_Time                    = OK and then
 			Begin_Time                              = OK and then
 			Match(25, 58, Offset_Parity_Minute)     = OK and then

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- TODO INTERESTING TEST CASE CAUSES LOW LEVEL FAULT DUE TO ANNOUNCE PERSISTING ONE BEYOND THE FIRST MISMATCH, THIS CAUSES A RESET FOR THE SECONDLAYER AND DISRUPTS QOS... -->
 <dcf77testdata descr="dst01">
 	<usefor test="secondlayer" descr="26.10.2008 02:57:00-02:03:00 CEST to CET"/>
 	<usefor test="qos"         descr="26.10.2008 02:57:00-02:03:00 CEST to CET"/>
 	<input offset="0">
+		<!--                      v DST Announce Bit -->
 		<tel val="010100000100011011001111010110100001011001111000010001000003"/> <!-- 26.10.08 02:57:00, SZ Announce -->
 		<tel val="001110100100111011001000110110100001011001111000010001000003"/> <!-- 26.10.08 02:58:00, SZ Announce -->
 		<tel val="011110001101110011001100110100100001011001111000010001000003"/> <!-- 26.10.08 02:59:00, SZ Announce -->
@@ -21,5 +21,5 @@
 	<checkpoint loc="239" val="2008-10-26 02:00:00" qos="QOS1"/>
 	<checkpoint loc="299" val="2008-10-26 02:01:00" qos="QOS1"/>
 	<checkpoint loc="359" val="2008-10-26 02:02:00" qos="QOS1"/>
-	<checkpoint loc="419" val="2008-10-26 03:02:00" qos="QOS1"/>
+	<checkpoint loc="419" val="2008-10-26 02:03:00" qos="QOS1"/>
 </dcf77testdata>
