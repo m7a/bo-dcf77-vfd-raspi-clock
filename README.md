@@ -16,8 +16,8 @@ x-masysma-copyright: (c) 2018-2023 Ma_Sys.ma <info@masysma.net>.
 =========
 
 Die _Ma_Sys.ma DCF77 VFD Raspi Clock_ ist eine selbst gebaute Digitalfunkuhr auf
-Basis eines Vakuum-Floureszenzdisplays, welches durch einen Raspberry Pi Pico
-(RP2040 Mikrocontroller) angesteuert wird und seine Uhrzeit mittels eines
+Basis eines Vakuum-Floureszenzdisplays, welche durch einen Raspberry Pi Pico
+(RP2040 Mikrocontroller) angesteuert wird und ihre Uhrzeit mittels eines
 DCF77-Antennenmoduls empfängt.
 
 Designziel der Uhr war es, möglichst viel Fehlerkorrektur bei der Auswertung der
@@ -40,7 +40,7 @@ und dann jeweils wieder verworfen.
  * Externe Antenne
  * 4 Knöpfe zur Steuerung -- 3 Taster (_Modus, Zurück, Weiter_) und ein
    Druckschalter (Wecker Ein/Aus)
- * VFD Displaymodul 128x64px
+ * 5V VFD SPI-Displaymodul 128x64px
  * Buzzer als Weckalarm
  * Lichtsensor zur automatischen Helligkeitsanpassung
 
@@ -64,17 +64,21 @@ _TODO WHICH CHIP EXACTLY_
 Beim Gehäuse wurde anfänglich eine quadratische Version genutzt, in deren
 Mitte dann ein großer Drehknauf plaziert worden wäre, mittels dessen man
 verschiedene Bildschirme „durchschalten” hätte können. Allerdings war die
-mechanische Stabilität zwischen Drehknauf und Achse ein echtes Problem und
-insgesamt die Drehknauflösung sehr klobig. Daher wurde für die neue Revision
-auf ein rechteckiges Gehäuse und statt eines Drehknaufs auf die Drucktaster und
-den Druckschalter gesetzt.
+mechanische Stabilität zwischen Drehknauf und Achse schlecht und insgesamt die
+Drehknauflösung sehr klobig. Daher wurde für die neue Revision auf ein
+rechteckiges Gehäuse und statt eines Drehknaufs auf die Drucktaster für die
+Steuerung und den Druckschalter für den Wecker gesetzt.
 
-Die Antenne sollte anfänglich integriert werden, nachdem der Empfang aber
-aufgrund der Abstrahlung (oder Schirmung) durch die anderen Komponenten quasi
-unmöglich war, wurde die Möglichkeit des Anschlusses einer externen Antenne
-geschaffen. Da sich die Uhr aufgrund ihrer Größe und Versorgungsspannung
-vielleicht auch „portabel” einsetzen lassen könnte, wurde das Extrageld für eine
-Steckerverbindung zur Antenne ausgegeben.
+Somit bleibt die Information “Wecker gestellt” auch bei Stromausfall erhalten
+und die Uhr kann beim Wiedereinschalten zwar nicht mehr die Weckzeit erinnern,
+aber mittels Buzzer signalisieren, dass die Weckfunktion ausgefallen ist.
+
+Die Antenne sollte anfänglich im Gehäuse integriert werden, nachdem der Empfang
+aber aufgrund der Abstrahlung (oder Schirmung) durch die anderen Komponenten
+quasi unmöglich war, wurde die Möglichkeit des Anschlusses einer externen
+Antenne geschaffen. Da sich die Uhr aufgrund ihrer Größe und Versorgungsspannung
+vielleicht auch „portabel” einsetzen lassen könnte, wurde eine Steckerverbindung
+zur Antenne vorgesehen.
 
 ## Schaltplan
 
@@ -102,12 +106,12 @@ ersetzt und anders implementiert werden muss.
 
 Vom Antennenmodul werden Pulse mit Längen von 100ms bzw. 200ms geliefert, um
 eine logische 0 bzw. 1 zu codieren. Als Endmarkierung (60. Puls) bleibt der
-Puls aus. Intern werden im Programme daher die Ablesungen (Reading) `Bit_0` (0),
+Puls aus. Intern werden im Programm daher die Ablesungen (Reading) `Bit_0` (0),
 `Bit_1` (1) und `No_Signal` (3) unterschieden.
 
 Die unterste Abstraktionsebene stellt der _Bitlayer_ dar: Er ist dafür
 zuständig, die eingehenden Pulslängen digital zu Reading zu codieren. Dazu wird
-eine Zuordnungstabelle verwendet.
+eine Zuordnungstabelle von Intervalllängen zu Ablesungen verwendet.
 
 Darüber befindet sich der _Secondlayer_. Die Idee hinter dieser Schicht ist es,
 die Ablesungen der letzten 9 Minuten vorzuhalten und anhand der Muster (bspw.
@@ -123,7 +127,7 @@ Minuten-Zehnerstand zugeordnet werden konnte.
 Der _Timelayer_ nutzt diese Daten, um die eigentliche Decodierung durchzuführen.
 Im einfachsten Fall ist der Empfang (nahezu) perfekt und das Datum und die
 Uhrzeit lassen sich aus dem Telegram_1 vollständig decodieren. In diesem Fall
-wird „perfekte Empfangsqualität” mittels Quality Of Service 1 (QOS1)
+wird „perfekte Empfangsqualität” mittels _Quality Of Service 1_ (QOS1)
 signalisiert. Falls eine derart einfache Decodierung nicht möglich ist, werden
 verschiedene Verfahren zum Einsatz gebracht, um die fehlenden Daten zu
 ermitteln, wobei mit höherem QOS-Wert die Qualität der Widerherstellung abnimmt.
@@ -182,7 +186,8 @@ vorausgesetzt, sollte der Zusammenbau weitgehend selbsterklärend sein.
 
 Da das Antennenkabel relativ starr ist, gibt es ggfs. Sinn, es etwas länger
 (bspw. 2m) zu wählen, damit man eine Chance hat, die Antenne auszurichten, ohne,
-dass sie sich aufgrund des Kabels wieder in die falsche Position dreht.
+dass sie sich aufgrund der Starrheit des Kabels wieder in die falsche Position
+dreht.
 
 Tests
 =====
@@ -226,7 +231,7 @@ Auf diese Weise lassen sich automatisiert auch sehr spezielle Fälle
 wie bspw. Schaltsekunden testen. Mit gewissen Einschränkungen erlauben diese
 Tests auch das Einstreuen von Störungen, indem man bspw. die 0/1-Werte aus
 den Telegrammen durch Ersetzen mit 3-Ziffern überschreibt und somit
-Empfangsprobleme codiert.
+Empfangsprobleme simuliert.
 
 Falls man ein eigenes DCF77-Projekt entwickelt, könnten insbesondere die
 QOS-Testdaten interessant sein, da dort auch jeweils der erwartete Zeitstempel
