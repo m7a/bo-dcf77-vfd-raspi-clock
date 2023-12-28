@@ -92,13 +92,13 @@ durch den Arduino nicht mehr vorhanden war. Die Vielseitigkeit des
 Ada-Typsystems lässt sich bei diesem Projekt gewinnbringend einsetzen, um
 das vorherige „Bit Fiddling” aus der C-Implementierung abzulösen. Dank
 Unterstützung für Subprozeduren und Module (Packages) können auch einige vormals
-sehr länglichen Identifier wieder etwas kürzer ausfallen. Beispiel: Der lange
+sehr längliche Identifier wieder etwas kürzer ausfallen. Beispiel: Der lange
 Funktionsname `dcf77_secondlayer_check_bcd_correct_telegram_ignore_eom` ist
 nicht mehr erforderlich, stattdessen ist es jetzt `Check_BCD_Correct_Telegram`
 mit dem optionalen Parameter `Ignore_EOM` im Package `DCF77_Secondlayer`.
 
 Entsprechend des Designziels beschäfigt sich der Großteil des Programmes mit der
-DCF77-Decodierung. Die Hardwarenahen Teile sind zentral in einer einzigen Datei
+DCF77-Decodierung. Die hardwarenahen Teile sind zentral in einer einzigen Datei
 untergebracht, sodass zum Test mit einer „virtuellen” Hardware nur diese Datei
 ersetzt und anders implementiert werden muss.
 
@@ -246,4 +246,99 @@ die Tests erreicht wird.
 Bedienungsanleitung
 ===================
 
-_TODO EXPLAIN THE GUI HERE_
+Im Allgemeinen können keine Einstellungen getätigt werden, die über das Trennen
+der Stromverosrgung hinaus Bestand haben (mit Ausnahme des Aktivierungszustands
+der Weckfunktion).
+
+_TODO EXPLAIN THE STATE CHART FOR GUI HERE (AND DRAW IT NICELY FIRST!)_
+
+## Standardbetrieb mit DCF77-Antenne
+
+Der empfohlene Standardsbetriebsmodus ist unter Verlass auf das
+DCF77-Zeitsignal. Dazu muss die externe Antenne angeschlossen werden.
+Anschließend wird das Netzteil angeschlossen und die Uhr synchronisiert
+sich selbständig mit dem Zeitsignal.
+
+Die gelungene Synchronisation kann jederzeit in der unteren linken Ecke
+des Bildschirms abgelesen werden, wobei (+1) die beste Empfangsqualität
+und (-9) die schlechteste Empfangsqualität signalisieren.
+
+In der Mitte des Bildschirms wird die Uhrzeit dargestellt, darüber das Datum.
+Unten rechts wird die eingestellte Weckzeit angezeigt, sofern der Wecker aktiv
+ist.
+
+## Menünavigation
+
+Die 4-Tasten-Bedienung folgt folgender Überlegung:
+
+ * Der linke grüne Taster (“Next/Edit”) ist für die Navigation “runter” bzw.
+   innerhalb von Untermenüs für den Wechsel zwischen Bearbeiten/Navigieren
+   gedacht.
+ * Die mittleren beiden blauen Taster sind für das Verstellen von Zahlenwerten
+   (+/-) bzw. die Navigationlinks/rechts gedacht.
+ * Der rechte rote Schalter ist exklusiv für die Weckereinstellung gedacht:
+   Ist er grdrückt ist der Weckalarm scharfgeschaltet und der Buzzer ertönt,
+   sobald die eingestellte Weckzeit das nächste Mal erreicht wird.
+
+## Wecker
+
+### Weckzeit stellen
+
+Zum Einstellen einer Weckzeit ist ausgehend vom Startbildschirm einmal
+“Next/Edit” und dann “>” zu drücken. Anschließend lässt sich mit “Next/Edit”
+das Bearbeiten des Stundenwerts aktivieren, mit +/- verstellen und
+anschließend mit “Next/Edit” speichern und mit “>” zum nächsten Feld
+(Weckzeit-Minute) wechseln. Dieses wird wieder mit “Next/Edit” bearbeitbar
+gemacht, mit +/- verstellt und nochmals “Next/Edit” gespeichert. Ein Druck auf
+“>” führt zurück zur Hauptansicht.
+
+### Wecker scharfschalten
+
+Zum Einschalten der Weckfunktion mit der aktuell hinterlegten Weckzeit muss
+der rote Knopf gedrückt werden. Die aktive Weckfunktion wird durch die
+orangene Hintergrundbeleuchtung des Knofpes signalisiert
+
+### Wecker auslösen
+
+Sobald die Weckzeit erreicht ist, löst der Wecker mittels Buzzergeräusch und
+blinkendem Wecker-Schalter aus.
+
+Sollte der Strom ausfallen oder aus anderen Gründen die Uhr bei aktivierterm
+Wecker-Schalter mit der Spannungsversorgung verbunden werden, so aktiviert sich
+der Buzzer sofort (unabhängig von einer eventuell vorher gestellten Weckzeit).
+Damit wird verhindert, dass ein nächtlicher Stromausfall die Weckfunktion außer
+Kraft setzt, allerdings kann es dadurch zu verfrüher Auslösung kommen.
+
+### Wecker abstellen
+
+Der Wecker kann durch Druck auf den Wecker-Schalter abgestellt werden.
+
+Erfolgt ein solches Abstellen auch nach 90min nicht, schaltet sich der Wecker
+in den “Timeout”-Modus -- der Buzzer wird abgeschaltet und der Wecker-Schalter
+blinkt solange weiter, bis die Stromversorgung getrennt oder der Schalter
+betätigt wurde.
+
+## Uhrzeit verstellen
+
+Eine verstllte Uhrzeit ist nur solange wirksam, wie kein anderslautendes Signal
+per DCF77 empfangen wird. Um eine eigene Uhrzeitvorgabe dauerhaft festzulegen
+muss die Antenne abgestöpselt werden. Im Betrieb ohne DCF77-Zeitsignal ist
+jedoch mit einer starken Abweichung über die Zeit zu rechnen!
+
+Mittels 2x “Next/Edit” navigiert man zum Uhhrzeitbearbeiten. Mit “>” wird das
+Menü betreten und darin können der Reihe nach die Werte für Uhrzeit
+(Stunde, Minute, Sekunde) und anschließend das Datum
+(Jahrhundert, Jahr, Monat, Tag) bearbeitet werden. Das Bearbeiten der Zahlen
+erfolgt analog zum Wecker-Stellen.
+
+## Einstellungen verstellen
+
+_TODO ..._
+
+## Statusinformationen anzeigen
+
+_TODO ..._
+
+## Eigene Antenne anschließen
+
+_TODO ..._
