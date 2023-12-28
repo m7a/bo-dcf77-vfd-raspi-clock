@@ -48,7 +48,8 @@ private
 
 		-- User-configured alarm time
 		T_AL: Time_T;
-		-- record if GUI just performed some changes to T_AL while
+
+		-- Record if GUI just performed some changes to T_AL while
 		-- we were processing...
 		AL_Has_Changed: Boolean;
 
@@ -77,6 +78,5 @@ private
 	function Date(T: in DCF77_Timelayer.TM) return Date_T;
 	function Time(T: in DCF77_Timelayer.TM) return Time_T;
 	function ">="(A, B: in Time_T) return Boolean;
-	--function "<"(A, B: in DCF77_Timelayer.TM) return Boolean;
 
 end DCF77_Alarm;

@@ -1,6 +1,6 @@
-with DCF77VFD_OO;
+with DCF77_GUI;
 
 procedure DCF77VFD is
 begin
-	DCF77VFD_OO.Main;
+	DCF77_GUI.Mainloop;
 end DCF77VFD;
