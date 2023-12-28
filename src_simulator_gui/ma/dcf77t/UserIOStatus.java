@@ -4,8 +4,9 @@ class UserIOStatus {
 
 	// These variables are intended to be written from the GUI side and read
 	// upon request from the protocol processor side.
-	String buttons;
-	int    light;
+	String  buttons;
+	int     light;
+	boolean alarmSwitch;
 
 	// This variable is intended to be read from the GUI side and written
 	// upon request from the protocol processor side.

@@ -6,6 +6,7 @@ with DCF77_ST_Layer_Shared;
 with DCF77_Secondlayer;
 with DCF77_Timelayer;
 with DCF77_Low_Level;
+with DCF77_Alarm;
 
 with DCF77_Functions;
 use  DCF77_Functions; -- x Num_To_Str_L2, L4
@@ -16,22 +17,27 @@ use type DCF77_Low_Level.Time;
 package body DCF77VFD_OO is
 
 	procedure Main is
-		LL:       constant DCF77_Low_Level.LLP := LLI'Access;
-		Disp:     aliased DCF77_Display.Disp;
-		Ticker:   aliased DCF77_Ticker.Ticker;
-		Bitlayer: aliased DCF77_Bitlayer.Bitlayer;
+		-- Low Level
+		LL:          constant DCF77_Low_Level.LLP := LLI'Access;
+		Disp:        aliased DCF77_Display.Disp;
 
-		Bitlayer_Reading: DCF77_Types.Reading;
+		-- Timekeeping
+		Ticker:      aliased DCF77_Ticker.Ticker;
+		Bitlayer:    aliased DCF77_Bitlayer.Bitlayer;
+		Secondlayer: aliased DCF77_Secondlayer.Secondlayer;
+		Timelayer:   aliased DCF77_Timelayer.Timelayer;
 
-		-- Software only
-		Secondlayer:            aliased DCF77_Secondlayer.Secondlayer;
+		-- GUI
+		Alarm:       aliased DCF77_Alarm.Alarm;
+
+		-- State Transfer between Layers
+		Bitlayer_Reading:       DCF77_Types.Reading;
+		Bitlayer_Has_New:       Boolean;
 		Secondlayer_Telegram_1: DCF77_ST_Layer_Shared.Telegram;
 		Secondlayer_Telegram_2: DCF77_ST_Layer_Shared.Telegram;
-		Timelayer:              aliased DCF77_Timelayer.Timelayer;
+		Datetime:               DCF77_Timelayer.TM;
 
-		Bitlayer_Has_New: Boolean;
-		Datetime:         DCF77_Timelayer.TM;
-
+		-- Local State (TODO BASICALLY ALL DEBUG ONLY)
 		Date_S:       String := "20YYMMDD";
 		Time_S:       String := "HH:ii:ss";
 		Date_B:       DCF77_Display.SB.Bounded_String;
@@ -58,9 +64,12 @@ package body DCF77VFD_OO is
 		LL.Init;
 		Disp.Init(LL);
 		Ticker.Init(LL);
+
 		Bitlayer.Init(LL);
 		Secondlayer.Init;
 		Timelayer.Init;
+
+		Alarm.Init(LL);
 
 		LL.Log("BEFORE CTR=39");
 		Disp.Update((1 => (X => 16, Y => 16, F => DCF77_Display.Small,
@@ -88,6 +97,11 @@ package body DCF77VFD_OO is
 			end if;
 
 			Datetime := Timelayer.Get_Current;
+
+			-- process all of the time for blinking and user input
+			-- handling!
+			Alarm.Process(Datetime);
+
 			--Date_S := Nat_To_S(Datetime.Y, 4) & "-" &
 			--		Nat_To_S(Datetime.M, 2) & "-" &
 			--		Nat_To_S(Datetime.D, 2);

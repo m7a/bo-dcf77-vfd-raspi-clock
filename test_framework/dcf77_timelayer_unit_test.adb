@@ -161,7 +161,7 @@ package body DCF77_Timelayer_Unit_Test is
 	begin
 		for I in Test_Vector'Range loop
 			CMP := Test_Vector(I).Input_TM;
-			DCF77_Timelayer.Testing.Advance_TM_By_Sec(CMP,
+			DCF77_Timelayer.Advance_TM_By_Sec(CMP,
 						Test_Vector(I).Delta_Sec);
 			if CMP = Test_Vector(I).Output_TM then
 				Test_Pass(Prefix & TVD(Test_Vector(I)));

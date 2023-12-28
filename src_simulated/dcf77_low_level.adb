@@ -17,6 +17,7 @@ use  Ada.Assertions;
 -- green_button_is_down         ack,green_button_is_down,<0|1>
 -- left_button_is_down          ack,left_button_is_down,<0|1>
 -- right_button_is_down         ack,right_button_is_down,<0|1>
+-- alarm_switch_is_enabled      ack,alarm_switch_is_enabled,<0|1>
 -- read_light_sensor            ack,read_light_sensor,<0..100 percentage>
 -- get_fault                    ack,get_fault,<positive value>
 --
@@ -124,6 +125,8 @@ package body DCF77_Low_Level is
 				(Call_Bool(Ctx, "left_button_is_down"));
 	function Read_Right_Button_Is_Down(Ctx: in out LL) return Boolean is
 				(Call_Bool(Ctx, "right_button_is_down"));
+	function Read_Alarm_Switch_Is_Enabled(Ctx: in out LL) return Boolean is
+				(Call_Bool(Ctx, "alarm_switch_is_enabled"));
 
 	-- Returns "percentage" scale value
 	function Read_Light_Sensor(Ctx: in out LL) return Light_Value is

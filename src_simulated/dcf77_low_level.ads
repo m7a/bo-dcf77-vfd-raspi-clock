@@ -27,6 +27,7 @@ package DCF77_Low_Level is
 	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean;
 	function Read_Left_Button_Is_Down(Ctx: in out LL) return Boolean;
 	function Read_Right_Button_Is_Down(Ctx: in out LL) return Boolean;
+	function Read_Alarm_Switch_Is_Enabled(Ctx: in out LL) return Boolean;
 
 	-- Returns "percentage" scale value
 	function Read_Light_Sensor(Ctx: in out LL) return Light_Value;

@@ -31,6 +31,7 @@ package body DCF77_Low_Level is
 		Not_Ta_G.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_L.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_R.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
+		Not_Sa_Al.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 
 		-- Analog Inputs
 		Light.Configure(RP.GPIO.Input, RP.GPIO.Floating);
@@ -156,6 +157,8 @@ package body DCF77_Low_Level is
 							(not Not_Ta_L.Get);
 	function Read_Right_Button_Is_Down(Ctx: in out LL) return Boolean is
 							(not Not_Ta_R.Get);
+	function Read_Alarm_Switch_Is_Enabled(Ctx: in out LL) return Boolean is
+							(not Not_Sa_Al.Get);
 
 	function Read_Light_Sensor(Ctx: in out LL) return Light_Value is
 		use type RP.ADC.Microvolts;

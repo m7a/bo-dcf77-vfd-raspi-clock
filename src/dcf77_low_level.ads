@@ -32,6 +32,7 @@ package DCF77_Low_Level is
 	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean;
 	function Read_Left_Button_Is_Down(Ctx: in out LL) return Boolean;
 	function Read_Right_Button_Is_Down(Ctx: in out LL) return Boolean;
+	function Read_Alarm_Switch_Is_Enabled(Ctx: in out LL) return Boolean;
 
 	-- Returns "percentage" scale value
 	function Read_Light_Sensor(Ctx: in out LL) return Light_Value;
@@ -81,6 +82,7 @@ private
 	Not_Ta_G:        RP.GPIO.GPIO_Point renames Pico.GP15;
 	Not_Ta_L:        RP.GPIO.GPIO_Point renames Pico.GP21;
 	Not_Ta_R:        RP.GPIO.GPIO_Point renames Pico.GP20;
+	Not_Sa_Al:       RP.GPIO.GPIO_Point renames Pico.GP19;
 
 	-- Analog Inputs
 	Light:           RP.GPIO.GPIO_Point renames Pico.GP26;

@@ -95,6 +95,8 @@ class ComProc extends Thread {
 		case "right_button_is_down":
 			return bool2str(ustat.buttons.equals("right") ||
 					ustat.buttons.equals("l+r"));
+		case "alarm_switch_is_enabled":
+			return bool2str(ustat.alarmSwitch);
 		case "read_light_sensor":
 			return String.valueOf(ustat.light);
 		case "get_fault":

@@ -38,6 +38,9 @@ package DCF77_Timelayer is
 	function Get_Current(Ctx: in Timelayer) return TM;
 	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS;
 
+	-- Procedure is also useful for alarm implementation!
+	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural);
+
 -- Exported for testing --
 
 	subtype BCD_Digit is Bits(0 .. 3);
@@ -117,7 +120,6 @@ private
 						Telegram_2: in Telegram);
 	function TM_To_Telegram_10min(T: in TM) return Telegram;
 	procedure WMBC(TR: in out Telegram; Offset, Length, Value: in Natural);
-	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural);
 	function Is_Leap_Year(Y: in Natural) return Boolean;
 	procedure Process_New_Telegram(Ctx: in out Timelayer; Telegram_1_In,
 						Telegram_2_In: in Telegram);

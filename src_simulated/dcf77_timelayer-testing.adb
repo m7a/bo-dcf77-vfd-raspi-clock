@@ -5,11 +5,6 @@ package body DCF77_Timelayer.Testing is
 	function Is_Leap_Year(Y: in Natural) return Boolean is
 				(DCF77_Timelayer.Is_Leap_Year(Y));
 
-	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural) is
-	begin
-		DCF77_Timelayer.Advance_TM_By_Sec(T, Seconds);
-	end Advance_TM_By_Sec;
-
 	function Test_Recover_Ones(Preceding_Minute_Ones: in Minute_Buf;
 					Preceding_Minute_Idx: in Minute_Buf_Idx)
 					return Integer is
