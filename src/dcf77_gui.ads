@@ -54,12 +54,16 @@ private
 		Select_Info
 	);
 
+	type Blink is mod 4;
+
+	Blink_Lim: constant Blink := 1;
+
 	type GUI is tagged limited record
 		S: aliased Program_State;
 
 		A:                       State;
 		Numeric_Editing_Enabled: Boolean;
-		Blink_Value:             Boolean;
+		Blink_Value:             Blink;
 		Screen:                  Items(1 .. Max_Num_Items);
 		Screen_Idx:              Natural;
 	end record;
@@ -80,7 +84,10 @@ private
 
 -- private GUI-internal functions --
 
-	procedure Process_Inputs(G: in out GUI);
+	procedure Process_Editing_Inputs(G: in out GUI;
+					Finish, Left, Right: in Boolean);
+	procedure Process_Navigation_Inputs(G: in out GUI;
+					Next_Edit, Left, Right: in Boolean);
 	procedure Update_Screen(G: in out GUI);
 	procedure Add_Time(G: in out GUI; XI: in Pos_X; YI: in Pos_Y;
 				FI: in Font; Underline: in Underline_Info);
@@ -90,15 +97,6 @@ private
 						Underline: in Underline_Info);
 	function Describe_QOS(Q: in DCF77_Timelayer.QOS)
 						return SB.Bounded_String;
-	procedure Add_Menu(Q: in out GUI; Lbl: in Menu_Green);
-
-	--	WIDX_M_Next  => (X =>  0, Y => 48, F => Small,
-	--			Msg => SB.To_Bounded_String("Next")),
-	--	WIDX_M_Minus => (X => 40, Y => 48, F => Small,
-	--			Msg => SB.To_Bounded_String("<")),
-	--	WIDX_M_Plus  => (X => 56, Y => 48, F => Small,
-	--			Msg => SB.To_Bounded_String(">")),
-	--	WIDX_M_AL    => (X => 64, Y => 48, F => Small,
-	--			Msg => SB.To_Bounded_String("AL"))
+	procedure Add_Menu(G: in out GUI; Lbl: in Menu_Green);
 
 end DCF77_GUI;

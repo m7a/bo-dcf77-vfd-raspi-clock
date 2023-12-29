@@ -113,7 +113,7 @@ package body DCF77_Low_Level is
 		Reply: constant String := Call(Ctx, Query);
 	begin
 		Assert(Reply'Length = 1);
-		case Reply(0) is
+		case Reply(Reply'First) is
 		when '0'    => return False;
 		when '1'    => return True;
 		when others => raise Assertion_Error with

@@ -44,6 +44,7 @@ package DCF77_Display is
 	procedure Init(Ctx: in out Disp; LL: in DCF77_Low_Level.LLP);
 	procedure Update(Ctx: in out Disp; It: in Items;
 		New_Brightness: in Brightness := Display_Brightness_Perc_100);
+	function Get_Letter_Width(F: in Font) return Pos_X;
 
 private
 
@@ -92,8 +93,8 @@ private
 	type Sequence is array (Natural range <>) of Sequence_Member;
 
 	-- TODO z highly wasteful but chip is large enough so why not?
-	type U32x16 is array (1 .. 16) of U32;
-	type U16x8 is array (1 .. 8) of U16;
+	type U32x16 is array (Pos_X'(1) .. Pos_X'(16)) of U32;
+	type U16x8  is array (Pos_X'(1) .. Pos_X'(8))  of U16;
 	type Font_Large is array (Character) of U32x16;
 	type Font_Small is array (Character) of U16x8;
 

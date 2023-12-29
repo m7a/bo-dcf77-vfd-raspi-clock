@@ -114,7 +114,7 @@ class ComProc extends Thread {
 	}
 
 	private static String bool2str(boolean value) {
-		return value ? "0" : "1";
+		return value ? "1" : "0";
 	}
 
 	private void handleCast(String type, String args) {

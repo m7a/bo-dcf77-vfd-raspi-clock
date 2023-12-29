@@ -31,6 +31,23 @@ package DCF77_Timelayer is
 	-- TODO DETERMINE FROM COMPILE DATE AND WARN IF IMPOSSIBLE
 	Time_Of_Compilation: constant TM := (2023, 11, 3, 20, 46, 47);
 
+	-- public because it is of interest to GUI, too!
+	Month_Lengths: constant array (0 .. 12) of Natural := (
+		29, --  0: leap year February
+		31, --  1: January
+		28, --  2: February
+		31, --  3: March
+		30, --  4: April
+		31, --  5: May
+		30, --  6: June
+		31, --  7: July
+		31, --  8: August
+		30, --  9: September
+		31, -- 10: October
+		30, -- 11: November
+		31  -- 12: December
+	);
+
 	procedure Init(Ctx: in out Timelayer);
 	procedure Process(Ctx: in out Timelayer;
 					Has_New_Bitlayer_Signal: in Boolean;
@@ -38,10 +55,15 @@ package DCF77_Timelayer is
 	function Get_Current(Ctx: in Timelayer) return TM;
 	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS;
 
+	procedure Set_TM_By_User_Input(Ctx: in out Timelayer; T: in TM);
+
 	-- Procedure is also useful for alarm implementation!
 	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural);
 
--- Exported for testing --
+	-- Function is also useful for GUI implementation!
+	function Is_Leap_Year(Y: in Natural) return Boolean;
+
+-- Visible for testing only --
 
 	subtype BCD_Digit is Bits(0 .. 3);
 
@@ -76,6 +98,12 @@ private
 								DST_Applied);
 
 	type Timelayer is tagged limited record
+		-- Year Hundreds defaults to compile-time value but may be
+		-- changed by user input. Clock does not care if it by itself
+		-- arrives at YH crossing and may fall back to leading “20” such
+		-- as long as nothing was entered by the user explicitly.
+		YH: Natural;
+
 		-- Ring buffer of last minute ones bits.
 		Preceding_Minute_Ones:  Minute_Buf;
 		Preceding_Minute_Idx:   Minute_Buf_Idx;
@@ -94,22 +122,6 @@ private
 		EOH_DST_Switch:         DST_Switch;
 	end record;
 
-	Month_Lengths: constant array (0 .. 12) of Integer := (
-		29, --  0: leap year February
-		31, --  1: January
-		28, --  2: February
-		31, --  3: March
-		30, --  4: April
-		31, --  5: May
-		30, --  6: June
-		31, --  7: July
-		31, --  8: August
-		30, --  9: September
-		31, -- 10: October
-		30, -- 11: November
-		31  -- 12: December
-	);
-
 	type Recovery is (Data_Complete, Data_Incomplete_For_Minute,
 						Data_Incomplete_For_Multiple);
 
@@ -120,7 +132,6 @@ private
 						Telegram_2: in Telegram);
 	function TM_To_Telegram_10min(T: in TM) return Telegram;
 	procedure WMBC(TR: in out Telegram; Offset, Length, Value: in Natural);
-	function Is_Leap_Year(Y: in Natural) return Boolean;
 	procedure Process_New_Telegram(Ctx: in out Timelayer; Telegram_1_In,
 						Telegram_2_In: in Telegram);
 	function Recover_BCD(Tel: in out Telegram) return Recovery;
@@ -130,11 +141,11 @@ private
 							Tel: in Telegram);
 	procedure Decode_And_Populate_DST_Switch(Ctx: in out Timelayer;
 							Tel: in Telegram);
-	function Decode_Tens(Tel: in Telegram) return TM;
+	function Decode_Tens(Ctx: in Timelayer; Tel: in Telegram) return TM;
 	procedure Discard_Ones(T: in out TM);
-	function Decode(Tel: in Telegram) return TM;
-	function Decode_Check(Current: in out TM; Tel: in Telegram)
-								return Boolean;
+	function Decode(Ctx: in Timelayer; Tel: in Telegram) return TM;
+	function Decode_Check(Ctx: in out Timelayer; Tel: in Telegram)
+							return Boolean;
 	function Recover_Ones(Ctx: in out Timelayer) return Integer;
 	function Are_Ones_Compatible(AD, BD: in BCD_Digit) return Boolean;
 	function Check_If_Compat_By_X_Eliminate(

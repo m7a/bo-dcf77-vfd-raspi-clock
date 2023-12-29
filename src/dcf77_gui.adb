@@ -1,13 +1,11 @@
 with DCF77_Functions;
 use  DCF77_Functions; -- x Num_To_Str_L2, L4
 with DCF77_Types;
-with DCF77_Low_Level;
 
 with Interfaces;
 use  Interfaces;
 
 use type DCF77_Types.Reading;
-use type DCF77_Low_Level.Time;
 
 package body DCF77_GUI is
 
@@ -21,61 +19,12 @@ package body DCF77_GUI is
 
 	procedure Mainloop is
 		G: aliased GUI;
-
-		Date_S:       String := "20YYMMDD";
-		Time_S:       String := "HH:ii:ss";
-		Date_B:       SB.Bounded_String;
-		Time_B:       SB.Bounded_String;
-		Last_Reading: DCF77_Types.Reading := DCF77_Types.No_Update;
-
 	begin
 		G.S.Init;
 		G.Init;
-
 		loop
 			G.S.Loop_Pre;
-			G.Process; -- TODO SATISFY COMPILER WARNING FOR NOW
-
-			--Date_S := Nat_To_S(Datetime.Y, 4) & "-" &
-			--		Nat_To_S(Datetime.M, 2) & "-" &
-			--		Nat_To_S(Datetime.D, 2);
-			Date_S := Num_To_Str_L4(G.S.Datetime.Y) &
-					Num_To_Str_L2(G.S.Datetime.M) &
-					Num_To_Str_L2(G.S.Datetime.D);
-			Time_S := Num_To_Str_L2(G.S.Datetime.H) & ":" &
-					Num_To_Str_L2(G.S.Datetime.I) & ":" &
-					Num_To_Str_L2(G.S.Datetime.S);
-			Date_B := SB.To_Bounded_String(Date_S);
-			Time_B := SB.To_Bounded_String(Time_S);
-
-			if G.S.Bitlayer_Reading /= DCF77_Types.No_Update then
-				Last_Reading := G.S.Bitlayer_Reading;
-			end if;
-
-			G.S.Disp.Update((
-				1 => (X => 0, Y => 0, F => Small, Msg => Date_B,
-					others => <>),
-				2 => (X => 68, Y => 0, F => Small,
-					Msg => SB.To_Bounded_String(
-					DCF77_Low_Level.Time'Image(
-					G.S.Ticker.Get_Delay / 1000)),
-					others => <>),
-				3 => (X => 100, Y => 0, F => Small,
-					Msg => Describe_QOS(G.S.Timelayer.Get_Quality_Of_Service),
-					others => <>),
-				4 => (X => 80, Y => 32, F => Small,
-					Msg => SB.To_Bounded_String(
-					Natural'Image(G.S.Bitlayer.Get_Unidentified)),
-					others => <>),
-				5 => (X => 0, Y => 48, F => Small,
-					Msg => SB.To_Bounded_String(
-					DCF77_Types.Reading'Image(Last_Reading) &
-					" FL" & Natural'Image(G.S.LL.Get_Fault)),
-					others => <>),
-				6 => (X => 0, Y => 16, F => Large,
-					Msg => Time_B, others => <>)
-			));
-
+			G.Process;
 			G.S.Loop_Post;
 		end loop;
 	end Mainloop;
@@ -103,10 +52,10 @@ package body DCF77_GUI is
 		S.Alarm.Init(S.LL);
 
 		-- TODO x DEBUG ONLY
-		S.LL.Log("BEFORE CTR=39");
+		S.LL.Log("BEFORE CTR=40");
 		S.Disp.Update((1 => (X => 16, Y => 16, F => Small,
 				Msg => SB.To_Bounded_String(
-				"INIT CTR=39"), others => <>)));
+				"INIT CTR=40"), others => <>)));
 	end Init;
 
 	procedure Loop_Pre(S: in out Program_State) is
@@ -156,54 +105,196 @@ package body DCF77_GUI is
 	begin
 		G.A                       := Select_Display;
 		G.Numeric_Editing_Enabled := False;
-		G.Blink_Value             := False;
+		G.Blink_Value             := 0;
 		G.Screen := (others => (X => 0, Y => 0, 
 				Msg => SB.To_Bounded_String(""), others => <>));
 	end Init;
 
 	procedure Process(G: in out GUI) is
+		Green: constant Boolean := G.S.LL.Read_Green_Button_Is_Down;
+		Left:  constant Boolean := G.S.LL.Read_Left_Button_Is_Down;
+		Right: constant Boolean := G.S.LL.Read_Right_Button_Is_Down;
 	begin
-		G.Process_Inputs;
+		if G.Numeric_Editing_Enabled then
+			G.Process_Editing_Inputs(Green, Left, Right);
+		else
+			G.Process_Navigation_Inputs(Green, Left, Right);
+		end if;
+
 		G.Screen_Idx := 0;
 		G.Update_Screen;
 		G.S.Disp.Update(G.Screen(G.Screen'First .. G.Screen_Idx));
 	end Process;
 
-	-- TODO IMPLEMENT PROCESSING HERE! MAY HAVE DEDICATED VARIANT FOR
-	-- 	NUMERIC EDITING MODE?
-	procedure Process_Inputs(G: in out GUI) is
+	procedure Process_Editing_Inputs(G: in out GUI;
+					Finish, Left, Right: in Boolean) is
+
+		function Edit(Field: in out Natural; Modulus: in Natural)
+							return Boolean is
+		begin
+			if Left and Right then
+				Field := 0;
+				return True;
+			elsif Left then
+				Field := (if Field = 0 then Modulus - 1
+								else Field - 1);
+				return True;
+			elsif Right then
+				Field := (Field + 1) mod Modulus;
+				return True;
+			else
+				-- else do nothing
+				return False;
+			end if;
+		end Edit;
+
+		function Edit_AL_Group return Boolean is
+			CAL: DCF77_Alarm.Time_T := G.S.Alarm.Get_AL_Time;
+			Has_Changes: Boolean;
+		begin
+			case G.A is
+			when Select_AL_H => Has_Changes := Edit(CAL.H, 24);
+			when Select_AL_I => Has_Changes := Edit(CAL.I, 60);
+			when others      => return False;
+			end case;
+			if Has_Changes then
+				G.S.Alarm.Set_AL_Time(CAL);
+			end if;
+			return True;
+		end Edit_AL_Group;
+
+		function Edit_Datetime_Group return Boolean is
+			CDT:         DCF77_Timelayer.TM := G.S.Datetime;
+			YH:          Natural            := CDT.Y  /  100;
+			Y:           Natural            := CDT.Y mod 100;
+			Has_Changes: Boolean;
+		begin
+			case G.A is
+			when Select_DT_H =>
+				Has_Changes := Edit(CDT.H, 24);
+			when Select_DT_I =>
+				Has_Changes := Edit(CDT.I, 60);
+			when Select_DT_S =>
+				-- Disallow input of leap second through GUI for
+				-- now
+				Has_Changes := Edit(CDT.S, 60);
+			when Select_DT_YH =>
+				Has_Changes := Edit(YH, 100);
+				CDT.Y       := Y + YH * 100;
+			when Select_DT_Y =>
+				Has_Changes := Edit(Y, 100);
+				CDT.Y       := Y + YH * 100;
+			when Select_DT_M =>
+				Has_Changes := Edit(CDT.M, 12);
+			when Select_DT_D =>
+				-- Currently requires that the day is valid
+				-- within month. Should be OK due to Y-M-D order
+				-- of editing!
+				Has_Changes := Edit(CDT.D,
+					DCF77_Timelayer.Month_Lengths(if
+						CDT.M = 2 and DCF77_Timelayer.
+							Is_Leap_Year(CDT.Y)
+						then 0 else CDT.M));
+			when others =>
+				return False;
+			end case;
+			if Has_Changes then
+				G.S.Timelayer.Set_TM_By_User_Input(CDT);
+			end if;
+			return True;
+		end Edit_Datetime_Group;
+	begin
+		if Finish then
+			G.Numeric_Editing_Enabled := False;
+			G.Blink_Value             := 0;
+		else
+			G.Blink_Value := G.Blink_Value + 1; -- Blink!
+			if not (Edit_AL_Group or else Edit_Datetime_Group) then
+				-- invalid input, return to default screen
+				G.Numeric_Editing_Enabled := False;
+				G.A                       := Select_Display;
+			end if;
+		end if;
+	end Process_Editing_Inputs;
+
+	procedure Process_Navigation_Inputs(G: in out GUI;
+					Next_Edit, Left, Right: in Boolean) is
 	begin
 		case G.A is
+		-- generalized inner navigation --
+		when
+			-- alarm
+			Select_AL_H |
+			-- datetime
+			Select_DT_H | Select_DT_I | Select_DT_S | Select_DT_YH |
+						Select_DT_Y | Select_DT_M
+		=>
+			if Next_Edit then
+				G.Numeric_Editing_Enabled := True;
+			elsif Left then
+				G.A := State'Pred(G.A);
+			elsif Right then
+				G.A := State'Succ(G.A);
+			end if;
+		-- display --
 		when Select_Display =>
-			null;
+			if Next_Edit then
+				G.A := Select_Alarm;
+			end if;
+		-- alarm --
 		when Select_Alarm =>
-			null;
-		when Select_AL_H =>
-			null;
+			if Next_Edit then
+				G.A := Select_Datetime;
+			elsif Left then
+				G.A := Select_Display;
+			elsif Right then
+				G.A := Select_AL_H;
+			end if;
 		when Select_AL_I =>
-			null;
+			if Next_Edit then
+				G.Numeric_Editing_Enabled := True;
+			elsif Left then
+				G.A := Select_AL_H;
+			elsif Right then
+				G.A := Select_Display;
+			end if;
+		-- datetime --
 		when Select_Datetime =>
-			null;
-		when Select_DT_H =>
-			null;
-		when Select_DT_I =>
-			null;
-		when Select_DT_S =>
-			null;
-		when Select_DT_YH =>
-			null;
-		when Select_DT_Y =>
-			null;
-		when Select_DT_M =>
-			null;
+			if Next_Edit then
+				G.A := Select_Options;
+			elsif Left then
+				G.A := Select_Display;
+			elsif Right then
+				G.A := Select_DT_H;
+			end if;
 		when Select_DT_D =>
-			null;
+			if Next_Edit then
+				G.Numeric_Editing_Enabled := True;
+			elsif Left then
+				G.A := State'Pred(G.A);
+			elsif Right then
+				G.A := Select_Display;
+			end if;
+		-- options --
 		when Select_Options =>
-			null;
+			if Next_Edit then
+				G.A := Select_Info;
+			elsif Left then
+				G.A := Select_Display;
+			elsif Right then
+				null; -- TODO OPTIONS SUBMENU GOES HERE
+			end if;
+		-- info --
 		when Select_Info =>
-			null;
+			if Next_Edit then
+				G.A := Select_Display;
+			elsif Left then
+				G.A := Select_Display;
+			elsif Right then
+				null; -- TODO INFO SUBMENU GOES HERE
+			end if;
 		end case;
-	end Process_Inputs;
+	end Process_Navigation_Inputs;
 
 	procedure Update_Screen(G: in out GUI) is
 	begin
@@ -215,83 +306,83 @@ package body DCF77_GUI is
 			if G.S.Alarm.Is_Alarm_Enabled then
 				G.Add_AL(48, Underline_None);
 			end if;
-		-- <alarm>
+		-- alarm --
 		when Select_Alarm =>
-			G.Add_Time(0, 16, Small, Underline_None);
+			G.Add_Time(32, 16, Small, Underline_None);
 			G.Add_Date(Underline_None);
 			G.Add_QOS(32);
 			G.Add_AL(32, Underline_BTLR);
 			G.Add_Menu(Menu_Next);
 		when Select_AL_H =>
-			G.Add_Time(0, 16, Small, Underline_None);
+			G.Add_Time(32, 16, Small, Underline_None);
 			G.Add_Date(Underline_None);
 			G.Add_QOS(32);
 			G.Add_AL(32, 2);
 			G.Add_Menu(Menu_Edit);
 		when Select_AL_I =>
-			G.Add_Time(0, 16, Small, Underline_None);
+			G.Add_Time(32, 16, Small, Underline_None);
 			G.Add_Date(Underline_None);
 			G.Add_QOS(32);
 			G.Add_AL(32, 4);
 			G.Add_Menu(Menu_Edit);
-		-- </alarm> | <datetime>
+		-- datetime --
 		when Select_Datetime =>
-			G.Add_Time(0, 16, Small, Underline_BLR);
+			G.Add_Time(32, 16, Small, Underline_BLR);
 			G.Add_Date(Underline_TLR);
 			G.Add_QOS(32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Next);
 		when Select_DT_H =>
-			G.Add_Time(0, 16, Small, 1);
+			G.Add_Time(32, 16, Small, 1);
 			G.Add_Date(Underline_None);
 			G.Add_QOS(32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_I =>
-			G.Add_Time(0, 16, Small, 3);
+			G.Add_Time(32, 16, Small, 3);
 			G.Add_Date(Underline_None);
 			G.Add_QOS(32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_S =>
-			G.Add_Time(0, 16, Small, 5);
+			G.Add_Time(32, 16, Small, 5);
 			G.Add_Date(Underline_None);
 			G.Add_QOS(32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_YH =>
-			G.Add_Time(0, 16, Small, Underline_None);
+			G.Add_Time(32, 16, Small, Underline_None);
 			G.Add_Date(1);
 			G.Add_QOS(32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_Y =>
-			G.Add_Time(0, 16, Small, Underline_None);
+			G.Add_Time(32, 16, Small, Underline_None);
 			G.Add_Date(2);
 			G.Add_QOS(32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_M =>
-			G.Add_Time(0, 16, Small, Underline_None);
+			G.Add_Time(32, 16, Small, Underline_None);
 			G.Add_Date(4);
 			G.Add_QOS(32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_D =>
-			G.Add_Time(0, 16, Small, Underline_None);
+			G.Add_Time(32, 16, Small, Underline_None);
 			G.Add_Date(6);
 			G.Add_QOS(32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
-		-- </datetime> | <options>
+		-- options --
 		when Select_Options =>
-			G.Add_Time(0, 16, Small, Underline_None);
-			-- TODO NOT SUPPORTED YET
+			G.Add_Time(0, 0, Small, Underline_None);
+			-- TODO OPTIONS SUBMENU GOES HERE
 			G.Add_Menu(Menu_Next);
-		-- </options> | <info>
+		-- info --
 		when Select_Info =>
-			G.Add_Time(0, 16, Small, Underline_None);
-			-- TODO NOT SUPPORTED YET
+			G.Add_Time(0, 0, Small, Underline_None);
+			-- TODO INFO SCREENS GO HERE
 			G.Add_Menu(Menu_Next);
 		end case;
 	end Update_Screen;
@@ -299,12 +390,12 @@ package body DCF77_GUI is
 	-- H (1), M (3), S (5)
 	procedure Add_Time(G: in out GUI; XI: in Pos_X; YI: in Pos_Y;
 				FI: in Font; Underline: in Underline_Info) is
-		CW: constant Pos_X := (if FI = Small then 8 else 16);
+		CW: constant Pos_X             := Get_Letter_Width(FI);
 		SP: constant SB.Bounded_String := SB.To_Bounded_String(":");
-		IU: Natural := G.Screen_Idx;
+		IU:          Natural           := G.Screen_Idx;
 	begin
 		-- H (1)
-		if not (Underline = 1 and G.Blink_Value) then
+		if not (Underline = 1 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
 			G.Screen(IU) := (X => XI, Y => YI, F => FI,
 					Msg => SB.To_Bounded_String(
@@ -319,7 +410,7 @@ package body DCF77_GUI is
 		G.Screen(IU) := (X => XI + CW * 2, Y => YI, F => FI, Msg => SP,
 				ULB => Underline = Underline_BLR, others => <>);
 		-- I (3)
-		if not (Underline = 3 and G.Blink_Value) then
+		if not (Underline = 3 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
 			G.Screen(IU) := (X => XI + CW * 3, Y => YI, F => FI,
 					Msg => SB.To_Bounded_String(
@@ -333,11 +424,11 @@ package body DCF77_GUI is
 		G.Screen(IU) := (X => XI + CW * 5, Y => YI, F => FI, Msg => SP,
 				ULB => Underline = Underline_BLR, others => <>);
 		-- S (5)
-		if not (Underline = 5 and G.Blink_Value) then
+		if not (Underline = 5 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
 			G.Screen(IU) := (X => XI + CW * 6, Y => YI, F => FI,
 					Msg => SB.To_Bounded_String(
-						Num_To_Str_L2(G.S.Datetime.H)),
+						Num_To_Str_L2(G.S.Datetime.S)),
 					ULB => Underline = 5 or
 						Underline = Underline_BLR,
 					ULR => Underline = Underline_BLR,
@@ -350,47 +441,53 @@ package body DCF77_GUI is
 	procedure Add_Date(G: in out GUI; Underline: in Underline_Info) is
 		SP: constant SB.Bounded_String := SB.To_Bounded_String("-");
 		IU:          Natural           := G.Screen_Idx;
+		CX:          Pos_X             := 24;
 	begin
 		-- YH (1)
-		if not (Underline = 1 and G.Blink_Value) then
+		if not (Underline = 1 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
-			G.Screen(IU) := (X => 0, Y => 0,
+			G.Screen(IU) := (X => CX, Y => 0,
 				Msg => SB.To_Bounded_String(
 					Num_To_Str_L2(G.S.Datetime.Y / 100)),
 				ULB => Underline = 1,
 				ULT | ULL => Underline = Underline_TLR,
 				others => <>);
 		end if;
+		CX := CX + 16;
 		-- Y (2)
-		if not (Underline = 2 and G.Blink_Value) then
+		if not (Underline = 2 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
-			G.Screen(IU) := (X => 16, Y => 0,
+			G.Screen(IU) := (X => CX, Y => 0,
 				Msg => SB.To_Bounded_String(
 					Num_To_Str_L2(G.S.Datetime.Y mod 100)),
 				ULB => Underline = 2,
 				ULT => Underline = Underline_TLR, others => <>);
 		end if;
+		CX := CX + 16;
 		-- Sep (3)
 		IU           := IU + 1;
-		G.Screen(IU) := (X => 32, Y => 0, Msg => SP,
+		G.Screen(IU) := (X => CX, Y => 0, Msg => SP,
 				ULT => Underline = Underline_TLR, others => <>);
+		CX := CX + 8;
 		-- M (4)
-		if not (Underline = 4 and G.Blink_Value) then
+		if not (Underline = 4 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
-			G.Screen(IU) := (X => 40, Y => 0,
+			G.Screen(IU) := (X => CX, Y => 0,
 				Msg => SB.To_Bounded_String(
 					Num_To_Str_L2(G.S.Datetime.M)),
 				ULB => Underline = 4,
 				ULT => Underline = Underline_TLR, others => <>);
 		end if;
+		CX := CX + 16;
 		-- Sep (5)
 		IU           := IU + 1;
-		G.Screen(IU) := (X => 56, Y => 0, Msg => SP,
+		G.Screen(IU) := (X => CX, Y => 0, Msg => SP,
 				ULT => Underline = Underline_TLR, others => <>);
+		CX := CX + 8;
 		-- D (6)
-		if not (Underline = 6 and G.Blink_Value) then
+		if not (Underline = 6 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
-			G.Screen(IU) := (X => 64, Y => 0,
+			G.Screen(IU) := (X => CX, Y => 0,
 				Msg => SB.To_Bounded_String(
 					Num_To_Str_L2(G.S.Datetime.D)),
 				ULB => Underline = 6,
@@ -415,14 +512,14 @@ package body DCF77_GUI is
 	begin
 		-- “AL” Prefix (1)
 		IU := IU + 1;
-		G.Screen(IU) := (X => 48, Y => YI,
+		G.Screen(IU) := (X => 72, Y => YI,
 				Msg => SB.To_Bounded_String("AL"),
 				ULB | ULL | ULT => Underline = Underline_BTLR,
 				others => <>);
 		-- H (2)
-		if not (Underline = 2 and G.Blink_Value) then
+		if not (Underline = 2 and G.Blink_Value > Blink_Lim) then
 			IU := IU + 1;
-			G.Screen(IU) := (X => 64, Y => YI,
+			G.Screen(IU) := (X => 88, Y => YI,
 					Msg => SB.To_Bounded_String(
 						Num_To_Str_L2(AL.H)),
 					ULB => Underline = 2 or
@@ -432,14 +529,14 @@ package body DCF77_GUI is
 		end if;
 		-- Sep (3)
 		IU := IU + 1;
-		G.Screen(IU) := (X => 80, Y => YI,
+		G.Screen(IU) := (X => 104, Y => YI,
 					Msg => SB.To_Bounded_String(":"),
 					ULB | ULT => Underline = Underline_BTLR,
 					others => <>);
 		-- I (4)
-		if not (Underline = 4 and G.Blink_Value) then
+		if not (Underline = 4 and G.Blink_Value > Blink_Lim) then
 			IU := IU + 1;
-			G.Screen(IU) := (X => 88, Y => YI,
+			G.Screen(IU) := (X => 112, Y => YI,
 					Msg => SB.To_Bounded_String(
 						Num_To_Str_L2(AL.I)),
 					ULB => Underline = 4 or
@@ -468,10 +565,34 @@ package body DCF77_GUI is
 		return QOS_Descr(Q);
 	end Describe_QOS;
 
-	procedure Add_Menu(Q: in out GUI; Lbl: in Menu_Green) is
+	procedure Add_Menu(G: in out GUI; Lbl: in Menu_Green) is
+		IU: Natural := G.Screen_Idx;
+		S_Minus: constant SB.Bounded_String := SB.To_Bounded_String(
+			if G.Numeric_Editing_Enabled then " - " else " < ");
+		S_Plus:  constant SB.Bounded_String := SB.To_Bounded_String(
+			if G.Numeric_Editing_Enabled then " + " else " > ");
 	begin
-		-- TODO ASTAT ... Draw menu here
-		null;
+		IU := IU + 1;
+		G.Screen(IU) := (X => 0, Y => 48, ULT | ULR => True,
+								others => <>);
+		case Lbl is
+		when Menu_Next =>
+			G.Screen(IU).Msg := SB.To_Bounded_String("Next  ");
+		when Menu_Edit =>
+			G.Screen(IU).Msg := SB.To_Bounded_String("Edit  ");
+		when Menu_Toggle =>
+			G.Screen(IU).Msg := SB.To_Bounded_String("Toggle");
+		end case;
+		IU := IU + 1;
+		G.Screen(IU) := (X => 48, Y => 48, Msg => S_Minus,
+					ULT | ULR => True, others => <>);
+		IU := IU + 1;
+		G.Screen(IU) := (X => 72, Y => 48, Msg => S_Plus,
+					ULT | ULR => True, others => <>);
+		IU := IU + 1;
+		G.Screen(IU) := (X => 96, Y => 48, Msg => SB.To_Bounded_String(
+					"ALM "), ULT => True, others => <>);
+		G.Screen_Idx := IU;
 	end Add_Menu;
 
 end DCF77_GUI;

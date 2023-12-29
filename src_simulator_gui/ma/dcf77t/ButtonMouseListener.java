@@ -30,12 +30,12 @@ class ButtonMouseListener extends MouseAdapter {
 
 	@Override
 	public void mouseReleased(MouseEvent ev) {
-		userIn.buttons = null;
+		userIn.buttons = "";
 	}
 
 	@Override
 	public void mouseExited(MouseEvent ev) {
-		userIn.buttons = null;
+		userIn.buttons = "";
 	}
 
 }

@@ -78,32 +78,70 @@ package body DCF77_Display is
 
 	procedure Add(Ctx: in out Disp; Item: in Display_Item) is
 		use type U32;
+
+		Is_Special:   constant Boolean := Item.ULB or Item.ULT or
+							Item.ULL or Item.ULR;
+		Letter_Width: constant Pos_X := Get_Letter_Width(Item.F);
+
 		-- for now we blindly assume y % 8 = 0!
 		Addr:         U16 := U16(Item.X) * 8 + U16(Item.Y) / 8 +
 					Shift_Left(U16(Ctx.Vscreen), 10);
-		Letter_Width: Integer;
-		C:            Character;
-	begin
-		case Item.F is
-		when Small => Letter_Width :=  8;
-		when Large => Letter_Width := 16;
-		end case;
 
-		for I in 1 .. SB.Length(Item.Msg) loop
-			C := SB.Element(Item.Msg, I);
+		procedure Add_Simple(C: in Character) is
+		begin
 			for RX in 1 .. Letter_Width loop
 				Ctx.Set_Address(Addr);
 				case Item.F is
 				when Small => Ctx.LL.SPI_Display_Transfer(
-					Font_Small_Data(C)(RX), Data);
+						Font_Small_Data(C)(RX), Data);
 				when Large => Ctx.LL.SPI_Display_Transfer(
-					Font_Large_Data(C)(RX), Data);
+						Font_Large_Data(C)(RX), Data);
 				end case;
 				Ctx.LL.Delay_Micros(1);
 				Addr := Addr + 8;
 			end loop;
-		end loop; 
+		end Add_Simple;
+
+		-- For simplicity draw special stuff always as small
+		procedure Add_Special(C: in Character;
+						Line_L, Line_R: in Boolean) is
+			Line: U16;
+		begin
+			for RX in 1 .. Letter_Width loop
+				Line := (if (RX = 1 and then Line_L)
+						or else
+					    (RX = Letter_Width and then Line_R)
+					then (16#fffc#)
+					else Font_Small_Data(C)(RX));
+				if Item.ULB then
+					Line := Line or 16#0004#;
+				end if;
+				if Item.ULT then
+					Line := Line or 16#8000#;
+				end if;
+				Ctx.Set_Address(Addr);
+				Ctx.LL.SPI_Display_Transfer(Line, Data);
+				Ctx.LL.Delay_Micros(1);
+				Addr := Addr + 8;
+			end loop;
+		end Add_Special;
+	begin
+		if Is_Special then
+			for I in 1 .. SB.Length(Item.Msg) loop
+				Add_Special(SB.Element(Item.Msg, I),
+						I = 1 and then Item.ULL,
+						I = SB.Length(Item.Msg)
+							and then Item.ULR);
+			end loop;
+		else
+			for I in 1 .. SB.Length(Item.Msg) loop
+				Add_Simple(SB.Element(Item.Msg, I));
+			end loop;
+		end if;
 	end Add;
+
+	function Get_Letter_Width(F: in Font) return Pos_X is
+						(if F = Large then 16 else 8);
 
 	procedure Set_Address(Ctx: in out Disp; Addr: in U16) is
 	begin

@@ -17,7 +17,12 @@ package body DCF77_Timelayer.Testing is
 	end Test_Recover_Ones;
 
 	function Decode(Tel: in Telegram) return TM is
-					(DCF77_Timelayer.Decode(Tel));
+		TTL: Timelayer;
+	begin
+		TTL.Init;
+		return TTL.Decode(Tel);
+	end Decode;
+
 	function TM_To_Telegram(T: in TM) return Telegram is
 					(DCF77_Timelayer.TM_To_Telegram(T));
 

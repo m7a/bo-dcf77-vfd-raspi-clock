@@ -187,22 +187,10 @@ package body DCF77_Alarm is
 	function Is_Alarm_Enabled(Ctx: in Alarm) return Boolean is
 							(Ctx.S /= AL_Disabled);
 
-	procedure Inc_AL_Hour(Ctx: in out Alarm) is
+	procedure Set_AL_Time(Ctx: in out Alarm; T: in Time_T) is
 	begin
-		Ctx.T_AL.H         := (Ctx.T_AL.H + 1) mod 24;
+		Ctx.T_AL           := T;
 		Ctx.AL_Has_Changed := True;
-	end Inc_AL_Hour;
-
-	procedure Inc_AL_Minute(Ctx: in out Alarm) is
-	begin
-		Ctx.T_AL.I         := (Ctx.T_AL.I + 1) mod 60;
-		Ctx.AL_Has_Changed := True;
-	end Inc_AL_Minute;
-
-	procedure Reset_AL_Time(Ctx: in out Alarm) is
-	begin
-		Ctx.T_AL           := (others => 0);
-		Ctx.AL_Has_Changed := True;
-	end Reset_AL_Time;
+	end Set_AL_Time;
 
 end DCF77_Alarm;

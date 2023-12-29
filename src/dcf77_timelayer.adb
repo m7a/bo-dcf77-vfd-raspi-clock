@@ -7,6 +7,7 @@ package body DCF77_Timelayer is
 
 	procedure Init(Ctx: in out Timelayer) is
 	begin
+		Ctx.YH                     := TM0.Y / 100;
 		Ctx.Preceding_Minute_Ones  := (others => (others => No_Update));
 		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
 		Ctx.Seconds_Since_Prev     := Unknown;
@@ -221,13 +222,13 @@ package body DCF77_Timelayer is
 
 		-- 1a. pre-adjust previous in case we can safely decode it
 		if Has_Out_2_Tens then
-			Ctx.Prev          := Decode_Tens(Telegram_2);
+			Ctx.Prev          := Ctx.Decode_Tens(Telegram_2);
 			Ctx.Prev_Telegram := Telegram_2;
 		end if;
 
 		-- 2.
 		if Out_1_Recovery = Data_Complete then
-			if not Decode_Check(Ctx.Current, Telegram_1) and
+			if not Ctx.Decode_Check(Telegram_1) and
 					Out_2_Recovery =
 					Data_Incomplete_For_Multiple then
 				Ctx.Seconds_Since_Prev := Unknown;
@@ -243,7 +244,7 @@ package body DCF77_Timelayer is
 			--     out1 recovery == complete handled above already
 			if Out_1_Recovery = Data_Incomplete_For_Minute and
 						Has_Minute_Tens(Telegram_1) then
-				Intermediate := Decode_Tens(Telegram_1);
+				Intermediate := Ctx.Decode_Tens(Telegram_1);
 				Advance_TM_By_Sec(Intermediate, Recovered_Ones *
 								Sec_Per_Min);
 				if Intermediate /= Ctx.Current then
@@ -507,8 +508,8 @@ package body DCF77_Timelayer is
 		end if; -- else ignore if no data available
 	end Decode_And_Populate_DST_Switch;
 
-	function Decode_Tens(Tel: in Telegram) return TM is
-		RV: TM := Decode(Tel);
+	function Decode_Tens(Ctx: in Timelayer; Tel: in Telegram) return TM is
+		RV: TM := Ctx.Decode(Tel);
 	begin
 		Discard_Ones(RV);
 		return RV;
@@ -519,7 +520,7 @@ package body DCF77_Timelayer is
 		T.I := (T.I / 10) * 10;
 	end Discard_Ones;
 
-	function Decode(Tel: in Telegram) return TM is
+	function Decode(Ctx: in Timelayer; Tel: in Telegram) return TM is
 		Ign_Parity: Parity_State := Parity_Sum_Undefined;
 
 		-- Read and Decode
@@ -527,7 +528,7 @@ package body DCF77_Timelayer is
 			(Decode_BCD(Tel.Value(Offset .. Offset + Length - 1),
 			Ign_Parity));
 	begin
-		return (Y => (TM0.Y / 100) * 100 +
+		return (Y => Ctx.YH * 100 +
 			     RD(Offset_Year_Tens,   Length_Year_Tens) * 10 +
 			     RD(Offset_Year_Ones,   Length_Year_Ones),
 			M => RD(Offset_Month_Tens,  Length_Month_Tens) * 10 +
@@ -542,12 +543,12 @@ package body DCF77_Timelayer is
 	end Decode;
 
 	-- @return true if no differences were detected
-	function Decode_Check(Current: in out TM; Tel: in Telegram)
+	function Decode_Check(Ctx: in out Timelayer; Tel: in Telegram)
 							return Boolean is
-		TMN_Interm: constant TM      := Decode(Tel);
-		RV:         constant Boolean := Current = TMN_Interm;
+		TMN_Interm: constant TM      := Ctx.Decode(Tel);
+		RV:         constant Boolean := Ctx.Current = TMN_Interm;
 	begin
-		Current := TMN_Interm;
+		Ctx.Current := TMN_Interm;
 		return RV;
 	end Decode_Check;
 
@@ -722,5 +723,18 @@ package body DCF77_Timelayer is
 
 	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS is
 							(Ctx.Current_QOS);
+
+	procedure Set_TM_By_User_Input(Ctx: in out Timelayer; T: in TM) is
+	begin
+		-- import data
+		Ctx.YH                     := T.Y / 100;
+		Ctx.Current                := T;
+		Ctx.Seconds_Left_In_Minute := DCF77_Offsets.Sec_Per_Min - T.S;
+		-- reset remainder of state
+		Ctx.Seconds_Since_Prev     := Unknown;
+		Ctx.Current_QOS            := QOS9_ASYNC;
+		Ctx.Prev_Telegram.Valid    := Invalid;
+		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
+	end Set_TM_By_User_Input;
 
 end DCF77_Timelayer;

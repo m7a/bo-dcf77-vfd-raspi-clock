@@ -16,14 +16,10 @@ package DCF77_Alarm is
 	procedure Process(Ctx: in out Alarm;
 					DT_Now_Prime: in DCF77_Timelayer.TM);
 
-	-- GUI display API
+	-- GUI API
 	function Get_AL_Time(Ctx: in Alarm) return Time_T;
 	function Is_Alarm_Enabled(Ctx: in Alarm) return Boolean;
-
-	-- GUI controls API
-	procedure Inc_AL_Hour(Ctx: in out Alarm);
-	procedure Inc_AL_Minute(Ctx: in out Alarm);
-	procedure Reset_AL_Time(Ctx: in out Alarm);
+	procedure Set_AL_Time(Ctx: in out Alarm; T: in Time_T);
 
 private
 
