@@ -19,7 +19,12 @@ package DCF77_Display is
 		X:   Pos_X;
 		Y:   Pos_Y;
 		Msg: SB.Bounded_String;
-		F:   Font := Small;
+		F:   Font    := Small;
+		-- underline bottom/top/left/right TODO IMPLEMENT IN DRIVER!
+		ULB: Boolean := False;
+		ULT: Boolean := False;
+		ULL: Boolean := False;
+		ULR: Boolean := False;
 	end record;
 
 	type Items is array (Natural range <>) of Display_Item;

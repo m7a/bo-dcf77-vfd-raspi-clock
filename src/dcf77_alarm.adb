@@ -1,6 +1,3 @@
-with DCF77_Functions;
-use  DCF77_Functions;
-
 package body DCF77_Alarm is
 
 	----------------------------------------------------[ Implementation ]--
@@ -185,9 +182,7 @@ package body DCF77_Alarm is
 
 	---------------------------------------------------------[ Interface ]--
 
-	function Get_AL_Time_Formatted(Ctx: in Alarm) return String is
-					(Num_To_Str_L2(Ctx.T_AL.H) & ":" &
-					Num_To_Str_L2(Ctx.T_AL.I));
+	function Get_AL_Time(Ctx: in Alarm) return Time_T is (Ctx.T_AL);
 
 	function Is_Alarm_Enabled(Ctx: in Alarm) return Boolean is
 							(Ctx.S /= AL_Disabled);

@@ -5,12 +5,19 @@ package DCF77_Alarm is
 
 	type Alarm is tagged limited private;
 
+	-- subset of TM
+	type Time_T is record
+		H: Natural; -- 0..23
+		I: Natural; -- 0..59
+		S: Natural; -- here often 0
+	end record;
+
 	procedure Init(Ctx: in out Alarm; LLI: in DCF77_Low_Level.LLP);
 	procedure Process(Ctx: in out Alarm;
 					DT_Now_Prime: in DCF77_Timelayer.TM);
 
 	-- GUI display API
-	function Get_AL_Time_Formatted(Ctx: in Alarm) return String;
+	function Get_AL_Time(Ctx: in Alarm) return Time_T;
 	function Is_Alarm_Enabled(Ctx: in Alarm) return Boolean;
 
 	-- GUI controls API
@@ -34,13 +41,6 @@ private
 		Y: Natural;
 		M: Natural;
 		D: Natural;
-	end record;
-
-	-- subset of TM
-	type Time_T is record
-		H: Natural; -- 0..23
-		I: Natural; -- 0..59
-		S: Natural; -- here often 0
 	end record;
 
 	type Alarm is tagged limited record

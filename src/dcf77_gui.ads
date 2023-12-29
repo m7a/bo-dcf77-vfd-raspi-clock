@@ -42,20 +42,7 @@ private
 	procedure Loop_Pre(S: in out Program_State);
 	procedure Loop_Post(S: in out Program_State);
 
-	-- Well Known Indices for the Screens
-	-- :Date: 2023-12-28
-	-- :AL:   AL09:20
-	-- :QOS:  +1
-	-- :Time: 00:55:55
-	-- :M_:   Menu Entries in Navigation Line (last line)
-	WIDX_Date:    constant Natural := 1;
-	WIDX_AL:      constant Natural := 2;
-	WIDX_QOS:     constant Natural := 3;
-	WIDX_Time:    constant Natural := 4;
-	WIDX_M_Next:  constant Natural := 5;
-	WIDX_M_Minus: constant Natural := 6;
-	WIDX_M_Plus:  constant Natural := 7;
-	WIDX_M_AL:    constant Natural := 8;
+	Max_Num_Items: constant Natural := 20;
 
 	type State is (
 		Select_Display,
@@ -70,31 +57,48 @@ private
 	type GUI is tagged limited record
 		S: aliased Program_State;
 
-		-- GUI Automaton State
 		A:                       State;
 		Numeric_Editing_Enabled: Boolean;
 		Blink_Value:             Boolean;
-
-		-- Screens
-		Screen_Display: Items(WIDX_Date .. WIDX_Time);
-		Screen_Edit:    Items(WIDX_Date .. WIDX_M_AL);
-		Screen_Options: Items(WIDX_Time .. WIDX_M_AL); -- TODO +x
-		Screen_Info:    Items(WIDX_Time .. WIDX_M_AL); -- TODO SZ TBD
-		-- TODO ... GUI STUFF GOES HERE
+		Screen:                  Items(1 .. Max_Num_Items);
+		Screen_Idx:              Natural;
 	end record;
+
+	-- 1..N index to underline, <= 0: special meaning, see constants
+	type Underline_Info is new Integer range -3 .. 6;
+
+	Underline_BTLR: constant Underline_Info := -3;
+	Underline_BLR:  constant Underline_Info := -2;
+	Underline_TLR:  constant Underline_Info := -1;
+	Underline_None: constant Underline_Info :=  0;
+
+	-- Edit := Edit/Save depending on state of Numeric_Editing_Enabled
+	type Menu_Green is (Menu_Next, Menu_Edit, Menu_Toggle);
 
 	procedure Init(G: in out GUI);
 	procedure Process(G: in out GUI);
 
--- GUI private stuff follows --
+-- private GUI-internal functions --
 
-	procedure Format_Datetime(T: in DCF77_Timelayer.TM;
-					Date, Time: out SB.Bounded_String);
-	procedure Format_Time(T: in DCF77_Timelayer.TM;
-					Time: out SB.Bounded_String);
-	procedure Update_Display(G: in out GUI);
+	procedure Process_Inputs(G: in out GUI);
+	procedure Update_Screen(G: in out GUI);
+	procedure Add_Time(G: in out GUI; XI: in Pos_X; YI: in Pos_Y;
+				FI: in Font; Underline: in Underline_Info);
+	procedure Add_Date(G: in out GUI; Underline: in Underline_Info);
+	procedure Add_QOS(G: in out GUI; YI: in Pos_Y);
+	procedure Add_AL(G: in out GUI; YI: in Pos_Y;
+						Underline: in Underline_Info);
 	function Describe_QOS(Q: in DCF77_Timelayer.QOS)
 						return SB.Bounded_String;
-	function Describe_AL(G: in GUI) return SB.Bounded_String;
+	procedure Add_Menu(Q: in out GUI; Lbl: in Menu_Green);
+
+	--	WIDX_M_Next  => (X =>  0, Y => 48, F => Small,
+	--			Msg => SB.To_Bounded_String("Next")),
+	--	WIDX_M_Minus => (X => 40, Y => 48, F => Small,
+	--			Msg => SB.To_Bounded_String("<")),
+	--	WIDX_M_Plus  => (X => 56, Y => 48, F => Small,
+	--			Msg => SB.To_Bounded_String(">")),
+	--	WIDX_M_AL    => (X => 64, Y => 48, F => Small,
+	--			Msg => SB.To_Bounded_String("AL"))
 
 end DCF77_GUI;
