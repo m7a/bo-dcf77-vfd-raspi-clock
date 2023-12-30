@@ -8,6 +8,7 @@ package body DCF77_Timelayer is
 	procedure Init(Ctx: in out Timelayer) is
 	begin
 		Ctx.YH                     := TM0.Y / 100;
+		Ctx.DCF77_Enabled          := True;
 		Ctx.Preceding_Minute_Ones  := (others => (others => No_Update));
 		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
 		Ctx.Seconds_Since_Prev     := Unknown;
@@ -63,7 +64,7 @@ package body DCF77_Timelayer is
 				Advance_TM_By_Sec(Ctx.Current, 1);
 			end if;
 		end if;
-		if Telegram_1.Valid /= Invalid then
+		if Telegram_1.Valid /= Invalid and Ctx.DCF77_Enabled then
 			Ctx.Process_New_Telegram(Telegram_1, Telegram_2);
 			if Ctx.EOH_DST_Switch = DST_Applied then
 				Ctx.EOH_DST_Switch := DST_No_Change;
@@ -736,5 +737,17 @@ package body DCF77_Timelayer is
 		Ctx.Prev_Telegram.Valid    := Invalid;
 		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
 	end Set_TM_By_User_Input;
+
+	function Is_DCF77_Enabled(Ctx: in Timelayer) return Boolean is
+							(Ctx.DCF77_Enabled);
+
+	procedure Set_DCF77_Enabled(Ctx: in out Timelayer; En: in Boolean) is
+	begin
+		Ctx.Seconds_Since_Prev   := Unknown;
+		Ctx.Current_QOS          := QOS9_ASYNC;
+		Ctx.Prev_Telegram.Valid  := Invalid;
+		Ctx.Preceding_Minute_Idx := Minute_Buf_Idx'Last;
+		Ctx.DCF77_Enabled        := En;
+	end Set_DCF77_Enabled;
 
 end DCF77_Timelayer;

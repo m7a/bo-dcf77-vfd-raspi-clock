@@ -56,6 +56,8 @@ package DCF77_Timelayer is
 	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS;
 
 	procedure Set_TM_By_User_Input(Ctx: in out Timelayer; T: in TM);
+	function Is_DCF77_Enabled(Ctx: in Timelayer) return Boolean;
+	procedure Set_DCF77_Enabled(Ctx: in out Timelayer; En: in Boolean);
 
 	-- Procedure is also useful for alarm implementation!
 	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural);
@@ -102,7 +104,12 @@ private
 		-- changed by user input. Clock does not care if it by itself
 		-- arrives at YH crossing and may fall back to leading “20” such
 		-- as long as nothing was entered by the user explicitly.
-		YH: Natural;
+		YH:                     Natural;
+
+		-- Bypass processing except for date & time computation based
+		-- on preceding value. Can be used to operate the clock manually
+		-- and for time drift debugging purposes.
+		DCF77_Enabled:          Boolean;
 
 		-- Ring buffer of last minute ones bits.
 		Preceding_Minute_Ones:  Minute_Buf;

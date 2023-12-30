@@ -51,7 +51,11 @@ private
 			Select_DT_H,  Select_DT_I, Select_DT_S,
 			Select_DT_YH, Select_DT_Y, Select_DT_M, Select_DT_D,
 		Select_Options,
-		Select_Info
+			Select_OPT_DCF77_EN, Select_OPT_RFU_EN,
+		Select_Info,
+			Select_I_QOS,
+			Select_I_Last_1, Select_I_Last_2,
+			Select_I_Ver_1, Select_I_Ver_2, Select_I_Ver_3
 	);
 
 	type Blink is mod 4;
@@ -66,6 +70,10 @@ private
 		Blink_Value:             Blink;
 		Screen:                  Items(1 .. Max_Num_Items);
 		Screen_Idx:              Natural;
+
+		-- reserved for future use. remove once something meaningful
+		-- is established behind this option...
+		RFU_Option:              Boolean;
 	end record;
 
 	-- 1..N index to underline, <= 0: special meaning, see constants
@@ -77,7 +85,7 @@ private
 	Underline_None: constant Underline_Info :=  0;
 
 	-- Edit := Edit/Save depending on state of Numeric_Editing_Enabled
-	type Menu_Green is (Menu_Next, Menu_Edit, Menu_Toggle);
+	type Menu_Green is (Menu_Next, Menu_Edit, Menu_Toggle, Menu_Home);
 
 	procedure Init(G: in out GUI);
 	procedure Process(G: in out GUI);
@@ -98,5 +106,11 @@ private
 	function Describe_QOS(Q: in DCF77_Timelayer.QOS)
 						return SB.Bounded_String;
 	procedure Add_Menu(G: in out GUI; Lbl: in Menu_Green);
+	procedure Add_Option_DCF77(G: in out GUI;
+						Underline: in Underline_Info);
+	procedure Add_Option(G: in out GUI; Underline: in Underline_Info;
+			YI: in Pos_Y; Label: in String; Value: in Boolean);
+	procedure Add_Option_RFU(G: in out GUI; Underline: in Underline_Info);
+	procedure Add_Info(G: in out GUI; Title, L1, L2: in String);
 
 end DCF77_GUI;

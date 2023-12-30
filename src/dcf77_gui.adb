@@ -108,6 +108,7 @@ package body DCF77_GUI is
 		G.Blink_Value             := 0;
 		G.Screen := (others => (X => 0, Y => 0, 
 				Msg => SB.To_Bounded_String(""), others => <>));
+		G.RFU_Option              := True;
 	end Init;
 
 	procedure Process(G: in out GUI) is
@@ -222,13 +223,7 @@ package body DCF77_GUI is
 	begin
 		case G.A is
 		-- generalized inner navigation --
-		when
-			-- alarm
-			Select_AL_H |
-			-- datetime
-			Select_DT_H | Select_DT_I | Select_DT_S | Select_DT_YH |
-						Select_DT_Y | Select_DT_M
-		=>
+		when Select_AL_H | Select_DT_H .. Select_DT_M =>
 			if Next_Edit then
 				G.Numeric_Editing_Enabled := True;
 			elsif Left then
@@ -282,7 +277,24 @@ package body DCF77_GUI is
 			elsif Left then
 				G.A := Select_Display;
 			elsif Right then
-				null; -- TODO OPTIONS SUBMENU GOES HERE
+				G.A := Select_OPT_DCF77_EN;
+			end if;
+		when Select_OPT_DCF77_EN =>
+			if Next_Edit then
+				G.S.Timelayer.Set_DCF77_Enabled(
+					not G.S.Timelayer.Is_DCF77_Enabled);
+			elsif Left then
+				G.A := State'Pred(G.A);
+			elsif Right then
+				G.A := State'Succ(G.A);
+			end if;
+		when Select_OPT_RFU_EN =>
+			if Next_Edit then
+				G.RFU_Option := not G.RFU_Option;
+			elsif Left then
+				G.A := State'Pred(G.A);
+			elsif Right then
+				G.A := Select_Display;
 			end if;
 		-- info --
 		when Select_Info =>
@@ -291,12 +303,29 @@ package body DCF77_GUI is
 			elsif Left then
 				G.A := Select_Display;
 			elsif Right then
-				null; -- TODO INFO SUBMENU GOES HERE
+				G.A := State'Succ(G.A);
+			end if;
+		when Select_I_QOS .. Select_I_Ver_2 =>
+			if Next_Edit then
+				G.A := Select_Display;
+			elsif Left then
+				G.A := State'Pred(G.A);
+			elsif Right then
+				G.A := State'Succ(G.A);
+			end if;
+		when Select_I_Ver_3 =>
+			if Next_Edit then
+				G.A := Select_Display;
+			elsif Left then
+				G.A := State'Pred(G.A);
+			elsif Right then
+				G.A := Select_Display;
 			end if;
 		end case;
 	end Process_Navigation_Inputs;
 
 	procedure Update_Screen(G: in out GUI) is
+		use type DCF77_Low_Level.Time;
 	begin
 		case G.A is
 		when Select_Display =>
@@ -377,13 +406,68 @@ package body DCF77_GUI is
 		-- options --
 		when Select_Options =>
 			G.Add_Time(0, 0, Small, Underline_None);
-			-- TODO OPTIONS SUBMENU GOES HERE
+			G.Add_Option_DCF77(Underline_TLR);
+			G.Add_Option_RFU(Underline_BLR);
 			G.Add_Menu(Menu_Next);
+		when Select_OPT_DCF77_EN =>
+			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Option_DCF77(1);
+			G.Add_Option_RFU(Underline_None);
+			G.Add_Menu(Menu_Toggle);
+		when Select_OPT_RFU_EN =>
+			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Option_DCF77(Underline_None);
+			G.Add_Option_RFU(1);
+			G.Add_Menu(Menu_Toggle);
 		-- info --
 		when Select_Info =>
 			G.Add_Time(0, 0, Small, Underline_None);
-			-- TODO INFO SCREENS GO HERE
-			G.Add_Menu(Menu_Next);
+			G.Add_Info("CTRInfo",
+				"LL " & Num_To_Str_L4(G.S.LL.Get_Fault) &
+					" BIT" & Num_To_Str_L4(
+					G.S.Bitlayer.Get_Unidentified),
+				"SEC" & Num_To_Str_L4(G.S.Secondlayer.Get_Fault)
+					& " DLY" & Num_To_Str_L4(Natural(
+					G.S.Ticker.Get_Delay / 1000)));
+			G.Add_Menu(Menu_Home);
+		when Select_I_QOS =>
+			G.Add_Time(0, 0, Small, Underline_None);
+			-- TODO GENERATE VALUES FROM TIMELAYER
+			G.Add_Info("QOSInfo",
+				"+1 23 45 678  9",
+				"-- TODO TBD --");
+			G.Add_Menu(Menu_Home);
+		when Select_I_Last_1 =>
+			G.Add_Time(0, 0, Small, Underline_None);
+			-- TODO FORMAT RECEIVED BYTES 0..28
+			G.Add_Info("Last1/2", "TBD", "TBD...");
+			G.Add_Menu(Menu_Home);
+		when Select_I_Last_2 =>
+			G.Add_Time(0, 0, Small, Underline_None);
+			-- TODO FORMAT RECEIVED BYTES 29..59
+			G.Add_Info("Last2/2", "TBD", "TBD_");
+			G.Add_Menu(Menu_Home);
+		when Select_I_Ver_1 =>
+			G.Add_Time(0, 0, Small, Underline_None);
+			-- indentation exceeded
+			G.Add_Info("Ver.1/3",
+			"Version 01.00.00", "Date" &
+			Num_To_Str_L4(DCF77_Timelayer.Time_Of_Compilation.Y) &
+			Num_To_Str_L2(DCF77_Timelayer.Time_Of_Compilation.M) &
+			Num_To_Str_L2(DCF77_Timelayer.Time_Of_Compilation.D) &
+			Num_To_Str_L2(DCF77_Timelayer.Time_Of_Compilation.H) &
+			Num_To_Str_L2(DCF77_Timelayer.Time_Of_Compilation.I));
+			G.Add_Menu(Menu_Home);
+		when Select_I_Ver_2 =>
+			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Info("Ver.2/3",
+					"(c) 2018-2024", "    Ma_Sys.ma");
+			G.Add_Menu(Menu_Home);
+		when Select_I_Ver_3 =>
+			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Info("Ver.3/3",
+					"Further info:", "info@masysma.net");
+			G.Add_Menu(Menu_Home);
 		end case;
 	end Update_Screen;
 
@@ -566,16 +650,18 @@ package body DCF77_GUI is
 	end Describe_QOS;
 
 	procedure Add_Menu(G: in out GUI; Lbl: in Menu_Green) is
-		IU: Natural := G.Screen_Idx;
 		S_Minus: constant SB.Bounded_String := SB.To_Bounded_String(
 			if G.Numeric_Editing_Enabled then " - " else " < ");
 		S_Plus:  constant SB.Bounded_String := SB.To_Bounded_String(
 			if G.Numeric_Editing_Enabled then " + " else " > ");
+		IU: Natural := G.Screen_Idx;
 	begin
 		IU := IU + 1;
 		G.Screen(IU) := (X => 0, Y => 48, ULT | ULR => True,
 								others => <>);
 		case Lbl is
+		when Menu_Home =>
+			G.Screen(IU).Msg := SB.To_Bounded_String("Home  ");
 		when Menu_Next =>
 			G.Screen(IU).Msg := SB.To_Bounded_String("Next  ");
 		when Menu_Edit =>
@@ -594,5 +680,54 @@ package body DCF77_GUI is
 					"ALM "), ULT => True, others => <>);
 		G.Screen_Idx := IU;
 	end Add_Menu;
+
+	procedure Add_Option_DCF77(G: in out GUI;
+						Underline: in Underline_Info) is
+	begin
+		G.Add_Option(Underline, 16, "DCF77 Proc.",
+						G.S.Timelayer.Is_DCF77_Enabled);
+	end Add_Option_DCF77;
+
+	procedure Add_Option(G: in out GUI; Underline: in Underline_Info;
+			YI: in Pos_Y; Label: in String; Value: in Boolean) is
+		Yes: constant SB.Bounded_String := SB.To_Bounded_String("Yes");
+		No:  constant SB.Bounded_String := SB.To_Bounded_String("No ");
+		IU: Natural := G.Screen_Idx;
+	begin
+		IU := IU + 1;
+		G.Screen(IU) := (X => 0, Y => YI,
+				Msg => SB.To_Bounded_String(Label),
+				others => <>);
+		IU := IU + 1;
+		G.Screen(IU) := (X => 88, Y => YI,
+				Msg => (if Value then Yes else No),
+				ULB => Underline = 1 or
+					Underline = Underline_BLR,
+				ULL | ULR => Underline = Underline_TLR or
+					Underline = Underline_BLR,
+				ULT => Underline = Underline_TLR,
+				others => <>);
+		G.Screen_Idx := IU;
+	end Add_Option;
+
+	procedure Add_Option_RFU(G: in out GUI; Underline: in Underline_Info) is
+	begin
+		G.Add_Option(Underline, 32, "RFU Option ", G.RFU_Option);
+	end Add_Option_RFU;
+
+	procedure Add_Info(G: in out GUI; Title, L1, L2: in String) is
+		IU: Natural := G.Screen_Idx;
+	begin
+		IU := IU + 1;
+		G.Screen(IU) := (X => 72, Y => 0, Msg =>
+				SB.To_Bounded_String(Title), others => <>);
+		IU := IU + 1;
+		G.Screen(IU) := (X => 0, Y => 16, Msg =>
+				SB.To_Bounded_String(L1), others => <>);
+		IU := IU + 1;
+		G.Screen(IU) := (X => 0, Y => 32, Msg =>
+				SB.To_Bounded_String(L2), others => <>);
+		G.Screen_Idx := IU;
+	end Add_Info;
 
 end DCF77_GUI;
