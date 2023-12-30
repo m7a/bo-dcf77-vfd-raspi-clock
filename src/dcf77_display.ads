@@ -20,7 +20,7 @@ package DCF77_Display is
 		Y:   Pos_Y;
 		Msg: SB.Bounded_String;
 		F:   Font    := Small;
-		-- underline bottom/top/left/right TODO IMPLEMENT IN DRIVER!
+		-- underline bottom/top/left/right
 		ULB: Boolean := False;
 		ULT: Boolean := False;
 		ULL: Boolean := False;
@@ -92,7 +92,7 @@ private
 
 	type Sequence is array (Natural range <>) of Sequence_Member;
 
-	-- TODO z highly wasteful but chip is large enough so why not?
+	-- Wasteful but chip is large enough so why not...
 	type U32x16 is array (Pos_X'(1) .. Pos_X'(16)) of U32;
 	type U16x8  is array (Pos_X'(1) .. Pos_X'(8))  of U16;
 	type Font_Large is array (Character) of U32x16;
@@ -178,7 +178,7 @@ private
 			16#181800#,16#0#,16#0#),
 		' ' => (16#0#,16#0#,16#0#,16#0#,16#0#,16#0#,16#0#,16#0#,16#0#,
 			16#0#,16#0#,16#0#,16#0#,16#0#,16#0#,16#0#),
-		-- TODO MAKE AN ERROR PATTERN HERE
+		-- optionally could do some error pattern here?
 		others => (others => 0)
 	);
 
@@ -359,7 +359,6 @@ private
 			16#0#),
 		'~' => (16#180#,16#200#,16#200#,16#100#,16#80#,16#80#,16#300#,
 			16#0#),
-		-- TODO WHAT ABOUT THE SPECIAL CHARS? -> arraydata.txt
 		others => (others => 0)
 	);
 

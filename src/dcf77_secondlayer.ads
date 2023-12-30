@@ -10,7 +10,11 @@ package DCF77_Secondlayer is
 	procedure Init(Ctx: in out Secondlayer);
 	procedure Process(Ctx: in out Secondlayer; Val: in Reading;
 					Telegram_1, Telegram_2: out Telegram);
+
+	-- GUI information
 	function Get_Fault(Ctx: in Secondlayer) return Natural;
+	procedure Visualize_Bytes(Ctx: in Secondlayer; RV: in out String;
+			From, To: in Natural; Cursor_Passed_Out: out Boolean);
 
 private
 

@@ -112,5 +112,7 @@ private
 			YI: in Pos_Y; Label: in String; Value: in Boolean);
 	procedure Add_Option_RFU(G: in out GUI; Underline: in Underline_Info);
 	procedure Add_Info(G: in out GUI; Title, L1, L2: in String);
+	procedure Add_Last_1(G: in out GUI);
+	procedure Add_Last_2(G: in out GUI);
 
 end DCF77_GUI;

@@ -9,11 +9,6 @@ package DCF77_Functions is
 	function Num_To_Str_L2(Num: in Natural) return String
 						with Pre => (Num < 100);
 
-	-- TODO function may not be needed?
-	--      the idea is that this one is generic but may be slower than
-	--      L2/L4 variants.
-	--function Num_To_Str(Num: in Natural; W: in Natural) return String;
-
 private
 
 	Digit_Lut: array(0 .. 9) of Character :=

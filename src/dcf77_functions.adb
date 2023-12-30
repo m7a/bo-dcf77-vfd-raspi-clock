@@ -16,17 +16,6 @@ package body DCF77_Functions is
 	procedure Inc_Saturated_Int(Ctr: in out Integer; Lim: in Integer)
 				renames Inc_Saturated_Integer;
 
-	--function Num_To_Str(Num: in Natural; W: in Natural) return String is
-	--	NC: Natural := Num;
-	--	RV: String(1 .. W);
-	--begin
-	--	for I in reverse RV'Range loop
-	--		RV(I) := Digit_Lut(NC mod 10);
-	--		NC := NC / 10;
-	--	end loop;
-	--	return RV;
-	--end Num_To_Str;
-
 	function Num_To_Str_L4(Num: in Natural) return String is
 			(Digit_Lut(Num / 1000), Digit_Lut((Num mod 1000) / 100),
 			Digit_Lut((Num mod 100) / 10), Digit_Lut(Num mod 10));

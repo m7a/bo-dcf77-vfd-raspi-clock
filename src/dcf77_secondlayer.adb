@@ -880,4 +880,32 @@ package body DCF77_Secondlayer is
 	function Get_Fault(Ctx: in Secondlayer) return Natural is
 							(Ctx.Fault_Reset);
 
+	procedure Visualize_Bytes(Ctx: in Secondlayer; RV: in out String;
+			From, To: in Natural; Cursor_Passed_Out: out Boolean) is
+		SI: Natural := RV'First;
+	begin
+		if Ctx.Line_Cursor >= From then
+			for I in From .. Natural'Min(To, Ctx.Line_Cursor - 1)
+									loop
+				case Ctx.Lines(Ctx.Line_Current).Value(I) is
+				when DCF77_Types.Bit_0     => RV(SI) := '0';
+				when DCF77_Types.Bit_1     => RV(SI) := '1';
+				when DCF77_Types.No_Update => RV(SI) := '2';
+				when DCF77_Types.No_Signal => RV(SI) := '3';
+				end case;
+				SI := SI + 1;
+			end loop;
+			if Ctx.Line_Cursor >= From and
+						Ctx.Line_Cursor <= To then
+				RV(RV'First + (Ctx.Line_Cursor - From)) := '_';
+			end if;
+		end if;
+		-- 28: It used to be '0' but in transition from backward to
+		--     forward processing this causes some wrong automatic
+		--     switching. Hence for now hardcode display size here...
+		Cursor_Passed_Out := Ctx.Inmode = In_Forward and
+					((Ctx.Line_Cursor = 1 and From > 28) or
+					(Ctx.Line_Cursor = To + 2));
+	end Visualize_Bytes;
+
 end DCF77_Secondlayer;

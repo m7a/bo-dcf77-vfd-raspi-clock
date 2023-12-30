@@ -53,15 +53,16 @@ package DCF77_Timelayer is
 					Has_New_Bitlayer_Signal: in Boolean;
 					Telegram_1, Telegram_2: in Telegram);
 	function Get_Current(Ctx: in Timelayer) return TM;
-	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS;
 
+	-- GUI interaction
+	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS;
 	procedure Set_TM_By_User_Input(Ctx: in out Timelayer; T: in TM);
 	function Is_DCF77_Enabled(Ctx: in Timelayer) return Boolean;
 	procedure Set_DCF77_Enabled(Ctx: in out Timelayer; En: in Boolean);
+	function Get_QOS_Stats(Ctx: in Timelayer) return String;
 
 	-- Procedure is also useful for alarm implementation!
 	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural);
-
 	-- Function is also useful for GUI implementation!
 	function Is_Leap_Year(Y: in Natural) return Boolean;
 
@@ -99,6 +100,9 @@ private
 	type DST_Switch is (DST_No_Change, DST_To_Summer, DST_To_Winter,
 								DST_Applied);
 
+	type Stat_Entry is mod 2**32;
+	type QOS_Stats_Array is array(QOS) of Stat_Entry;
+
 	type Timelayer is tagged limited record
 		-- Year Hundreds defaults to compile-time value but may be
 		-- changed by user input. Clock does not care if it by itself
@@ -127,6 +131,8 @@ private
 		-- Denotes if at end of hour there will be a switch between
 		-- summer and winter time.
 		EOH_DST_Switch:         DST_Switch;
+
+		QOS_Stats:              QOS_Stats_Array;
 	end record;
 
 	type Recovery is (Data_Complete, Data_Incomplete_For_Minute,

@@ -17,6 +17,7 @@ package body DCF77_Timelayer is
 		Ctx.Current_QOS            := QOS9_ASYNC;
 		Ctx.Prev_Telegram          := (Valid => Invalid,
 						Value => (others => No_Signal));
+		Ctx.QOS_Stats              := (others => 0);
 	end Init;
 
 	procedure Process(Ctx: in out Timelayer;
@@ -69,6 +70,15 @@ package body DCF77_Timelayer is
 			if Ctx.EOH_DST_Switch = DST_Applied then
 				Ctx.EOH_DST_Switch := DST_No_Change;
 			end if;
+		end if;
+		-- maintain information about the statistics of the occurrence
+		-- of the individual QOS levels
+		if Has_New_Bitlayer_Signal then
+			if Ctx.QOS_Stats(Ctx.Current_QOS) = Stat_Entry'Last then
+				Ctx.QOS_Stats := (others => 0);
+			end if;
+			Ctx.QOS_Stats(Ctx.Current_QOS) :=
+					Ctx.QOS_Stats(Ctx.Current_QOS) + 1;
 		end if;
 	end Process;
 
@@ -749,5 +759,33 @@ package body DCF77_Timelayer is
 		Ctx.Preceding_Minute_Idx := Minute_Buf_Idx'Last;
 		Ctx.DCF77_Enabled        := En;
 	end Set_DCF77_Enabled;
+
+	function Get_QOS_Stats(Ctx: in Timelayer) return String is
+		type Sum_T is mod 2**64;
+
+		S1:   constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS1));
+		S23:  constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS2)) +
+					Sum_T(Ctx.QOS_Stats(QOS3));
+		S45:  constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS4)) +
+					Sum_T(Ctx.QOS_Stats(QOS5));
+		S678: constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS6)) +
+					Sum_T(Ctx.QOS_Stats(QOS7)) +
+					Sum_T(Ctx.QOS_Stats(QOS8));
+		S9:   constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS9_ASYNC));
+
+		-- +1 avoid div 0 and 100%
+		Sum:  constant Sum_T := (S1 + S23 + S45 + S678 + S9) / 100 + 1;
+
+		P1:   constant Natural := Natural(S1   / Sum);
+		P23:  constant Natural := Natural(S23  / Sum);
+		P45:  constant Natural := Natural(S45  / Sum);
+		P678: constant Natural := Natural(S678 / Sum);
+		P9:   constant Natural := Natural(S9   / Sum);
+	begin
+		-- Format TBL >+1 23 45 678  9<
+		return  Num_To_Str_L2(P1)  & " " & Num_To_Str_L2(P23)  & " " &
+			Num_To_Str_L2(P45) & "  " & Num_To_Str_L2(P678) & " " &
+			Num_To_Str_L2(P9);
+	end Get_QOS_Stats;
 
 end DCF77_Timelayer;

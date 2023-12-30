@@ -52,10 +52,10 @@ package body DCF77_GUI is
 		S.Alarm.Init(S.LL);
 
 		-- TODO x DEBUG ONLY
-		S.LL.Log("BEFORE CTR=40");
+		S.LL.Log("BEFORE CTR=41");
 		S.Disp.Update((1 => (X => 16, Y => 16, F => Small,
 				Msg => SB.To_Bounded_String(
-				"INIT CTR=40"), others => <>)));
+				"INIT CTR=41"), others => <>)));
 	end Init;
 
 	procedure Loop_Pre(S: in out Program_State) is
@@ -432,20 +432,16 @@ package body DCF77_GUI is
 			G.Add_Menu(Menu_Home);
 		when Select_I_QOS =>
 			G.Add_Time(0, 0, Small, Underline_None);
-			-- TODO GENERATE VALUES FROM TIMELAYER
 			G.Add_Info("QOSInfo",
-				"+1 23 45 678  9",
-				"-- TODO TBD --");
+				"+1 23 45 678  9", G.S.Timelayer.Get_QOS_Stats);
 			G.Add_Menu(Menu_Home);
 		when Select_I_Last_1 =>
 			G.Add_Time(0, 0, Small, Underline_None);
-			-- TODO FORMAT RECEIVED BYTES 0..28
-			G.Add_Info("Last1/2", "TBD", "TBD...");
+			G.Add_Last_1;
 			G.Add_Menu(Menu_Home);
 		when Select_I_Last_2 =>
 			G.Add_Time(0, 0, Small, Underline_None);
-			-- TODO FORMAT RECEIVED BYTES 29..59
-			G.Add_Info("Last2/2", "TBD", "TBD_");
+			G.Add_Last_2;
 			G.Add_Menu(Menu_Home);
 		when Select_I_Ver_1 =>
 			G.Add_Time(0, 0, Small, Underline_None);
@@ -729,5 +725,35 @@ package body DCF77_GUI is
 				SB.To_Bounded_String(L2), others => <>);
 		G.Screen_Idx := IU;
 	end Add_Info;
+
+	procedure Add_Last_1(G: in out GUI) is
+		L1: String(1 .. 16) := (others => ' ');
+		L2: String(1 .. 16) := (others => ' ');
+		Cursor_Passed_Out: Boolean;
+	begin
+		G.S.Secondlayer.Visualize_Bytes(L1, 0,  15, Cursor_Passed_Out);
+		G.S.Secondlayer.Visualize_Bytes(L2, 16, 28, Cursor_Passed_Out);
+		-- Hack to display dots if telegram continues on next page...
+		if L2(13) /= ' ' and L2(13) /= '_' then
+			L2(14 .. 16) := "...";
+		end if;
+		if Cursor_Passed_Out then
+			G.A := Select_I_Last_2;
+		end if;
+		G.Add_Info("Last1/2", L1, L2);
+	end Add_Last_1;
+
+	procedure Add_Last_2(G: in out GUI) is
+		L3: String(1 .. 16) := (others => ' ');
+		L4: String(1 .. 15) := (others => ' ');
+		Cursor_Passed_Out: Boolean;
+	begin
+		G.S.Secondlayer.Visualize_Bytes(L3, 29, 44, Cursor_Passed_Out);
+		G.S.Secondlayer.Visualize_Bytes(L4, 45, 59, Cursor_Passed_Out);
+		if Cursor_Passed_Out then
+			G.A := Select_I_Last_1;
+		end if;
+		G.Add_Info("Last2/2", L3, L4);
+	end Add_Last_2;
 
 end DCF77_GUI;
