@@ -1,6 +1,5 @@
 with DCF77_Display;
 use  DCF77_Display;
-with DCF77_Ticker;
 with DCF77_Types;
 with DCF77_Bitlayer;
 with DCF77_ST_Layer_Shared;
@@ -24,7 +23,6 @@ private
 		Disp:        aliased DCF77_Display.Disp;
 
 		-- Timekeeping
-		Ticker:      aliased DCF77_Ticker.Ticker;
 		Bitlayer:    aliased DCF77_Bitlayer.Bitlayer;
 		Secondlayer: aliased DCF77_Secondlayer.Secondlayer;
 		Timelayer:   aliased DCF77_Timelayer.Timelayer;
@@ -40,7 +38,6 @@ private
 
 	procedure Init(S: in out Program_State);
 	procedure Loop_Pre(S: in out Program_State);
-	procedure Loop_Post(S: in out Program_State);
 
 	Max_Num_Items: constant Natural := 20;
 

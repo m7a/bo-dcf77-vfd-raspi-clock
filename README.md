@@ -10,8 +10,21 @@ x-masysma-version: 1.0.0
 x-masysma-website: https://masysma.net/...
 x-masysma-repository: https://www.github.com/m7a/bo-dcf77vfd-raspi-clock
 x-masysma-owned: 1
-x-masysma-copyright: (c) 2018-2023 Ma_Sys.ma <info@masysma.net>.
+x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
 ---
+Status
+======
+
+ * Largest Problem is the drift really.
+ * Additionally, something wrong with the ticker: After switching screens the
+   timing is off. This causes the clock to desynchronize itself (badly!)
+ * Need to fix this ticker issue maybe by removing the protection against
+   continuous small delay changes. Could also consider revising it to do a
+   busy loop with get time if that performs better?
+ * Button pressing is not nice. Should really await for a button release
+   (at least for the green buttons and for blue navigation. blue +/- could
+   retain the current behaviour because it seems to be OK)
+
 Übersicht
 =========
 

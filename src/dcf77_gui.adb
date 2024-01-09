@@ -25,7 +25,6 @@ package body DCF77_GUI is
 		loop
 			G.S.Loop_Pre;
 			G.Process;
-			G.S.Loop_Post;
 		end loop;
 	end Mainloop;
 
@@ -43,7 +42,6 @@ package body DCF77_GUI is
 
 		S.LL.Init;
 		S.Disp.Init(S.LL);
-		S.Ticker.Init(S.LL);
 
 		S.Bitlayer.Init(S.LL);
 		S.Secondlayer.Init;
@@ -52,10 +50,10 @@ package body DCF77_GUI is
 		S.Alarm.Init(S.LL);
 
 		-- TODO x DEBUG ONLY
-		S.LL.Log("BEFORE CTR=41");
+		S.LL.Log("BEFORE CTR=42");
 		S.Disp.Update((1 => (X => 16, Y => 16, F => Small,
 				Msg => SB.To_Bounded_String(
-				"INIT CTR=41"), others => <>)));
+				"INIT CTR=42"), others => <>)));
 	end Init;
 
 	procedure Loop_Pre(S: in out Program_State) is
@@ -63,17 +61,11 @@ package body DCF77_GUI is
 	begin
 		S.LL.Debug_Dump_Interrupt_Info;
 
-		S.Bitlayer_Reading := S.Bitlayer.Update;
+		S.Bitlayer_Reading := S.Bitlayer.Update_Tick;
 		S.Secondlayer.Process(S.Bitlayer_Reading,
 			S.Secondlayer_Telegram_1, S.Secondlayer_Telegram_2);
 
 		Bitlayer_Has_New := S.Bitlayer_Reading /= DCF77_Types.No_Update;
-
-		-- TODO HEAVY DRIFT WHEN RUN W/O SYNC! NEED TO ADJUST THIS SOMEHOW...
-		-- In principle we have to adjust the bitlayer to query
-		-- one earlier when the preceding output was No_Signal.
-		-- Since that was after 11 iterations, next check after
-		-- 9 iterations to sum up to 20 i.e. 2000ms or something.
 
 		if Bitlayer_Has_New then
 			S.Timelayer.Process(True, -- Bitlayer_Has_New,
@@ -83,15 +75,9 @@ package body DCF77_GUI is
 
 		S.Datetime := S.Timelayer.Get_Current;
 
-		-- process all of the time for blinking and user input
-		-- handling!
+		-- process all of the time for blinking and user input handling!
 		S.Alarm.Process(S.Datetime);
 	end Loop_Pre;
-
-	procedure Loop_Post(S: in out Program_State) is
-	begin
-		S.Ticker.Tick; -- last operation before next iteration
-	end Loop_Post;
 
 	------------------------------------------------------------------------
 	------------------------------------------------------------------------
@@ -428,7 +414,7 @@ package body DCF77_GUI is
 					G.S.Bitlayer.Get_Unidentified),
 				"SEC" & Num_To_Str_L4(G.S.Secondlayer.Get_Fault)
 					& " DLY" & Num_To_Str_L4(Natural(
-					G.S.Ticker.Get_Delay / 1000)));
+					G.S.Bitlayer.Get_Delay / 1000)));
 			G.Add_Menu(Menu_Home);
 		when Select_I_QOS =>
 			G.Add_Time(0, 0, Small, Underline_None);
