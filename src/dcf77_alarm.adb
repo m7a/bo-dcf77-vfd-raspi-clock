@@ -74,6 +74,7 @@ package body DCF77_Alarm is
 	procedure Start_Buzzing(Ctx: in out Alarm;
 					DT_Now_Prime: in DCF77_Timelayer.TM) is
 	begin
+		Ctx.LL.Set_Buzzer_Enabled(True);
 		Ctx.Blink_CTR := 0; -- Buzzing always implies blinking!
 		-- compute time to stop at the latest if no user interaction
 		-- happens in the meantime!

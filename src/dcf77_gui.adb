@@ -94,6 +94,9 @@ package body DCF77_GUI is
 		G.Blink_Value             := 0;
 		G.Screen := (others => (X => 0, Y => 0, 
 				Msg => SB.To_Bounded_String(""), others => <>));
+		G.Last_Green              := False;
+		G.Last_Left               := False;
+		G.Last_Right              := False;
 		G.RFU_Option              := True;
 	end Init;
 
@@ -103,14 +106,23 @@ package body DCF77_GUI is
 		Right: constant Boolean := G.S.LL.Read_Right_Button_Is_Down;
 	begin
 		if G.Numeric_Editing_Enabled then
-			G.Process_Editing_Inputs(Green, Left, Right);
+			G.Process_Editing_Inputs(
+					Green and not G.Last_Green,
+					Left, Right);
 		else
-			G.Process_Navigation_Inputs(Green, Left, Right);
+			G.Process_Navigation_Inputs(
+					Green and not G.Last_Green,
+					Left  and not G.Last_Left,
+					Right and not G.Last_Right);
 		end if;
 
 		G.Screen_Idx := 0;
 		G.Update_Screen;
 		G.S.Disp.Update(G.Screen(G.Screen'First .. G.Screen_Idx));
+
+		G.Last_Green := Green;
+		G.Last_Left  := Left;
+		G.Last_Right := Right;
 	end Process;
 
 	procedure Process_Editing_Inputs(G: in out GUI;
@@ -409,12 +421,16 @@ package body DCF77_GUI is
 		when Select_Info =>
 			G.Add_Time(0, 0, Small, Underline_None);
 			G.Add_Info("CTRInfo",
-				"LL " & Num_To_Str_L4(G.S.LL.Get_Fault) &
-					" BIT" & Num_To_Str_L4(
-					G.S.Bitlayer.Get_Unidentified),
-				"SEC" & Num_To_Str_L4(G.S.Secondlayer.Get_Fault)
-					& " DLY" & Num_To_Str_L4(Natural(
-					G.S.Bitlayer.Get_Delay / 1000)));
+				Num_To_Str_L4(G.S.LL.Get_Fault) & " " &
+					Num_To_Str_L4(
+						G.S.Secondlayer.Get_Fault) &
+					" LSBuod",
+				Num_To_Str_L4(G.S.Bitlayer.Get_Unidentified) &
+					" " & Num_To_Str_L4(
+						G.S.Bitlayer.Get_Overflown) &
+					" " & Num_To_Str_L4(Natural(
+						G.S.Bitlayer.Get_Delay / 1000))
+			);
 			G.Add_Menu(Menu_Home);
 		when Select_I_QOS =>
 			G.Add_Time(0, 0, Small, Underline_None);

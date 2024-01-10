@@ -68,6 +68,11 @@ private
 		Screen:                  Items(1 .. Max_Num_Items);
 		Screen_Idx:              Natural;
 
+		-- Button Values last time
+		Last_Green: Boolean;
+		Last_Left:  Boolean;
+		Last_Right: Boolean;
+
 		-- reserved for future use. remove once something meaningful
 		-- is established behind this option...
 		RFU_Option:              Boolean;
