@@ -47,13 +47,14 @@ package body DCF77_GUI is
 		S.Secondlayer.Init;
 		S.Timelayer.Init;
 
+		S.ALS.Init;
 		S.Alarm.Init(S.LL);
 
 		-- TODO x DEBUG ONLY
-		S.LL.Log("BEFORE CTR=42");
+		S.LL.Log("BEFORE CTR=43");
 		S.Disp.Update((1 => (X => 16, Y => 16, F => Small,
 				Msg => SB.To_Bounded_String(
-				"INIT CTR=42"), others => <>)));
+				"INIT CTR=43"), others => <>)));
 	end Init;
 
 	procedure Loop_Pre(S: in out Program_State) is
@@ -72,6 +73,8 @@ package body DCF77_GUI is
 						S.Secondlayer_Telegram_1,
 						S.Secondlayer_Telegram_2);
 		end if;
+
+		S.ALS.Update(S.LL.Read_Light_Sensor, S.Brightness_Setting);
 
 		S.Datetime := S.Timelayer.Get_Current;
 
@@ -118,7 +121,8 @@ package body DCF77_GUI is
 
 		G.Screen_Idx := 0;
 		G.Update_Screen;
-		G.S.Disp.Update(G.Screen(G.Screen'First .. G.Screen_Idx));
+		G.S.Disp.Update(G.Screen(G.Screen'First .. G.Screen_Idx),
+				G.S.Brightness_Setting);
 
 		G.Last_Green := Green;
 		G.Last_Left  := Left;

@@ -6,6 +6,7 @@ with DCF77_ST_Layer_Shared;
 with DCF77_Secondlayer;
 with DCF77_Timelayer;
 with DCF77_Low_Level;
+with DCF77_Ambient_Light_Sensor;
 with DCF77_Alarm;
 
 package DCF77_GUI is
@@ -27,9 +28,11 @@ private
 		Secondlayer: aliased DCF77_Secondlayer.Secondlayer;
 		Timelayer:   aliased DCF77_Timelayer.Timelayer;
 
+		ALS:         aliased DCF77_Ambient_Light_Sensor.ALS;
 		Alarm:       aliased DCF77_Alarm.Alarm;
 
 		-- State Transfer between Layers
+		Brightness_Setting:     DCF77_Display.Brightness;
 		Bitlayer_Reading:       DCF77_Types.Reading;
 		Secondlayer_Telegram_1: DCF77_ST_Layer_Shared.Telegram;
 		Secondlayer_Telegram_2: DCF77_ST_Layer_Shared.Telegram;
