@@ -20,18 +20,19 @@ private
 
 	type Program_State is tagged limited record
 		-- Low Level
-		LL:          DCF77_Low_Level.LLP;
-		Disp:        aliased DCF77_Display.Disp;
+		LL:                     DCF77_Low_Level.LLP;
+		Disp:                   aliased DCF77_Display.Disp;
 
 		-- Timekeeping
-		Bitlayer:    aliased DCF77_Bitlayer.Bitlayer;
-		Secondlayer: aliased DCF77_Secondlayer.Secondlayer;
-		Timelayer:   aliased DCF77_Timelayer.Timelayer;
-
-		ALS:         aliased DCF77_Ambient_Light_Sensor.ALS;
-		Alarm:       aliased DCF77_Alarm.Alarm;
+		Bitlayer:               aliased DCF77_Bitlayer.Bitlayer;
+		Secondlayer:            aliased DCF77_Secondlayer.Secondlayer;
+		Timelayer:              aliased DCF77_Timelayer.Timelayer;
+		-- Support Layers
+		ALS:                    aliased DCF77_Ambient_Light_Sensor.ALS;
+		Alarm:                  aliased DCF77_Alarm.Alarm;
 
 		-- State Transfer between Layers
+		Light_Sensor_Reading:   DCF77_Low_Level.Light_Value;
 		Brightness_Setting:     DCF77_Display.Brightness;
 		Bitlayer_Reading:       DCF77_Types.Reading;
 		Secondlayer_Telegram_1: DCF77_ST_Layer_Shared.Telegram;
@@ -72,9 +73,9 @@ private
 		Screen_Idx:              Natural;
 
 		-- Button Values last time
-		Last_Green: Boolean;
-		Last_Left:  Boolean;
-		Last_Right: Boolean;
+		Last_Green:              Boolean;
+		Last_Left:               Boolean;
+		Last_Right:              Boolean;
 
 		-- reserved for future use. remove once something meaningful
 		-- is established behind this option...

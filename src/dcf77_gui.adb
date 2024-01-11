@@ -50,11 +50,10 @@ package body DCF77_GUI is
 		S.ALS.Init;
 		S.Alarm.Init(S.LL);
 
-		-- TODO x DEBUG ONLY
-		S.LL.Log("BEFORE CTR=43");
+		S.LL.Log("Ma_Sys.ma DCF77 VFD / INIT CTR=44");
 		S.Disp.Update((1 => (X => 16, Y => 16, F => Small,
 				Msg => SB.To_Bounded_String(
-				"INIT CTR=43"), others => <>)));
+				"INIT CTR=44"), others => <>)));
 	end Init;
 
 	procedure Loop_Pre(S: in out Program_State) is
@@ -74,7 +73,8 @@ package body DCF77_GUI is
 						S.Secondlayer_Telegram_2);
 		end if;
 
-		S.ALS.Update(S.LL.Read_Light_Sensor, S.Brightness_Setting);
+		S.Light_Sensor_Reading := S.LL.Read_Light_Sensor;
+		S.ALS.Update(S.Light_Sensor_Reading, S.Brightness_Setting);
 
 		S.Datetime := S.Timelayer.Get_Current;
 
@@ -425,10 +425,11 @@ package body DCF77_GUI is
 		when Select_Info =>
 			G.Add_Time(0, 0, Small, Underline_None);
 			G.Add_Info("CTRInfo",
-				Num_To_Str_L4(G.S.LL.Get_Fault) & " " &
-					Num_To_Str_L4(
+				Num_To_Str_L4(G.S.LL.Get_Fault) &
+					" " & Num_To_Str_L4(
 						G.S.Secondlayer.Get_Fault) &
-					" LSBuod",
+					" " & Num_To_Str_L4(Natural(
+						G.S.Light_Sensor_Reading)),
 				Num_To_Str_L4(G.S.Bitlayer.Get_Unidentified) &
 					" " & Num_To_Str_L4(
 						G.S.Bitlayer.Get_Overflown) &
