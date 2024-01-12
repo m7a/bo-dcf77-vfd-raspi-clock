@@ -34,10 +34,10 @@ package body DCF77_Low_Level is
 		Not_Sa_Al.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 
 		-- Analog Inputs
-		Light.Configure(RP.GPIO.Input, RP.GPIO.Floating);
 		Light.Configure(RP.GPIO.Analog);
 		Ctx.ADC0_Light := RP.ADC.To_ADC_Channel(Light);
 		RP.ADC.Configure(Ctx.ADC0_Light);
+		RP.ADC.Enable;
 
 		-- Outputs
 		Control_Or_Data.Configure(RP.GPIO.Output);
@@ -165,8 +165,13 @@ package body DCF77_Low_Level is
 		Val: constant RP.ADC.Microvolts :=
 					RP.ADC.Read_Microvolts(Ctx.ADC0_Light);
 	begin
-		-- TODO MAY WANT TO EMBED SOME TUNED CONVERSION HERE
-		return Light_Value(RP.ADC.Microvolts'Min(
+		-- REM: Due to the hardware implementation the logic signal
+		--      is inverted.
+		-- REM: Actual hardware limit is 82. Should maybe adjust to that
+		--      s.t. 100% display brightness can be achieved in practice
+		--      (it could in fact be related to that we measure 3.1V max
+		--      on the ADC VREF...)
+		return Light_Value'Last - Light_Value(RP.ADC.Microvolts'Min(
 			RP.ADC.Microvolts(Light_Value'Last),
 			Val * RP.ADC.Microvolts(Light_Value'Last) / 3_300_000));
 	end Read_Light_Sensor;

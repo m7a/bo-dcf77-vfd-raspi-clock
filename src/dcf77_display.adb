@@ -60,8 +60,10 @@ package body DCF77_Display is
 
 		-- update brightness if necessary
 		if New_Brightness /= Ctx.Current_Brightness then
-			Ctx.Send_U8((GP9002_Bright, Control));
-			Ctx.Send_U8((New_Brightness, Data));
+			Ctx.Send_Seq((
+				(GP9002_Bright, Control),
+				(New_Brightness, Data)
+			));
 			Ctx.Current_Brightness := New_Brightness;
 		end if;
 

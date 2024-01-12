@@ -12,15 +12,22 @@ package body DCF77_Ambient_Light_Sensor is
 
 	procedure Update(Ctx: in out ALS; Reading: in Light_Value;
 						Setting: out Brightness) is
-		GT_Lim: Natural := Brightness_Limits'First;
+		Current_LV:  constant Light_Value :=
+						Brightness_Limits(Ctx.Last_Idx);
+		Proposed_LV: Light_Value;
+		GT_Lim:      Natural := Brightness_Limits'First;
 	begin
 		for Idx in Brightness_Limits'Range loop
-			if Reading > Brightness_Limits(Idx) then
+			if Reading >= Brightness_Limits(Idx) then
 				GT_Lim := Idx;
 			end if;
 		end loop;
-		if GT_Lim = Ctx.Last_Idx or else (Reading -
-				Brightness_Limits(GT_Lim)) > Required_Delta then
+		Proposed_LV := Brightness_Limits(GT_Lim);
+		if (Current_LV >= 20 and then
+				Proposed_LV < (Current_LV - Required_Delta))
+		or else (Current_LV <= 80 and then
+				Proposed_LV > (Current_LV + Required_Delta))
+		then
 			Ctx.Last_Idx := GT_Lim;
 		end if;
 		Setting := Brightness_Settings(Ctx.Last_Idx);
