@@ -25,16 +25,16 @@ private
 	);
 	Brightness_Limits: constant array (1 .. 8) of
 						DCF77_Low_Level.Light_Value := (
-		20,
-		30,
-		40,
-		50,
-		60,
-		70,
-		80,
-		90
+		 9,
+		18,
+		27,
+		36,
+		45,
+		54,
+		63,
+		72
 	);
-	Required_Delta: constant DCF77_Low_Level.Light_Value := 17;
+	Required_Delta: constant DCF77_Low_Level.Light_Value := 7;
 
 	type ALS is tagged limited record
 		Last_Idx: Natural;

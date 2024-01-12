@@ -23,10 +23,10 @@ package body DCF77_Ambient_Light_Sensor is
 			end if;
 		end loop;
 		Proposed_LV := Brightness_Limits(GT_Lim);
-		if (Current_LV >= 20 and then
-				Proposed_LV < (Current_LV - Required_Delta))
-		or else (Current_LV <= 80 and then
-				Proposed_LV > (Current_LV + Required_Delta))
+		if (Current_LV >= Required_Delta
+			and then Proposed_LV < (Current_LV - Required_Delta))
+		or else (Current_LV <= (Light_Value'Last - Required_Delta)
+			and then Proposed_LV > (Current_LV + Required_Delta))
 		then
 			Ctx.Last_Idx := GT_Lim;
 		end if;
