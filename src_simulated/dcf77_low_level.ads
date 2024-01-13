@@ -18,6 +18,7 @@ package DCF77_Low_Level is
 
 	function Get_Time_Micros(Ctx: in out LL) return Time;
 	procedure Delay_Micros(Ctx: in out LL; DT: in Time);
+	procedure Delay_Until(Ctx: in out LL; T: in Time);
 
 	-- Returns False if no new data available. Clears data
 	function Read_Interrupt_Signal(Ctx: in out LL; Signal_Length: out Time;

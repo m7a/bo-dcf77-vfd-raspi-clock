@@ -28,9 +28,10 @@ package body DCF77_Bitlayer is
 							Bitlayer_Fault_Max);
 		else
 			Ctx.Delay_Us := End_Of_Slice - Time_Now;
-			while Time_Now < End_Of_Slice loop
-				Time_Now := Ctx.LL.Get_Time_Micros;
-			end loop;
+			if Time_Now < End_Of_Slice then
+				Ctx.LL.Delay_Until(End_Of_Slice);
+			end if;
+			Time_Now := Ctx.LL.Get_Time_Micros;
 		end if;
 		Ctx.Start_Of_Slice := Time_Now;
 

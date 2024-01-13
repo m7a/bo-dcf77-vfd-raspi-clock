@@ -29,7 +29,7 @@ package DCF77_Timelayer is
 	type Timelayer is tagged limited private;
 
 	-- TODO DETERMINE FROM COMPILE DATE AND WARN IF IMPOSSIBLE
-	Time_Of_Compilation: constant TM := (2024, 1, 12, 16, 46, 09);
+	Time_Of_Compilation: constant TM := (2024, 1, 13, 18,  4, 33);
 
 	-- public because it is of interest to GUI, too!
 	Month_Lengths: constant array (0 .. 12) of Natural := (

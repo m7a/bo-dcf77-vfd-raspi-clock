@@ -82,6 +82,13 @@ package body DCF77_Low_Level is
 		end if;
 	end Delay_Micros;
 
+	procedure Delay_Until(Ctx: in out LL; T: in Time) is
+		Now: constant Time := Ctx.Get_Time_Micros;
+		DT:  constant Time := (if T > Now then (T - Now) else 0);
+	begin
+		Ctx.Delay_Micros(DT);
+	end Delay_Until;
+
 	--             21 -----v
 	-- ack,interrupt_signal,<signal_length>,<signal_begin>
 	-- akc,interrupt_signal,none

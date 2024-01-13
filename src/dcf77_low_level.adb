@@ -118,6 +118,11 @@ package body DCF77_Low_Level is
 		RP.Timer.Busy_Wait_Until(RP.Timer.Clock + RP.Timer.Time(DT));
 	end Delay_Micros;
 
+	procedure Delay_Until(Ctx: in out LL; T: in Time) is
+	begin
+		RP.Timer.Busy_Wait_Until(RP.Timer.Time(T));
+	end Delay_Until;
+
 	procedure Set_Buzzer_Enabled(Ctx: in out LL; Enabled: in Boolean) is
 	begin
 		if Enabled then
