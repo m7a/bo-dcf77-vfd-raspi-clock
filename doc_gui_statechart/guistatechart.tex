@@ -1,4 +1,4 @@
-\documentclass[paper=a4, landscape, DIV9, 12pt, abstracton, headings=normal,
+\documentclass[paper=a4, landscape, DIV9, 9pt, abstracton, headings=normal,
 						captions=tableheading]{scrartcl}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -10,14 +10,32 @@
 \usepackage{kpfonts}
 \usepackage{microtype}
 \usepackage{tikz}
-\usetikzlibrary{matrix,fadings,calc,positioning,decorations.pathreplacing,%
-		decorations.text,arrows} % All tikz effects go here if used
+\usetikzlibrary{shapes.geometric,shapes.misc,arrows,matrix,fadings,calc,%
+		positioning,decorations.pathreplacing,decorations.text,fit}
 \newcommand{\cmd}[1]{{\ttfamily#1}}
 \newcommand{\incscr}[1]{\includegraphics[scale=0.5]{#1}}
+\newcommand{\btngreen}{grün}
+\definecolor{btngreen}{rgb}{0.0,0.6,0.0}
+\definecolor{btnblue}{rgb}{0.0,0.0,0.6}
+\newcommand{\bluepairhoriz}[2]{
+	\draw[->,thick,btnblue] ($(#1.east)+(0,0.1)$) --
+		($(#2.west)+(0,0.1)$) node [midway,above] {rechts};
+	\draw[<-,thick,btnblue] ($(#1.east)+(0,-0.1)$) --
+		($(#2.west)+(0,-0.1)$) node [midway,below] {links};
+}
+\newcommand{\greeneditfromto}[2]{
+	\draw[->,thick,btngreen] ($(#1.south)+(-0.2,0.0)$) --
+		($(#2.north)+(-0.2,0.0)$) node [midway,left] {\btngreen};
+	\draw[<-,thick,btngreen] ($(#1.south)+(0.2,0.0)$) --
+		($(#2.north)+(0.2,0.0)$) node [midway,right] {\btngreen};
+	\draw[<->,thick,btnblue] (#2) edge[loop below,looseness=2.5] (#2)
+				node[below,yshift=-0.9cm] {verstellen};
+	% alt: kleiner/größer
+}
 \begin{document}
 \thispagestyle{empty}
 \begin{tikzpicture}[remember picture,overlay]
-	\node[anchor=north west,xshift=2cm,yshift=-1cm] at
+	\node[anchor=north west,xshift=2.5cm,yshift=-1.5cm] at
 				(current page.north west) (anchor) {~};
 
 	\node[below=1cm of anchor,draw]     (scrstart)   {\incscr{scrstart}};
@@ -56,5 +74,66 @@
 	\node[right=1cm of scrinfo2,draw]   (scrver1)    {\incscr{scrversion1}};
 	\node[right=1cm of scrver1,draw]    (scrver2)    {\incscr{scrversion2}};
 	\node[right=1cm of scrver2,draw]    (scrver3)    {\incscr{scrversion3}};
+
+	\draw[->,thick,btngreen] (scrstart) -- (scralm1)
+						node [midway,right] {\btngreen};
+	\draw[->,thick,btngreen] (scralm1) -- (scrdate1)
+						node [midway,right] {\btngreen};
+	\draw[->,thick,btngreen] (scrdate1) -- (scroption1)
+						node [midway,right] {\btngreen};
+	\draw[->,thick,btngreen] (scroption1) -- (scrinfo1)
+						node [midway,right] {\btngreen};
+	\draw[->,thick,btngreen] (scrinfo1) -- +(0,-1.5) -- +(-1.7,-1.5) --
+				($(scrstart)-(1.7,0)$) -- (scrstart);
+
+	\bluepairhoriz{scralm1}{scralm2}
+	\bluepairhoriz{scralm2}{scralm3}
+	\greeneditfromto{scralm2}{scralm2b}
+	\greeneditfromto{scralm3}{scralm3b}
+	\draw[<-,thick,btnblue] (scrstart) -- +(0,1.5) node (startanch) {};
+	\draw[thick,btnblue] (scralm3) -- +(2,0) node (scralm3end) {};
+	\draw[thick,btnblue] (scralm3end.center) --
+			(scralm3end.center|-startanch.center)
+			node (retpathinterm1) {} --
+			(startanch.center) node [midway,above] {rechts/zurück};
+
+	\bluepairhoriz{scrdate1}{scrdate2}
+	\bluepairhoriz{scrdate2}{scrdate3}
+	\bluepairhoriz{scrdate3}{scrdate4}
+	\bluepairhoriz{scrdate4}{scrdate5}
+	\bluepairhoriz{scrdate5}{scrdate6}
+	\bluepairhoriz{scrdate6}{scrdate7}
+	\bluepairhoriz{scrdate7}{scrdate8}
+	\greeneditfromto{scrdate2}{scrdate2b}
+	\greeneditfromto{scrdate3}{scrdate3b}
+	\greeneditfromto{scrdate4}{scrdate4b}
+	\greeneditfromto{scrdate5}{scrdate5b}
+	\greeneditfromto{scrdate6}{scrdate6b}
+	\greeneditfromto{scrdate7}{scrdate7b}
+	\greeneditfromto{scrdate8}{scrdate8b}
+	\draw[thick,btnblue] (scrdate8) -- +(2,0) node (scrdate8end) {};
+	\draw[->,thick,btnblue] (scrdate8end.center) --
+		(scrdate8end.center|-retpathinterm1.center) --
+		(retpathinterm1.center) node [midway,above] {rechts/zurück};
+
+	\bluepairhoriz{scroption1}{scroption2}
+	\bluepairhoriz{scroption2}{scroption3}
+	\draw[<-,thick,btngreen] (scroption2) edge[loop below,looseness=2.5]
+			(scroption2) node[below,yshift=-0.9cm] {umschalten};
+	\draw[<-,thick,btngreen] (scroption3) edge[loop below,looseness=2.5]
+			(scroption3) node[below,yshift=-0.9cm] {umschalten};
+	\draw[thick,btnblue] (scroption3) -- (scrdate8end.center|-scroption3)
+			node (scroption3end) {};
+	\draw[->,thick,btnblue] (scroption3end.center) -- (scrdate8end.center);
+
+	\bluepairhoriz{scrinfo1}{scrinfo2}
+	\bluepairhoriz{scrinfo2}{scrver1}
+	\bluepairhoriz{scrver1}{scrver2}
+	\bluepairhoriz{scrver2}{scrver3}
+	\draw[thick,btnblue] (scrver3) -- (scroption3end.center|-scrver3)
+			node (scrver3end) {};
+	\draw[->,thick,btnblue] (scrver3end.center) -- (scroption3end.center);
+
+	% TODO LEFT SIDE USE LOGICAL CONSTRUCTION AND POINT BLUE ARROWS THERE, TOO. ALSO LABEL THE lower blue buttons “right/zurück”, too...
 \end{tikzpicture}
 \end{document}
