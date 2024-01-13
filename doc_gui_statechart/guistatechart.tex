@@ -1,0 +1,60 @@
+\documentclass[paper=a4, landscape, DIV9, 12pt, abstracton, headings=normal,
+						captions=tableheading]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,german,ngerman]{babel}
+\usepackage[german]{keystroke}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{kpfonts}
+\usepackage{microtype}
+\usepackage{tikz}
+\usetikzlibrary{matrix,fadings,calc,positioning,decorations.pathreplacing,%
+		decorations.text,arrows} % All tikz effects go here if used
+\newcommand{\cmd}[1]{{\ttfamily#1}}
+\newcommand{\incscr}[1]{\includegraphics[scale=0.5]{#1}}
+\begin{document}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+	\node[anchor=north west,xshift=2cm,yshift=-1cm] at
+				(current page.north west) (anchor) {~};
+
+	\node[below=1cm of anchor,draw]     (scrstart)   {\incscr{scrstart}};
+	\node[below=1cm of scrstart,draw]   (scralm1)    {\incscr{scralm1}};
+	\node[right=1cm of scralm1,draw]    (scralm2)    {\incscr{scralm2}};
+	\node[right=1cm of scralm2,draw]    (scralm3)    {\incscr{scralm3}};
+
+	\node[below=1cm of scralm1]         (startsep)   {\incscr{spacer}};
+	\node[below=1cm of scralm2,draw]    (scralm2b)   {\incscr{scralm2b}};
+	\node[below=1cm of scralm3,draw]    (scralm3b)   {\incscr{scralm3b}};
+
+	\node[below=1cm of startsep,draw]   (scrdate1)   {\incscr{scrdate1}};
+	\node[right=1cm of scrdate1,draw]   (scrdate2)   {\incscr{scrdate2}};
+	\node[right=1cm of scrdate2,draw]   (scrdate3)   {\incscr{scrdate3}};
+	\node[right=1cm of scrdate3,draw]   (scrdate4)   {\incscr{scrdate4}};
+	\node[right=1cm of scrdate4,draw]   (scrdate5)   {\incscr{scrdate5}};
+	\node[right=1cm of scrdate5,draw]   (scrdate6)   {\incscr{scrdate6}};
+	\node[right=1cm of scrdate6,draw]   (scrdate7)   {\incscr{scrdate7}};
+	\node[right=1cm of scrdate7,draw]   (scrdate8)   {\incscr{scrdate8}};
+
+	\node[below=1cm of scrdate1]        (scrsep2)    {\incscr{spacer}};
+	\node[below=1cm of scrdate2,draw]   (scrdate2b)  {\incscr{scrdate2b}};
+	\node[below=1cm of scrdate3,draw]   (scrdate3b)  {\incscr{scrdate3b}};
+	\node[below=1cm of scrdate4,draw]   (scrdate4b)  {\incscr{scrdate4b}};
+	\node[below=1cm of scrdate5,draw]   (scrdate5b)  {\incscr{scrdate5b}};
+	\node[below=1cm of scrdate6,draw]   (scrdate6b)  {\incscr{scrdate6b}};
+	\node[below=1cm of scrdate7,draw]   (scrdate7b)  {\incscr{scrdate7b}};
+	\node[below=1cm of scrdate8,draw]   (scrdate8b)  {\incscr{scrdate8b}};
+
+	\node[below=1cm of scrsep2,draw]    (scroption1) {\incscr{scroption1}};
+	\node[right=1cm of scroption1,draw] (scroption2) {\incscr{scroption2}};
+	\node[right=1cm of scroption2,draw] (scroption3) {\incscr{scroption3}};
+
+	\node[below=1cm of scroption1,draw] (scrinfo1)   {\incscr{scrinfo1}};
+	\node[right=1cm of scrinfo1,draw]   (scrinfo2)   {\incscr{scrinfo2}};
+	\node[right=1cm of scrinfo2,draw]   (scrver1)    {\incscr{scrversion1}};
+	\node[right=1cm of scrver1,draw]    (scrver2)    {\incscr{scrversion2}};
+	\node[right=1cm of scrver2,draw]    (scrver3)    {\incscr{scrversion3}};
+\end{tikzpicture}
+\end{document}

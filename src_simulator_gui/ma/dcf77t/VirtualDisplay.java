@@ -1,11 +1,19 @@
 package ma.dcf77t;
 
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.imageio.ImageIO;
+import java.awt.event.ActionEvent;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
-
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.util.Arrays;
 import java.util.function.Consumer;
+import java.io.IOException;
+import java.io.File;
 
 class VirtualDisplay extends JComponent {
 
@@ -51,11 +59,11 @@ class VirtualDisplay extends JComponent {
 
 	private void drawScreen(Graphics g, int index) {
 		int screenAddressStart = backend.getScreenAddressStart(index);
+		int[] memory = backend.getMemory();
 		for(int i = 0; i < SCREEN_NUM_BYTES; i++) {
-			int currentByte   = backend.getMemory(screenAddressStart
-									+ i);
 			int virtualStartY = (i % SCREEN_HEIGHT_BYTES) * 8;
 			int virtualStartX = i / SCREEN_HEIGHT_BYTES;
+			int currentByte = memory[screenAddressStart + i];
 
 			for(int j = 0; j < 8; j++) {
 				// 7 - j because we start from the msb.
@@ -69,6 +77,51 @@ class VirtualDisplay extends JComponent {
 				g.fillRect(realX, realY, PX_ENLARGE,
 								PX_ENLARGE);
 			}
+		}
+	}
+
+	void screenshot(ActionEvent ev) {
+		int[] memory    = backend.getMemory();
+		int[] memoryCPY = Arrays.copyOf(memory, memory.length);
+		int screenID    = backend.getScreenOn(0) ? 0 :
+					(backend.getScreenOn(1) ? 1 : -1);
+		if (screenID == -1)
+			return;
+
+		int screenAddressStart = backend.getScreenAddressStart(
+								screenID);
+		BufferedImage img = new BufferedImage(
+					DISPLAY_WIDTH_PX, DISPLAY_HEIGHT_PX,
+					BufferedImage.TYPE_BYTE_BINARY);
+		for (int i = 0; i < SCREEN_NUM_BYTES; i++) {
+			int virtualStartY = (i % SCREEN_HEIGHT_BYTES) * 8;
+			int virtualStartX = i / SCREEN_HEIGHT_BYTES;
+			int currentByte = memoryCPY[i];
+			for (int j = 0; j < 8; j++) {
+				boolean isPixelOn =
+					(((currentByte >> (7 - j)) & 1) == 1);
+				img.setRGB(virtualStartX, virtualStartY + j,
+					isPixelOn ? 0x000000 : 0xffffff);
+			}
+		}
+
+		JFileChooser chooser = new JFileChooser();
+		chooser.setFileFilter(new FileNameExtensionFilter("PNG files",
+									"png"));
+		File file;
+
+		switch (chooser.showSaveDialog(this)) {
+		case JFileChooser.APPROVE_OPTION:
+			file = chooser.getSelectedFile();
+			break;
+		default:
+			return;
+		}
+
+		try {
+			ImageIO.write(img, "png", file);
+		} catch(IOException ex) {
+			ex.printStackTrace();
 		}
 	}
 

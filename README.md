@@ -12,19 +12,6 @@ x-masysma-repository: https://www.github.com/m7a/bo-dcf77vfd-raspi-clock
 x-masysma-owned: 1
 x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
 ---
-Status
-======
-
- * Largest Problem is the drift really.
- * Additionally, something wrong with the ticker: After switching screens the
-   timing is off. This causes the clock to desynchronize itself (badly!)
- * Need to fix this ticker issue maybe by removing the protection against
-   continuous small delay changes. Could also consider revising it to do a
-   busy loop with get time if that performs better?
- * Button pressing is not nice. Should really await for a button release
-   (at least for the green buttons and for blue navigation. blue +/- could
-   retain the current behaviour because it seems to be OK)
-
 Übersicht
 =========
 
@@ -40,6 +27,11 @@ DCF77-Empfang kontinuierlich aktiv, sodass der Wechsel der Sekunden in der
 Anzeige mit dem Empfang der Signalpulse synchron erfolgt.
 
 _TODO PIC_
+
+Repository-Inhaltsübersicht
+===========================
+
+_TODO TREE and lnk to sections_
 
 Hardwaredesign
 ==============
@@ -70,9 +62,8 @@ den Chip (und für die AVR-Architektur) geworden war. Daher wurde das Projekt au
 Basis des Raspberry Pi PICO (RP2040) neugestartet. Dadurch wurde eine Umsetzung
 von den 3.3V IO-Spannung des RP2040 auf die 5V fürs Displaymodul erforderlich.
 Typische Wandlerchips dafür scheinen alle nur als SMD-Bauteile verfügbar zu
-sein. Daher wurde ein „Hack” mittels eines unidirektionalen Wandlerchips
-implementiert.
-_TODO WHICH CHIP EXACTLY_
+sein. Daher wurde ein „Hack” mittels eines unidirektional genutzten Wandlerchips
+(SN74HCT245N) implementiert.
 
 Beim Gehäuse wurde anfänglich eine quadratische Version genutzt, in deren
 Mitte dann ein großer Drehknauf plaziert worden wäre, mittels dessen man
@@ -90,12 +81,79 @@ Die Antenne sollte anfänglich im Gehäuse integriert werden, nachdem der Empfan
 aber aufgrund der Abstrahlung (oder Schirmung) durch die anderen Komponenten
 quasi unmöglich war, wurde die Möglichkeit des Anschlusses einer externen
 Antenne geschaffen. Da sich die Uhr aufgrund ihrer Größe und Versorgungsspannung
-vielleicht auch „portabel” einsetzen lassen könnte, wurde eine Steckerverbindung
-zur Antenne vorgesehen.
+vielleicht auch „portabel” einsetzen lassen könnte und um in Zukunft mit
+verschiedenen Antennenvarianten experimentieren zu können, wurde eine
+Steckerverbindung zur Antenne vorgesehen.
+
+## Blockschaltbild
+
+	+-------------+           +--------+
+	|             |---------->| Buzzer |
+	| Netzteil 5V |           +--------+
+	| +Sicherung  |               ^
+	|             |   +-----+     |
+	|             |-->| LED |     |
+	|             |   +-----+     |
+	|             |     ^         |
+	|             |     |         |
+	|             |   +----------------+
+	|             |-->| Externe Last   |
+	+-------------+   | per Transistor |   +------------------+
+	      |           | geschaltet.    |<--| DCF77 Antenne    |
+	      v           |                |   | (extern)         |
+	+-------------+   |                |   +------------------+
+	| VFD SPI     |   | RPI 2040 PICO  |
+	| Display     |   |                |   +------------------+
+	+-------------+   |                |<--| Lichtsensor      |
+	      ^           | 3.3V erzeugt   |   +------------------+
+	      |           | aus on-Board-  |
+	+-------------+   | Regler         |   +------------------+
+	| Wandler     |<--|                |<--| Schalter/Taster  |
+	| SN74HCT245N |   |                |   | (Eingaben)       |
+	+-------------+   +----------------+   +------------------+
+
+Aufgrund des ursprünglich für den Arduino vorgesehenen Designs läuft das
+Displaymodul mit 5V Betriebsspannung, die auch für das Netzteil als
+Ausgangsspannung gewählt wurde.
+
+Der RPI 2040 benötigt jedoch 3.3V für sämtliche I/O-Ports, sodass für die
+Kommunikation mit dem Display der Wandler benötigt wird. Die 3.3V werden mit
+dem auf dem Raspberry Pi PICO-Board befindlichen Wandler erzeugt, der genug
+Strom liefert, um auch die Antenne und den Lichtsensor zu betreiben. Die
+Lasten für die LED-Hintergrundbeleuchtung des Wecker-Schalters und für den
+Buzzer werden über npn-Transistoren geschaltet.
 
 ## Schaltplan
 
-_TODO ..._
+![Schaltplanentwurf](dcf77_vfd_raspi_clock_att/schematic.png)
+
+Der gezeigte Schaltplan entspricht weitgehend der Realisierung: Eine Abweichung
+gibt es lediglich bei der Beschaltung der nicht genutzten Kanäle des Wandlers:
+In der praktischen Umsetzung wurden hier die im Datenblatt empfohlenen und im
+Schaltplan fehlenden 10kOhm-Widerstände eingebaut, um die Robustheit weiter zu
+erhöhen.
+
+Der prinzipielle Aufbau ist so gestaltet, dass in den digitalen Signalen jeweils
+1kOhm-Widerstände sitzen, um bei Fehlern zu verhindern, dass große Ströme
+fließen können. Die Schalter- und Tastereingaben sind hardwareseitig mit
+Kondensatoren entprellt. Die Schottky-Diode D1 verhindert, dass bei Anschluss
+der USB-Schnittstelle am Raspi das VFD gespeist wird (es würde zu viel Strom
+ziehen).
+
+Der Feldeffekttransistor 2N7000 ist ein diskreter Logikwandler von den 5V des
+Displays auf die 3.3V des Raspi. Da die Software von dieser
+Kommunikationsrichtung keinen Gebrauch macht, könnte man ihn vermutlich auch
+nicht bestücken, ohne die Funktionalität einzuschränken.
+
+Die mit TX/RX/GND-bezeichneten Punkte sind für eine Stiftleiste zum Anschluss
+eines Seriell-Wandlers gedacht, damit man am Rechner die Ausgaben des Programmes
+auch ohne Eisnchränkung durch die Displaygröße nachvollziehen kann. Dieser
+Weg war beim Debuggen hilfreich. Für die Umsetzung verschwindet die Stiftleiste
+im Gehäuse (ebenso wie der USB-Port).
+
+## Verdrahtungsplan
+
+_TODO ... nochmal in besserer Qualität und mit mehr Farben einscannen!_
 
 Softwaredesign
 ==============
@@ -111,9 +169,9 @@ nicht mehr erforderlich, stattdessen ist es jetzt `Check_BCD_Correct_Telegram`
 mit dem optionalen Parameter `Ignore_EOM` im Package `DCF77_Secondlayer`.
 
 Entsprechend des Designziels beschäfigt sich der Großteil des Programmes mit der
-DCF77-Decodierung. Die hardwarenahen Teile sind zentral in einer einzigen Datei
-untergebracht, sodass zum Test mit einer „virtuellen” Hardware nur diese Datei
-ersetzt und anders implementiert werden muss.
+DCF77-Decodierung. Die hardwarenahen Teile sind zentral in einem einzigen Modul
+untergebracht (`DCF77_Low_Level`), sodass zum Test mit einer „virtuellen”
+Hardware nur dieses Modul ersetzt und anders implementiert werden muss.
 
 ## DCF77-Decodierung
 
@@ -124,7 +182,10 @@ Puls aus. Intern werden im Programm daher die Ablesungen (Reading) `Bit_0` (0),
 
 Die unterste Abstraktionsebene stellt der _Bitlayer_ dar: Er ist dafür
 zuständig, die eingehenden Pulslängen digital zu Reading zu codieren. Dazu wird
-eine Zuordnungstabelle von Intervalllängen zu Ablesungen verwendet.
+eine Zuordnungstabelle von Intervalllängen zu Ablesungen verwendet. Da sich das
+im Laufe der Entwicklung als günstig herausstellte, implementiert der Bitlayer
+auch die Funktion des _Tickers_, der dafür sorgt, dass der Code in definierten
+Zeitintervallen von 100ms ausgeführt wird.
 
 Darüber befindet sich der _Secondlayer_. Die Idee hinter dieser Schicht ist es,
 die Ablesungen der letzten 9 Minuten vorzuhalten und anhand der Muster (bspw.
@@ -157,12 +218,29 @@ Die Ansteuerung der Hardware efolgt mittels der _Low-Level_-Bibliothek
 (`DCF77_Low_Level`). Darüber hinaus wird für die Abstraktion des
 Displayprotokolls eine eigene Bibliothek (`DCF77_Display`) genutzt.
 
-Der `DCF77_Ticker` gehört im weitesten Sinne auch zur Hardware und unterstüzt
-das Programm beim Einhalten eines gleichmäßigen Verarbeitungstaktes. Intern
-werden dadurch Berechnungen alle 100ms ausgeführt. Die vom Ticker eingefügte
-Wartezeit richtet sich nach der gemessenen und für die Verarbeitung der Daten
-benötigten Rechenzeit, passt sich also automatisch an, wenn das Programm
-komplexer oder schneller wird.
+## Bedienoberfläche
+
+Die wesentliche Bedienlogik ist in der `DCF77_GUI` codiert. Das Modul ist
+gleichzeitig auch der Einstiegspunkt für das Programm. Die Bedienlogik mit den
+drei Tastern und zwei Schaltern ist in der Anleitung beschrieben (vgl. weiter
+unten).
+
+Die GUI übernimmt zusätzlich zu reinen “Anzeigefunktionen” auch noch folgende
+Aufgaben:
+
+ * Eingabe der Weckzeit
+ * Einstellung von Datum- und Uhrzeit
+ * Deaktivieren der DCF77-Decodierung (bspw. falls manipulierte
+   falsche Daten empfangen werden sollten)
+
+## Zusatzfunktionen
+
+Das Modul `DCF77_Alarm` stellt die Berechnungen zur Erkennung des Eintretens
+von Weckzeitpunkten bereit und verwaltet die Weckzeit, sowie die
+Buzzersteuerung.
+
+Im Modul `DCF77_Ambient_Light_Sensor` ist die Verstellung der Anzeigehelligkeit
+in Abhängigkeit der Umgebungshelligkeit codiert.
 
 Nachbau
 =======
@@ -259,8 +337,12 @@ die Tests erreicht wird.
 Bedienungsanleitung
 ===================
 
+_TODO INTRODUCTION TO MANUAL GOES HERE_
+
+## Allgemeines
+
 Im Allgemeinen können keine Einstellungen getätigt werden, die über das Trennen
-der Stromverosrgung hinaus Bestand haben (mit Ausnahme des Aktivierungszustands
+der Stromversorgung hinaus Bestand haben (mit Ausnahme des Aktivierungszustands
 der Weckfunktion).
 
 _TODO EXPLAIN THE STATE CHART FOR GUI HERE (AND DRAW IT NICELY FIRST!)_

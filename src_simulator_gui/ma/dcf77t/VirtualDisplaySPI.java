@@ -105,8 +105,8 @@ class VirtualDisplaySPI implements SerialDisplayInterface {
 						(higherScreenAddress[idx] << 8);
 	}
 
-	int getMemory(int addr) {
-		return memory[addr];
+	int[] getMemory() {
+		return memory;
 	}
 
 }

@@ -76,8 +76,14 @@ class AppWnd {
 		);
 		for (JButton b: btn)
 			b.addMouseListener(listen);
-
 		right.add(buttons);
+
+		JPanel extra = new JPanel(new FlowLayout(FlowLayout.CENTER));
+		JButton screenshot = new JButton("Screenshot");
+		screenshot.addActionListener(disp::screenshot);
+		extra.add(screenshot);
+		right.add(extra);
+
 		right.setBorder(new TitledBorder("Light and Buttons"));
 		clockFrontend.add(right);
 		
