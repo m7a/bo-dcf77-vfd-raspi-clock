@@ -109,8 +109,8 @@ private
 	-- Cannot be part of the record for lifecycle reasons
 	-- ISR procedure may run even if context already destroyed!
 	-- Marker value "0" is used to indicate "unset".
-	-- After processing, users should reset the Interrupt_Out_Ticks to 0.
-	Interrupt_Fault_Max: constant Natural := 1000;
+	-- After processing, users should reset the Interrupt_Start_Ticks to 0.
+	Interrupt_Fault_Max: constant Natural := 9999;
 	Interrupt_Start_Ticks:  Time    := 0;
 	Interrupt_Out_Ticks:    Time    := 0;
 	Interrupt_Pending_Read: Boolean := False;

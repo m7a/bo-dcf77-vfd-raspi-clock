@@ -18,7 +18,7 @@ package DCF77_Secondlayer is
 
 private
 
-	Reset_Fault_Max: constant Natural := 1000;
+	Reset_Fault_Max: constant Natural := 9999;
 	Lines:           constant Natural := 9;
 	-- We make use of this value being the same as an "expired" timer... 
 	Noleap:          constant Natural := 0;

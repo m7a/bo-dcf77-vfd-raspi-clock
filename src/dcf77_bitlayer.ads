@@ -18,7 +18,7 @@ private
 	Second_In_Us:       constant DCF77_Low_Level.Time := 1_000_000;
 	Delay_Us_Target:    constant DCF77_Low_Level.Time :=   100_000;
 	Delay_Us_Epsilon:   constant DCF77_Low_Level.Time :=    20_000;
-	Bitlayer_Fault_Max: constant Natural              :=     1_000;
+	Bitlayer_Fault_Max: constant Natural              :=     9_999;
 
 	type Bitlayer is tagged limited record
 		-- required
