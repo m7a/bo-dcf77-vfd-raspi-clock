@@ -16,7 +16,8 @@
 \newcommand{\incscr}[1]{\includegraphics[scale=0.5]{#1}}
 \newcommand{\btngreen}{grün}
 \definecolor{btngreen}{rgb}{0.0,0.6,0.0}
-\definecolor{btnblue}{rgb}{0.0,0.0,0.6}
+\definecolor{btnblue}{rgb}{0.0,0.3,0.6}
+\definecolor{btnred}{rgb}{0.6,0.0,0.0}
 \newcommand{\bluepairhoriz}[2]{
 	\draw[->,thick,btnblue] ($(#1.east)+(0,0.1)$) --
 		($(#2.west)+(0,0.1)$) node [midway,above] {rechts};
@@ -32,59 +33,81 @@
 				node[below,yshift=-0.9cm] {verstellen};
 	% alt: kleiner/größer
 }
+% https://tex.stackexchange.com/questions/18200/draw-edges-and-paths-in-the-
+\pgfdeclarelayer{bg}
+\pgfsetlayers{bg,main}
 \begin{document}
 \thispagestyle{empty}
 \begin{tikzpicture}[remember picture,overlay]
+	\tikzset{scr/.style={fill=white,draw}}
 	\node[anchor=north west,xshift=2.5cm,yshift=-1.5cm] at
 				(current page.north west) (anchor) {~};
 
-	\node[below=1cm of anchor,draw]     (scrstart)   {\incscr{scrstart}};
-	\node[below=1cm of scrstart,draw]   (scralm1)    {\incscr{scralm1}};
-	\node[right=1cm of scralm1,draw]    (scralm2)    {\incscr{scralm2}};
-	\node[right=1cm of scralm2,draw]    (scralm3)    {\incscr{scralm3}};
+	\node[below=1cm of anchor,scr]     (scrstart)   {\incscr{scrstart}};
+	\node[right=1cm of scrstart,scr]   (scrstartal) {\incscr{scrstartal}};
 
-	\node[below=1cm of scralm1]         (startsep)   {\incscr{spacer}};
-	\node[below=1cm of scralm2,draw]    (scralm2b)   {\incscr{scralm2b}};
-	\node[below=1cm of scralm3,draw]    (scralm3b)   {\incscr{scralm3b}};
+	\node[below=1cm of scrstart,scr]   (scralm1)    {\incscr{scralm1}};
+	\node[right=1cm of scralm1,scr]    (scralm2)    {\incscr{scralm2}};
+	\node[right=1cm of scralm2,scr]    (scralm3)    {\incscr{scralm3}};
 
-	\node[below=1cm of startsep,draw]   (scrdate1)   {\incscr{scrdate1}};
-	\node[right=1cm of scrdate1,draw]   (scrdate2)   {\incscr{scrdate2}};
-	\node[right=1cm of scrdate2,draw]   (scrdate3)   {\incscr{scrdate3}};
-	\node[right=1cm of scrdate3,draw]   (scrdate4)   {\incscr{scrdate4}};
-	\node[right=1cm of scrdate4,draw]   (scrdate5)   {\incscr{scrdate5}};
-	\node[right=1cm of scrdate5,draw]   (scrdate6)   {\incscr{scrdate6}};
-	\node[right=1cm of scrdate6,draw]   (scrdate7)   {\incscr{scrdate7}};
-	\node[right=1cm of scrdate7,draw]   (scrdate8)   {\incscr{scrdate8}};
+	\node[below=1cm of scralm1]        (startsep)   {\incscr{spacer}};
+	\node[below=1cm of scralm2,scr]    (scralm2b)   {\incscr{scralm2b}};
+	\node[below=1cm of scralm3,scr]    (scralm3b)   {\incscr{scralm3b}};
 
-	\node[below=1cm of scrdate1]        (scrsep2)    {\incscr{spacer}};
-	\node[below=1cm of scrdate2,draw]   (scrdate2b)  {\incscr{scrdate2b}};
-	\node[below=1cm of scrdate3,draw]   (scrdate3b)  {\incscr{scrdate3b}};
-	\node[below=1cm of scrdate4,draw]   (scrdate4b)  {\incscr{scrdate4b}};
-	\node[below=1cm of scrdate5,draw]   (scrdate5b)  {\incscr{scrdate5b}};
-	\node[below=1cm of scrdate6,draw]   (scrdate6b)  {\incscr{scrdate6b}};
-	\node[below=1cm of scrdate7,draw]   (scrdate7b)  {\incscr{scrdate7b}};
-	\node[below=1cm of scrdate8,draw]   (scrdate8b)  {\incscr{scrdate8b}};
+	\node[below=1cm of startsep,scr]   (scrdate1)   {\incscr{scrdate1}};
+	\node[right=1cm of scrdate1,scr]   (scrdate2)   {\incscr{scrdate2}};
+	\node[right=1cm of scrdate2,scr]   (scrdate3)   {\incscr{scrdate3}};
+	\node[right=1cm of scrdate3,scr]   (scrdate4)   {\incscr{scrdate4}};
+	\node[right=1cm of scrdate4,scr]   (scrdate5)   {\incscr{scrdate5}};
+	\node[right=1cm of scrdate5,scr]   (scrdate6)   {\incscr{scrdate6}};
+	\node[right=1cm of scrdate6,scr]   (scrdate7)   {\incscr{scrdate7}};
+	\node[right=1cm of scrdate7,scr]   (scrdate8)   {\incscr{scrdate8}};
 
-	\node[below=1cm of scrsep2,draw]    (scroption1) {\incscr{scroption1}};
-	\node[right=1cm of scroption1,draw] (scroption2) {\incscr{scroption2}};
-	\node[right=1cm of scroption2,draw] (scroption3) {\incscr{scroption3}};
+	\node[below=1cm of scrdate1]       (scrsep2)    {\incscr{spacer}};
+	\node[below=1cm of scrdate2,scr]   (scrdate2b)  {\incscr{scrdate2b}};
+	\node[below=1cm of scrdate3,scr]   (scrdate3b)  {\incscr{scrdate3b}};
+	\node[below=1cm of scrdate4,scr]   (scrdate4b)  {\incscr{scrdate4b}};
+	\node[below=1cm of scrdate5,scr]   (scrdate5b)  {\incscr{scrdate5b}};
+	\node[below=1cm of scrdate6,scr]   (scrdate6b)  {\incscr{scrdate6b}};
+	\node[below=1cm of scrdate7,scr]   (scrdate7b)  {\incscr{scrdate7b}};
+	\node[below=1cm of scrdate8,scr]   (scrdate8b)  {\incscr{scrdate8b}};
 
-	\node[below=1cm of scroption1,draw] (scrinfo1)   {\incscr{scrinfo1}};
-	\node[right=1cm of scrinfo1,draw]   (scrinfo2)   {\incscr{scrinfo2}};
-	\node[right=1cm of scrinfo2,draw]   (scrver1)    {\incscr{scrversion1}};
-	\node[right=1cm of scrver1,draw]    (scrver2)    {\incscr{scrversion2}};
-	\node[right=1cm of scrver2,draw]    (scrver3)    {\incscr{scrversion3}};
+	\node[below=1cm of scrsep2,scr]    (scroption1) {\incscr{scroption1}};
+	\node[right=1cm of scroption1,scr] (scroption2) {\incscr{scroption2}};
+	\node[right=1cm of scroption2,scr] (scroption3) {\incscr{scroption3}};
 
+	\node[below=1cm of scroption1,scr] (scrinfo1)   {\incscr{scrinfo1}};
+	\node[right=1cm of scrinfo1,scr]   (scrinfo2)   {\incscr{scrinfo2}};
+	\node[right=1cm of scrinfo2,scr]   (scrver1)    {\incscr{scrversion1}};
+	\node[right=1cm of scrver1,scr]    (scrver2)    {\incscr{scrversion2}};
+	\node[right=1cm of scrver2,scr]    (scrver3)    {\incscr{scrversion3}};
+
+	\draw[->,thick,btnred] ($(scrstart.east)+(0,0.1)$) --
+		($(scrstartal.west)+(0,0.1)$) node [midway,above] {Al.ein};
+	\path (scrstart.east) -- (scrstartal.west)
+		node [midway,above,yshift=4mm] {$\epsilon$};
+	\draw[<-,thick,btnred] ($(scrstart.east)+(0,-0.1)$) --
+		($(scrstartal.west)+(0,-0.1)$) node [midway,below] {Al.aus};
+	\draw[<-,thick,btngreen] (scrstart) -- +(-2,0) node (scrstartpre) {};
+
+	\draw[->,thick,btngreen] (scrstartal) -- (scralm1)
+					node [midway,right] {\btngreen};
 	\draw[->,thick,btngreen] (scrstart) -- (scralm1)
-						node [midway,right] {\btngreen};
+					node [midway,left] {\btngreen};
+	\draw[->,thick,btnblue] (scralm1) -- +(-2,0)
+					node [midway,above] {\small links};
 	\draw[->,thick,btngreen] (scralm1) -- (scrdate1)
-						node [midway,right] {\btngreen};
+					node [midway,left] {\btngreen};
+	\draw[->,thick,btnblue] (scrdate1) -- +(-2,0)
+					node [midway,above] {\small links};
 	\draw[->,thick,btngreen] (scrdate1) -- (scroption1)
-						node [midway,right] {\btngreen};
+					node [midway,left] {\btngreen};
+	\draw[->,thick,btnblue] (scroption1) -- +(-2,0)
+					node [midway,above] {\small links};
 	\draw[->,thick,btngreen] (scroption1) -- (scrinfo1)
-						node [midway,right] {\btngreen};
-	\draw[->,thick,btngreen] (scrinfo1) -- +(0,-1.5) -- +(-1.7,-1.5) --
-				($(scrstart)-(1.7,0)$) -- (scrstart);
+					node [midway,left] {\btngreen};
+	\draw[->,thick,btnblue] (scrinfo1) -- +(-2,0)
+					node [midway,above] {\small links};
 
 	\bluepairhoriz{scralm1}{scralm2}
 	\bluepairhoriz{scralm2}{scralm3}
@@ -92,6 +115,7 @@
 	\greeneditfromto{scralm3}{scralm3b}
 	\draw[<-,thick,btnblue] (scrstart) -- +(0,1.5) node (startanch) {};
 	\draw[thick,btnblue] (scralm3) -- +(2,0) node (scralm3end) {};
+	\path[btnblue] (scralm3) -- +(2,0) node[midway,above] {\small rechts};
 	\draw[thick,btnblue] (scralm3end.center) --
 			(scralm3end.center|-startanch.center)
 			node (retpathinterm1) {} --
@@ -112,6 +136,7 @@
 	\greeneditfromto{scrdate7}{scrdate7b}
 	\greeneditfromto{scrdate8}{scrdate8b}
 	\draw[thick,btnblue] (scrdate8) -- +(2,0) node (scrdate8end) {};
+	\path[btnblue] (scrdate8) -- +(2,0) node [midway,above] {\small rechts};
 	\draw[->,thick,btnblue] (scrdate8end.center) --
 		(scrdate8end.center|-retpathinterm1.center) --
 		(retpathinterm1.center) node [midway,above] {rechts/zurück};
@@ -124,6 +149,8 @@
 			(scroption3) node[below,yshift=-0.9cm] {umschalten};
 	\draw[thick,btnblue] (scroption3) -- (scrdate8end.center|-scroption3)
 			node (scroption3end) {};
+	\path[btnblue] (scroption3) -- (scrdate8end.center|-scroption3)
+			node [midway,above] {rechts};
 	\draw[->,thick,btnblue] (scroption3end.center) -- (scrdate8end.center);
 
 	\bluepairhoriz{scrinfo1}{scrinfo2}
@@ -132,8 +159,73 @@
 	\bluepairhoriz{scrver2}{scrver3}
 	\draw[thick,btnblue] (scrver3) -- (scroption3end.center|-scrver3)
 			node (scrver3end) {};
+	\path[btnblue] (scrver3) -- (scroption3end.center|-scrver3)
+			node [midway,above] {rechts};
 	\draw[->,thick,btnblue] (scrver3end.center) -- (scroption3end.center);
 
-	% TODO LEFT SIDE USE LOGICAL CONSTRUCTION AND POINT BLUE ARROWS THERE, TOO. ALSO LABEL THE lower blue buttons “right/zurück”, too...
+	\draw[thick,btngreen] (scrinfo1) -- +(0,-1.5) node (scrinfo1bot) {};
+	\draw[thick,btngreen] (scrstartpre.center) --
+			(scrstartpre.center|-scrinfo1bot.center) --
+			(scrinfo1bot.center) node [midway,above] {\btngreen};
+	\draw[thick,btngreen] (scrinfo2) -- +(0,-1.5) node (scrinfo2bot) {};
+	\draw[->,thick,btngreen] (scrinfo2bot.center) -- (scrinfo1bot.center)
+			node [midway,above] {\btngreen};
+	\draw[thick,btngreen] (scrver1) -- +(0,-1.5) node (scrver1bot) {};
+	\draw[->,thick,btngreen] (scrver1bot.center) -- (scrinfo2bot.center)
+			node [midway,above] {\btngreen};
+	\draw[thick,btngreen] (scrver2) -- +(0,-1.5) node (scrver2bot) {};
+	\draw[->,thick,btngreen] (scrver2bot.center) -- (scrver1bot.center)
+			node [midway,above] {\btngreen};
+	\draw[thick,btngreen] (scrver3) -- +(0,-1.5) node (scrver3bot) {};
+	\draw[->,thick,btngreen] (scrver3bot.center) -- (scrver2bot.center)
+			node [midway,above] {\btngreen};
+
+	\node[right=2cm of scralm3] (picsmall)
+				{\includegraphics[height=7cm]{picsmall}};
+	\path (picsmall.center) -- +(-2.2,-2.3) node (lblgreen)
+			{\color{white}\colorbox{btngreen}{\textbf{\btngreen}}};
+	\node[right=0.5cm of lblgreen] (lblleft)
+			{\color{white}\colorbox{btnblue}{\textbf{links}}};
+	\node[right=0.5cm of lblleft] (lblright)
+			{\color{white}\colorbox{btnblue}{\textbf{rechts}}};
+	\node[right=0.5cm of lblright] (lblalarm)
+			{\color{white}\colorbox{btnred}{\textbf{Wecker}}};
+
+	\path (picsmall.center) -- +(4.4,1.5) node (lblals)
+			{\colorbox{white}{\textbf{Lichtsensor}}};
+	\node[below=1cm of lblals] (lblbuzz)
+			{\colorbox{white}{\textbf{Buzzer}}};
+	\path (picsmall.south east) -- +(-0.5,1) node (lblant)
+			{\colorbox{white}{\textbf{Antennenanschluss}}};
+	\node[above=4.5cm of lblant] (lblpwr)
+			{\colorbox{white}{\textbf{5V-Stromversorgung}}};
+
+	\path (scrver3.center) -- +(9,-1.5) node[draw] (lblplankopf)
+		{\begin{minipage}{6cm}\begin{center}
+		Ma\_Sys.ma DCF77 VFD Raspi Clock\\
+		Bedienung und Übersicht der Anzeigezustände\\
+		2024-01-14 \qquad \cmd{info@masysma.net}
+		\end{center}\end{minipage}};
+
+	\begin{pgfonlayer}{bg}
+		\node[inner sep=3mm,fill=black!10,fit=(scrstartal) (scralm3b)]
+				(areaalm) {};
+		\node[inner sep=3mm,fill=black!10,fit=(scrdate2) (scrdate8b)]
+				(areadate) {};
+		\node[inner sep=3mm,fill=black!10,fit=(scroption1) (scrver3)]
+				(areaextra) {};
+	\end{pgfonlayer}
+
+	\node[above=1cm of scralm3,text width=2cm,xshift=-0.5cm]
+			(lblareaalm) {\textbf{\huge Wecker-\\einstellung}};
+	\node[below=0.7cm of scrdate8b,xshift=-0.92cm,fill=black!10]
+			(lblareadate) {\textbf{\huge Datumseinstellung}};
+	\node[above=0.3cm of scrver2,text width=5cm,xshift=1.5cm] (lblareaextra)
+			{\textbf{\huge{Einstellungen und Statusinformationen}}};
+
+	\begin{pgfonlayer}{bg}
+		\node[inner sep=1mm,fill=black!10,fit=(scrdate8) (lblareadate)]
+				(areadate2) {};
+	\end{pgfonlayer}
 \end{tikzpicture}
 \end{document}

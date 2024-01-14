@@ -668,7 +668,9 @@ package body DCF77_GUI is
 		when Menu_Next =>
 			G.Screen(IU).Msg := SB.To_Bounded_String("Next  ");
 		when Menu_Edit =>
-			G.Screen(IU).Msg := SB.To_Bounded_String("Edit  ");
+			G.Screen(IU).Msg := SB.To_Bounded_String((
+						if G.Numeric_Editing_Enabled
+						then "Save  " else "Edit  "));
 		when Menu_Toggle =>
 			G.Screen(IU).Msg := SB.To_Bounded_String("Toggle");
 		end case;

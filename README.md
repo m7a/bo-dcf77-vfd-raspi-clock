@@ -26,7 +26,7 @@ Antenne auch bei schlechten Empfangsbedingungen möglich ist. Weiterhin ist der
 DCF77-Empfang kontinuierlich aktiv, sodass der Wechsel der Sekunden in der
 Anzeige mit dem Empfang der Signalpulse synchron erfolgt.
 
-_TODO PIC_
+![Ansicht der fertig aufgebauten Uhr](dcf77vfd_raspi_clock_att/picdetail2.jpg)
 
 Repository-Inhaltsübersicht
 ===========================
@@ -40,6 +40,8 @@ Im Laufe der Entwicklung wurden verschiedene Hardwarevarianten durchgespielt
 und dann jeweils wieder verworfen.
 
 ## Genereller Aufbau
+
+![Ansicht der Uhr mit Antenne](dcf77vfd_raspi_clock_att/picoverview.jpg)
 
  * Externes 5V Steckernetzteil
  * Externe Antenne
@@ -125,7 +127,7 @@ Buzzer werden über npn-Transistoren geschaltet.
 
 ## Schaltplan
 
-![Schaltplanentwurf](dcf77_vfd_raspi_clock_att/schematic.png)
+![Schaltplanentwurf](dcf77vfd_raspi_clock_att/schematic.png)
 
 Der gezeigte Schaltplan entspricht weitgehend der Realisierung: Eine Abweichung
 gibt es lediglich bei der Beschaltung der nicht genutzten Kanäle des Wandlers:
@@ -288,7 +290,7 @@ DCF77-Entwicklung (ggfs. auch in anderen Projekten) helfen können.
 
 ## Telegramm-Editor
 
-![Telegramm-Editor Screenshot](dcf77_vfd_raspi_clock_att/scrteledit.png)
+![Telegramm-Editor Screenshot](dcf77vfd_raspi_clock_att/scrteledit.png)
 
 Im Ordner `telegram_editor` befindet sich ein in Java geschriebener
 DCF77-Telegrammeditor, der sowohl Telegramme decodieren, als auch ein
@@ -298,7 +300,7 @@ der Entwicklung des 1. Implementierungsversuchs in C hilfreich waren.
 
 ## Simulator
 
-![Simulator-Screenshot mit einer Vorversion der Uhrensoftware](dcf77_vfd_raspi_clock_att/scrsimulator.png)
+![Simulator-Screenshot mit einer Vorversion der Uhrensoftware](dcf77vfd_raspi_clock_att/scrsimulator.png)
 
 Unter `src_simulated` befinden sich diverse Symlinks und einige zusätzliche
 Dateien, mit denen sich das Programm auf dem Hostsystem kompilieren und ohne

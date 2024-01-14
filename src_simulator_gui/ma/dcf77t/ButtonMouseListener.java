@@ -20,7 +20,11 @@ class ButtonMouseListener extends MouseAdapter {
 	public void mousePressed(MouseEvent ev) {
 		for(int i = 0; i < origins.length; i++) {
 			if(ev.getSource() == origins[i]) {
-				userIn.buttons = assignedLabels[i];
+				if(assignedLabels[i].equals("red"))
+					userIn.alarmSwitch =
+							!userIn.alarmSwitch;
+				else
+					userIn.buttons = assignedLabels[i];
 				return;
 			}
 		}
