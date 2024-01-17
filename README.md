@@ -12,6 +12,37 @@ x-masysma-repository: https://www.github.com/m7a/bo-dcf77vfd-raspi-clock
 x-masysma-owned: 1
 x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
 ---
+Bugs
+====
+
+Achtung: Diese Selbstbau-Uhr ist aktuell noch in einer Testphase. Sie enthält
+noch kritische Bugs, die zu falscher Zeitanzeige führen können.
+
+Notizen:
+
+~~~
+ -> QOS9 observed in test GUI (maybe leap sec case related if that is in the
+    test data. happens after some long time only?)
+
+ -> QOS9 and time 20years in the future observed in “real” test.
+    These outrages occur with high missed interrupt collection (400 times) and
+    high missed bitlayer decoding (100 times) along with some secondlayer resets
+    (20 times). It seems that maybe in event of “wrong interrupts” the SW could
+    protect from processing the data at the bitlayer already and rather output
+    “no signal” under such disturbing circumstances. However, it is unclear how
+    that could be detected exactly in practice. First fix the other QOS9 issue.
+
+ -> In another case, the clock crashed (halted). This should never happen.
+
+ -> In at least one case, a time 10min in the future was observed.
+
+ -> Font lic topic
+    ! Problem: GPL incompatible w/ SIL OFL. Must change project license to
+	    account for that and specify that the display header contains 
+    data that is not under the chosen lic! !
+    https://github.com/FortAwesome/Font-Awesome/issues/1124
+~~~
+
 Übersicht
 =========
 
@@ -31,7 +62,49 @@ Anzeige mit dem Empfang der Signalpulse synchron erfolgt.
 Repository-Inhaltsübersicht
 ===========================
 
-_TODO TREE and lnk to sections_
+	bo-dcf77/
+	 |
+	 +-- dcf77vfd_raspi_block_att/ -- Ressourcendateien zur Webseite
+	 |
+	 +-- doc_gui_statechart/       -- Zustandsiagramm, siehe Abschnitt
+	 |                                Bedienungsanleitung/Menünavigation
+	 |
+	 +-- release/                  -- Gesicherter Firmware-Binärstand
+	 |
+	 +-- src/                      -- Firmwarequelltext
+	 |
+	 +-- src_simulated/            -- Zusatzdateien für Kompilierung zur
+	 |                                Ausführung auf einem PC-System
+	 |
+	 +-- src_simulated_gui/        -- Java-Simulationsanwendung, siehe
+	 |                                Tests/Simulator
+	 |
+	 +-- telegram_editor/          -- (Java) DCF77-Telegrammeditor, siehe
+	 |                                Tests/Telegramm-Editor
+	 |
+	 +-- test/                     -- Individuelle/Spezielle Testprogramme
+	 |                                (idr. uninteressant für Benutzer)
+	 |
+	 +-- test_data/                -- DCF77-Testdatensätze
+	 |                                zur Verarbeitung mit Test Framework
+	 |
+	 +-- test_framework/           -- Automatische Testanwendung, siehe
+	 |                                Tests/Test-Framework
+	 |
+	 +-- xdev_impl1c/              -- alte C-Implementierung, 1. Versuch
+	 |
+	 +-- xdev_impl2c/              -- alte C-Implementierung, 2. Versuch
+	 |
+	 +-- xdev_misc/                -- vorbereitende Tests/Notizen
+	 |
+	 +-- README.md                 -- diese Beschreibung
+	 |
+	 +-- LICENSE.txt               -- freie Softwarelizenz für die Uhr
+	 +-- LICENSE-THIRDPARTY.txt    -- und für genutzte Komponenten
+	 |
+	 +-- dcf77vrd.gpr/alire.toml   -- Alire-Projektdateien zum Kompilieren
+	 |
+	 +-- build.xml                 -- Software-Bauinstruktionen für `ant`
 
 Hardwaredesign
 ==============
@@ -155,7 +228,19 @@ im Gehäuse (ebenso wie der USB-Port).
 
 ## Verdrahtungsplan
 
-_TODO ... nochmal in besserer Qualität und mit mehr Farben einscannen!_
+Der Verdrahtungsplan ist für eine Loch-Streifenrasterplatine vorgesehen, bei
+der drei Löcher jeweils mit einem Streifen verbunden sind. Auf diese Weise
+lassn sich ohne eigenes Platinenlayout Schaltungen realisieren.
+
+![Verdrahtungsplan für Loch-Streifenrasterplatine](dcf77vfd_raspi_clock_att/verdrahtungsplan.png)
+
+Auf dem dargsetllten Verdrahtungsplan sind die 10kOhm-Widerstände zum Schutz
+des Pegelwandlers noch nicht eingezeichnet, da diese erst bei der Bestückung
+eingebaut wurden.
+
+Bei den gelb markierten Drahtbrücken ist auf die Bestückungsreihenfolge zu
+achten: Diese liegen teilweise unterhalb von anderen Teilen und müssen daher
+vor diesen eingebaut werden.
 
 Softwaredesign
 ==============
@@ -232,8 +317,7 @@ Aufgaben:
 
  * Eingabe der Weckzeit
  * Einstellung von Datum- und Uhrzeit
- * Deaktivieren der DCF77-Decodierung (bspw. falls manipulierte
-   falsche Daten empfangen werden sollten)
+ * Deaktivieren der DCF77-Decodierung (hauptsächlich zu Testzwecken interessant)
 
 ## Zusatzfunktionen
 
@@ -247,15 +331,35 @@ in Abhängigkeit der Umgebungshelligkeit codiert.
 Nachbau
 =======
 
-Die Software und Hardwarebeschreibung in diesem Repository sind
-_Freie Software_. Daher ist u.A. ein Nachbau ohne Zahlung von Lizenzgebühren
-möglich.
-
 Grundsätzlich habe ich die Uhr bisher erst genau dieses eine Mal gebaut. Von
 daher ist es nicht unwahrscheinlich, dass die Pläne noch den ein oder anderen
 Fehler enthalten, der im Rahmen der Ausführung erst korrigiert wurde. Es ist
 daher dringend geraten, Schaltplan, `DCF77_Low_Level` und Verdrahtungsplan
 spätestens vor der 1. Inbetriebnahme abzugleichen.
+
+## Lizenz
+
+	Ma_Sys.ma DCF77 VFD Raspi Clock
+	(c) 2018-2024 Ma_Sys.ma <info@masysma.net>
+	
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+	
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+Die Software und Hardwarebeschreibung in diesem Repository sind
+_freie Software_. Daher ist u.A. ein Nachbau ohne Zahlung von Lizenzgebühren
+möglich. Für Details, vgl. `LICENSE.txt` im Repository.
+
+Da diese Entwicklung unter Anderem die Terminus-Schriftart und die
+Hardwareabstraktion zur Programmierung des RP2040 mittels Ada verwendet, sind
+weitere Lizenzen für diese Komponenten anwendbar. Sie sind in der Datei
+`LICENSE-THIRDPARTY.txt` zusammengestellt.
 
 ## Software
 
@@ -270,7 +374,78 @@ Die genauen Kommandos zum Bauen der Software stehen im `build.xml`. Wenn
 
 ## Stückliste
 
-_TODO ..._
+Die folgende Stückliste beschreibt, welche Teile in der Uhr verbaut wurden. Im
+Laufe der Entwicklung wurden noch deutlich mehr Teile (bspw. Gehäuse- und
+Schaltervarianten, Arduino Nano) bestellt, die jedoch nicht alle im finalen
+Design enthalten sind.
+
+Inzwischen sind schon nicht mehr alle Teile lieferbar. Die meisten Teile lassen
+sich jedoch gegen gleichwertige Alternativen ersetzen.
+
+Einzig die schlechte Verfügbarkeit des Displays könnte einen Nachbau behindern.
+Beim Reichelt war es zum Zeitpunkt der Erstellung dieser Dokumentation nämlich
+nicht mehr lieferbar. Die Wahl eines alternativen Displays kann Anpassungen
+am Schaltplan, Verdrahtungsplan und am Displaytreiber (`DCF77_Display`)
+erforderlich machen.
+
+Lieferant     Anzahl  Beschreibung                      Stückpreis/€  Gesamtpreis/€  Bestellnummer mit Link
+------------  ------  --------------------------------  ------------  -------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------
+conrad.de     1       Antennengehäuse                   3.79          3.79           [1977726-62](https://www.conrad.de/de/p/tru-components-tc-7910904-universal-gehaeuse-63-x-57-x-37-abs-pc-grau-1-st-1977726.html)
+conrad.de     1       Buchse für Antennenanschluss      11.04         11.04          [738657-62](https://www.conrad.de/de/p/binder-09-0412-00-04-rundstecker-flanschbuchse-gesamtpolzahl-4-serie-rundsteckverbinder-712-1-st-738657.html)
+conrad.de     10*     Feinsicherung 6.3x32 1.0A T                     3.79           [523965-62](https://www.conrad.de/de/p/eska-632-317-632317-feinsicherung-o-x-l-6-3-mm-x-32-mm-1-a-250-v-traege-t-inhalt-10-st-523965.html)
+conrad.de     1       Flachbandkabel 20pol RM2.54       2.70          2.70           [2103807-62](https://www.conrad.de/de/p/bkl-electronic-10120672-flachbandkabel-rastermass-2-54-mm-20-x-0-08-mm-grau-1-st-2103807.html)
+conrad.de     1       Gehäuse                           20.99         20.99          [522512-62](https://www.conrad.de/de/p/hammond-electronics-1591-etbu-universal-gehaeuse-191-x-110-x-61-polycarbonat-blau-1-st-522512.html)
+conrad.de     1       Kabelverschraubung M12 (f.Ant.)   0.56          0.56           [1521098-62](https://www.conrad.de/de/p/kvm1m-kabelverschraubung-verschraubbar-mit-gegenmutter-m12-m12-polyamid-grau-1-st-1521098.html)
+conrad.de     1       Lichtsensor NaPiCa AMS302         2.85          2.85           504926-62
+conrad.de     1       Stecker für Antenne               12.99         12.99          [738864-62](https://www.conrad.de/de/p/binder-99-0409-00-04-rundstecker-stecker-gerade-gesamtpolzahl-4-serie-rundsteckverbinder-712-1-st-738864.html)
+conrad.de     2       Steuerleitung 4x0.25mm²  (Ant.)   2.29          4.58           [1180024-62](https://www.conrad.de/de/p/voka-kabelwerk-liycy-steuerleitung-4-x-0-25-mm-grau-102104-00-meterware-1180024.html)
+conrad.de     1       Summer KPMB-G2206L-K6405          3.29          3.29           715057-62
+conrad.de     1       Taster Grün                       4.79          4.79           [701259-62](https://www.conrad.de/de/p/tru-components-701259-gq12b-a-gn-vandalismusgeschuetzter-drucktaster-48-v-dc-2-a-1-x-aus-ein-tastend-ip65-1-st-701259.html)
+conrad.de     2       Taster Blau                       4.99          9.98           [701260-62](https://www.conrad.de/de/p/tru-components-gq12b-a-bl-vandalismusgeschuetzter-drucktaster-48-v-dc-2-a-1-x-aus-ein-tastend-ip65-1-st-701260.html)
+conrad.de     4       Abstandsbolzen 7mm x 10mm         0.10          0.60           [526363-62](https://www.conrad.de/de/p/526363-abstandsbolzen-o-x-l-7-mm-x-10-mm-polystyrol-1-st-526363.html)
+conrad.de     100*    Widerstände 10k 0.25W 5% (Pkg)                  2.29           [1584380-62](https://www.conrad.de/de/p/tru-components-1584380-tc-cfr0w4j0102kit203-kohleschicht-widerstand-1-k-axial-bedrahtet-0207-0-25-w-5-100-st-1584380.html)
+conrad.de     100*    Widerstände 1k 0.25W 5% (Pkg)                   2.29           [1584383-62](https://www.conrad.de/de/p/tru-components-1584383-tc-cfr0w4j0103kit203-kohleschicht-widerstand-10-k-axial-bedrahtet-0207-0-25-w-5-100-st-1584383.html)
+conrad.de     1       Versandkosten ab 59.95€ = 0       0.00          0.00            
+elv.de        1       DCF-Empfangsmodul DCF-2 (Ant.)    9.95          9.95           [091610](https://de.elv.com/dcf-empfangsmodul-dcf-2-091610)
+elv.de        1       Versandkosten Best.-Wert. < 29€   3.99          3.99            
+reichelt.de   1       Abdeckung f. Operator, rund, rot  0.71          0.71           [A01-63 ROT](https://www.reichelt.de/abdeckung-fuer-operator-rund-rot-a01-63-rot-p27936.html)
+reichelt.de   1       Anschlussbuchse 5.6mm/2.1mm       1.25          1.25           [HEBLM 21](https://www.reichelt.de/einbaubuchse-zentraleinbau-aussen-5-6-mm-innen-2-1-mm-heblm-21-p35268.html)
+reichelt.de   2       Buchsenleiste 20-pol, RM2.54      0.30          0.60           [BL 1x20G8 2,54](https://www.reichelt.de/20pol-buchsenleiste-gerade-rm-2-54-h-8-5mm-bl-1x20g8-2-54-p51827.html)
+reichelt.de   1       IC-Sockel 20-pol                  0.08          0.08           [GS 20](https://www.reichelt.de/ic-sockel-20-polig-doppelter-federkontakt-gs-20-p8212.html)
+reichelt.de   1       LED 6V für Serie A01 - amber      6.20          6.20           [A01 LED6V GE](https://www.reichelt.de/led-6-v-fuer-serie-a01-amber-a01-led6v-ge-p167419.html)
+reichelt.de   1       LED-Halter Außenreflektor         0.90          0.90           [VOSS WU-A-5](https://www.reichelt.de/nicht-mehr-lieferbar-voss-wu-a-5-p232320.html)
+reichelt.de   100*    Karosseriescheiben 3.2mm          1.99          1.99           [SKA 3,2X9-100](https://www.reichelt.de/karosseriescheiben-3-2-mm-100-stueck-ska-3-2x9-100-p65774.html)
+reichelt.de   4       Kondensator 22nF                  0.10          0.40           [X7R-2,5 22N MUR](https://www.reichelt.de/vielschicht-keramikkondensator-22n-10--x7r-2-5-22n-mur-p22856.html?r=1)
+reichelt.de   2       MOSFET (1 Reserve)                0.08          0.16           [2N 7000 DIO](https://www.reichelt.de/mosfet-n-ch-60v-0-115a-0-4w-to-92-2n-7000-dio-p219075.html)
+reichelt.de   100*    Muttern M2.5                      1.85          1.85           [SK M2,5-100](https://www.reichelt.de/sechskantmuttern-m2-5-100-stueck-sk-m2-5-100-p18082.html)
+reichelt.de   1       Netzteil 5V 1.5A 5.5mmx2.1mm      7.20          7.20           [HNP 06-050L6](https://www.reichelt.de/steckernetzteil-7-5-w-5-v-1-5-a-hnp-06-050l6-p177069.html)
+reichelt.de   1       Operator, bel.bar, rastend, rund  7.20          7.20           [A01-09R](https://www.reichelt.de/operator-beleuchtbar-rastend-rund-a01-09r-p27923.html)
+reichelt.de   1       Punkt-Streifenrasterp. 160x100mm  2.70          2.70           [H25PS160](https://www.reichelt.de/punkt-streifenrasterplati-hartpapier-160x100mm-h25ps160-p23953.html)
+reichelt.de   1       Raspberry Pi Pico, RP2040         3.95          3.95           [RASP PI PICO](https://www.reichelt.de/de/de/raspberry-pi-pico-rp2040-cortex-m0-microusb-rasp-pi-pico-p295706.html)
+reichelt.de   1       Schalterblock f. A01, 2xUM        6.68          6.68           [A01-52B](https://www.reichelt.de/schalterblock-fuer-a01-6a-250vac-2-polig-um-a01-52b-p27916.html)
+reichelt.de   1       Schottkydiode (1 Reserve)         0.07          0.14           [1N 5819RL STM](https://www.reichelt.de/schottkydiode-40-v-1-a-do-41-1n-5819rl-stm-p219449.html)
+reichelt.de   200*    Schrauben M2.5 12mm Schlitz       1.99          1.99           [SZK M2,5X12-200](https://www.reichelt.de/zylinderkopfschrauben-schlitz-m2-5-12-mm-200-stueck-szk-m2-5x12-200-p130239.html)
+reichelt.de   1       Sicherungshalter 6.3mm x 32mm     1.60          1.60           [SCH 318002](https://www.reichelt.de/sicherungshalter-fuer-6-3-x-32-mm-250-v-10-a-schwarz-sch-318002-p245390.html)
+reichelt.de   1       Stiftleiste 1x3-pol RM2.54        0.08          0.08           [MPE 087-1-003](https://www.reichelt.de/stiftleisten-2-54-mm-1x03-gerade-mpe-087-1-003-p119880.html)
+reichelt.de   2       Stiftleiste 1x20-pol RM2.54       0.36          0.72           [MPE 087-1-020](https://www.reichelt.de/stiftleisten-2-54-mm-1x20-gerade-mpe-087-1-020-p119888.html)
+reichelt.de   1       Stiftleiste 2x10-pol RM2.54       0.35          0.35           [MPE 087-2-020](https://www.reichelt.de/stiftleisten-2-54-mm-2x10-gerade-mpe-087-2-020-p119898.html)
+reichelt.de   2       Transceiver (1 Reserve)           0.70          1.40           [SN 74HCT245N TEX](https://www.reichelt.de/transceiver-octal-4-5--5-5-v-pdip-20-sn-74hct245n-tex-p219305.html)
+reichelt.de   1       VFD-Displaymodul 5V               39.30         39.30          [LCD-128X64BK AA](https://www.reichelt.de/nicht-mehr-lieferbar-lcd-128x64bk-aa-p197556.html)
+reichelt.de   1       Widerstand 100 Ohm, 2W            0.10          0.10           [VIS PRO200020103](https://www.reichelt.de/widerstand-metallschicht-100-ohm-2-w-5--vis-pr0200020103-p284585.html)
+reichelt.de   1       Versandkosten (immer)             5.95          5.95            
+Vorrat        1       Anschlusskabel für Lichtsensor                                  
+Vorrat        3       Kabelbinder                                                     
+Vorrat                Lötzinn bleifrei                                                
+Vorrat        1       npn-Transistor klein                                            
+Vorrat        1       npn-Transistor Leistung                                         
+Vorrat        3       Schaltlitze Schalteranschluss                                   
+Vorrat        1       Widerstand 220kOhm                                              
+
+*) Packungsgröße, effektiv wurden nicht alle Teile verbaut,
+Vorrat := Wurde nicht extra für dieses Projekt eingekauft und daher auch nicht
+in den Kosten erfasst.
+
+Gesamtkosten nur für benötigte Teile 193.97€ davon 9.95€ Versand
 
 ## Hardwarezusammenbau
 
@@ -339,15 +514,13 @@ die Tests erreicht wird.
 Bedienungsanleitung
 ===================
 
-_TODO INTRODUCTION TO MANUAL GOES HERE_
+Diese Anleitung beschreibt die Verwendung der _DCF77 VFD Raspi Clock_.
 
-## Allgemeines
-
-Im Allgemeinen können keine Einstellungen getätigt werden, die über das Trennen
-der Stromversorgung hinaus Bestand haben (mit Ausnahme des Aktivierungszustands
-der Weckfunktion).
-
-_TODO EXPLAIN THE STATE CHART FOR GUI HERE (AND DRAW IT NICELY FIRST!)_
+Bis auf die Aktivierung der Weckfunktion können keine Einstellungen getätigt
+werden, die über das Trennen der Stromversorgung hinaus Bestand haben. Ist die
+Weckfunktion zum Einschaltzeitpunkt aktiviert, ertönt sofort der Buzzer
+(unabhängig von der Uhrzeit), sodass man auch bei Stomausfall keine Weckung
+verpasst, sofern der Strom rechtzeitig zum Weckzeitpunkt zurückkehrt.
 
 ## Standardbetrieb mit DCF77-Antenne
 
@@ -358,7 +531,7 @@ sich selbständig mit dem Zeitsignal.
 
 Die gelungene Synchronisation kann jederzeit in der unteren linken Ecke
 des Bildschirms abgelesen werden, wobei (+1) die beste Empfangsqualität
-und (-9) die schlechteste Empfangsqualität signalisieren.
+und (-9) eine fehlende Synchronisierung signalisieren.
 
 In der Mitte des Bildschirms wird die Uhrzeit dargestellt, darüber das Datum.
 Unten rechts wird die eingestellte Weckzeit angezeigt, sofern der Wecker aktiv
@@ -366,54 +539,68 @@ ist.
 
 ## Menünavigation
 
+![Zustandsdiagramm zur Erklärung der Menünavigation](dcf77vfd_raspi_clock_att/guistatechart)
+
 Die 4-Tasten-Bedienung folgt folgender Überlegung:
 
- * Der linke grüne Taster (“Next/Edit”) ist für die Navigation “runter” bzw.
+ * Der linke grüne Taster (_grün_) ist für die Navigation “runter” bzw.
    innerhalb von Untermenüs für den Wechsel zwischen Bearbeiten/Navigieren
    gedacht.
  * Die mittleren beiden blauen Taster sind für das Verstellen von Zahlenwerten
-   (+/-) bzw. die Navigationlinks/rechts gedacht.
- * Der rechte rote Schalter ist exklusiv für die Weckereinstellung gedacht:
-   Ist er grdrückt ist der Weckalarm scharfgeschaltet und der Buzzer ertönt,
-   sobald die eingestellte Weckzeit das nächste Mal erreicht wird.
+   (+/-) bzw. die Navigation (_links/rechts_) gedacht.
+ * Der rechte rote Schalter (_Al.ein/Al.aus_) ist exklusiv für die
+   Weckereinstellung gedacht: Ist er grdrückt ist der Weckalarm scharfgeschaltet
+   und der Buzzer ertönt, sobald die eingestellte Weckzeit das nächste Mal
+   erreicht wird.
 
-## Wecker
+Das Diagramm zeigt schematisch, welche Anzeige man ausgehend von einer gegebenen
+Startanzeige (Anfang oben links) durch Drücken der Tasten erreicht.
+
+## Weckfunktion
 
 ### Weckzeit stellen
 
 Zum Einstellen einer Weckzeit ist ausgehend vom Startbildschirm einmal
-“Next/Edit” und dann “>” zu drücken. Anschließend lässt sich mit “Next/Edit”
-das Bearbeiten des Stundenwerts aktivieren, mit +/- verstellen und
-anschließend mit “Next/Edit” speichern und mit “>” zum nächsten Feld
-(Weckzeit-Minute) wechseln. Dieses wird wieder mit “Next/Edit” bearbeitbar
-gemacht, mit +/- verstellt und nochmals “Next/Edit” gespeichert. Ein Druck auf
-“>” führt zurück zur Hauptansicht.
+_grün_ und dann _rechts_ zu drücken. Anschließend lässt sich mit _grün_
+das Bearbeiten des Stundenwerts aktivieren, mit _links/rechts_ verstellen und
+anschließend mit _grün_ speichern und mit _rechts_ zum nächsten Feld
+(Weckzeit-Minute) wechseln. Dieses wird wieder mit _grün_ bearbeitbar
+gemacht, mit _links/rechts_ verstellt und durch _grün_ gespeichert. Ein Druck
+auf _rechts_ führt anschließend zurück zur Hauptansicht.
 
 ### Wecker scharfschalten
 
-Zum Einschalten der Weckfunktion mit der aktuell hinterlegten Weckzeit muss
-der rote Knopf gedrückt werden. Die aktive Weckfunktion wird durch die
-orangene Hintergrundbeleuchtung des Knofpes signalisiert
+Die Weckeinstellung wird mit dem roten Schalter scharfgeschaltet. Der Schalter
+verharrt in der Position und sichert so den Einschaltzustand des Weckers
+unabhängig vom Stromnetz.
+
+Die aktive Weckfunktion wird durch die orangene Hintergrundbeleuchtung des
+Knofpes und durch Anzeige der Weckzeit auf dem Startbildschirm signalisiert.
 
 ### Wecker auslösen
 
 Sobald die Weckzeit erreicht ist, löst der Wecker mittels Buzzergeräusch und
-blinkendem Wecker-Schalter aus.
+blinkendem roten Schalter aus.
 
 Sollte der Strom ausfallen oder aus anderen Gründen die Uhr bei aktivierterm
-Wecker-Schalter mit der Spannungsversorgung verbunden werden, so aktiviert sich
+roten Schalter mit der Spannungsversorgung verbunden werden, so aktiviert sich
 der Buzzer sofort (unabhängig von einer eventuell vorher gestellten Weckzeit).
 Damit wird verhindert, dass ein nächtlicher Stromausfall die Weckfunktion außer
 Kraft setzt, allerdings kann es dadurch zu verfrüher Auslösung kommen.
 
 ### Wecker abstellen
 
-Der Wecker kann durch Druck auf den Wecker-Schalter abgestellt werden.
+Der Wecker kann durch Druck auf den roten Schalter abgestellt werden.
 
-Erfolgt ein solches Abstellen auch nach 90min nicht, schaltet sich der Wecker
-in den “Timeout”-Modus -- der Buzzer wird abgeschaltet und der Wecker-Schalter
-blinkt solange weiter, bis die Stromversorgung getrennt oder der Schalter
-betätigt wurde.
+Erfolgt ein solches Abstellen auch nach 90 min nicht, wird der Buzzer
+abgeschaltet und der Wecker-Schalter blinkt solange weiter, bis die
+Stromversorgung getrennt oder der rote Schalter zum Abstellen des
+Weckers betätigt wurde.
+
+Die 90 min-Abschaltung soll verhindern, dass vergessene und unbeaufsichtigte
+Wecker pausenlos vor sich hin lärmen. Außerdem ist zu erwarten, dass die meisten
+Nutzer innerhalb des 90 min-Zeitraums aufwachen. Andernfalls könnte ein lauterer
+Wecker erforderlich sein.
 
 ## Uhrzeit verstellen
 
@@ -422,7 +609,7 @@ per DCF77 empfangen wird. Um eine eigene Uhrzeitvorgabe dauerhaft festzulegen
 muss die Antenne abgestöpselt werden. Im Betrieb ohne DCF77-Zeitsignal ist
 jedoch mit einer starken Abweichung über die Zeit zu rechnen!
 
-Mittels 2x “Next/Edit” navigiert man zum Uhhrzeitbearbeiten. Mit “>” wird das
+Mittels 2x _grün_ navigiert man zum Uhhrzeitbearbeiten. Mit _rechts_ wird das
 Menü betreten und darin können der Reihe nach die Werte für Uhrzeit
 (Stunde, Minute, Sekunde) und anschließend das Datum
 (Jahrhundert, Jahr, Monat, Tag) bearbeitet werden. Das Bearbeiten der Zahlen
@@ -430,12 +617,57 @@ erfolgt analog zum Wecker-Stellen.
 
 ## Einstellungen verstellen
 
-_TODO ..._
+Aktuell wird nur _eine_ Einstellungsoption angeboten: _DCF77 Proc._ schaltet
+zwischen dem Verarbeiten der Inhalte des DCF77-Zeitsignals und dem ignorieren
+der empfangenen Bits um. Allerdings ist auch bei Abschalten dieser Einstellung
+die Zeit auf der Uhr nicht gänzlich vom Zeitsignal unabhänig, da der
+Sekundezeiger immernoch grundsätzlich auf Basis des Signalempfangs gesteuert
+wird. Um dies zu verhindern, muss man zusätzlich die Antenne abstöpseln.
+
+Mittels 3x _grün_ kann man vom Startbildschirm ins Einstellungsmenü navigieren.
+Anschließend lässt sich die Einstellung mit _rechts_ auslösen und mit einem
+Druck auf _grün_ umschalten. Zurück zum Startbildschirm gelangt man mit
+2x _rechts_. (Die _RFU Option_ hat keine Bedeutung).
 
 ## Statusinformationen anzeigen
 
-_TODO ..._
+Mittels 4x _grün_ kann man vom Startbildschirm ins Informationsmenü navigieren.
+Drain können mittels _rechts_ verschiedene Bildschirme durchgeschaltet werden.
+Ihre Bedeutung ist nachfolgend erläutert.
+
+### CTRInfo
+
+Der CTRInfo-Bildschirm zeigt 6 Zahlenwerte, die interne Variablen des
+Uhrprogramms anzeigen:
+
+ 1. Die erste Zahl zeigt `LL.Get_Fault`.
+ 2. Die zweite Zahl zeigt `Secondlayer.Get_Fault`.
+ 3. Die dritte Zahl zeigt die am Umgebungshelligkeitssensor erkannte Helligkeit
+    (`Light_Sensor_Reading`) im Bereich 0..100 (praktisch werden nur Werte bis
+    knapp über 80 erreicht).
+ 4. Die vierte Zahl zeigt `Bitlayer.Get_Unidentified`.
+ 5. Die fünfte Zahl zeigt `Bitlayer.Get_Overflow`.
+ 6. Die sechste Zahl zeigt `Bitlayer.Get_Delay / 1000` und betägt typischerweise
+    um die 70.
+
+Wenn in Feld 1 und 4 hohe Zahlen stehen, kann das ein Indikator für gestörten
+Signalempfang sein.
+
+### QOSInfo
+
+Der QOSInfo-Bildschirm zeigt anteilig, wie viel Zeit die Uhr in den
+verschiedenen _Quality of Service_-Zuständen verbracht hat. Typischerweise
+sollten 1 und 9 vorherrschen. Generell bedeutet ein höherer Wert bei 1 eine
+bessere Empfangsqualität. Idealerweise sollte der Wert bei 9 mit laufendem
+Uhrenbetrieb immer weiter zu Gunsten von 1 abnehmen.
+
+### Versionsinformationen
+
+Die hinteren drei Bildschirme geben Auskunft über die Firmwareversion, den
+Softwareentwickler und Kontaktinformationen zum Softwareentwickler.
 
 ## Eigene Antenne anschließen
 
 _TODO ..._
+
+_TODO INC INFO FROM MADOCS: madoc010750, madoc010751, maodc010752, madoc010753_ 

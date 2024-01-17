@@ -110,7 +110,12 @@ private
 	------------------------------------------------------------------------
 	------------------------------------------------------------------------
 
-	-- TODO TERMINUS FONT LICENSE ETC
+	-- Terminus Font is licensed under the SIL Open Font License, Version 1.1.
+	-- 
+	-- Copyright (c) 2010-2014 Dimitar Toshkov Zhekov,
+	-- with Reserved Font Name "Terminus Font".
+	--
+	-- see LICENSE-THIRDPARTY.txt for OFL copy
 	Font_Large_Data: constant Font_Large := (
 		'-' => (16#0#,16#18000#,16#18000#,16#18000#,16#18000#,16#18000#,
 			16#18000#,16#18000#,16#18000#,16#18000#,16#18000#,
