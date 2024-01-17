@@ -50,10 +50,10 @@ package body DCF77_GUI is
 		S.ALS.Init;
 		S.Alarm.Init(S.LL);
 
-		S.LL.Log("Ma_Sys.ma DCF77 VFD / INIT CTR=44");
+		S.LL.Log("Ma_Sys.ma DCF77 VFD / INIT CTR=45");
 		S.Disp.Update((1 => (X => 16, Y => 16, F => Small,
 				Msg => SB.To_Bounded_String(
-				"INIT CTR=44"), others => <>)));
+				"INIT CTR=45"), others => <>)));
 	end Init;
 
 	procedure Loop_Pre(S: in out Program_State) is
@@ -424,17 +424,20 @@ package body DCF77_GUI is
 		-- info --
 		when Select_Info =>
 			G.Add_Time(0, 0, Small, Underline_None);
-			G.Add_Info("CTRInfo",
-				Num_To_Str_L4(G.S.LL.Get_Fault) &
-					" " & Num_To_Str_L4(
-						G.S.Secondlayer.Get_Fault) &
-					" " & Num_To_Str_L4(Natural(
-						G.S.Light_Sensor_Reading)),
-				Num_To_Str_L4(G.S.Bitlayer.Get_Unidentified) &
-					" " & Num_To_Str_L4(
-						G.S.Bitlayer.Get_Overflown) &
-					" " & Num_To_Str_L4(Natural(
-						G.S.Bitlayer.Get_Delay / 1000))
+			G.Add_Info(
+			Title => "CTRInfo",
+			L1 => Num_To_Str_L4(G.S.Bitlayer.Get_Unidentified) &
+				" " &
+				Num_To_Str_L4(G.S.Bitlayer.Get_Discarded) &
+				" " &
+				Num_To_Str_L2(G.S.Bitlayer.Get_Overflown) &
+				" " &
+				Num_To_Str_L3(Natural(G.S.Bitlayer.Get_Delay /
+									1000)),
+			L2 => Num_To_Str_L4(G.S.LL.Get_Fault) & " " &
+				Num_To_Str_L4(G.S.Secondlayer.Get_Fault) &
+				"    " &
+				Num_To_Str_L3(Natural(G.S.Light_Sensor_Reading))
 			);
 			G.Add_Menu(Menu_Home);
 		when Select_I_QOS =>
