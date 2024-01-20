@@ -72,10 +72,6 @@ procedure DCF77_Test_Runner is
 		for Line of Spec.Input loop
 			for I in  0 .. Line.Len - 1 loop
 				SL.Process(Line.Val(I), T1, T2);
-				-- TODO FOR DEBUG
-				--if T1.Valid /= DCF77_Secondlayer.Invalid then
-				--	Ada.Text_IO.Put_Line("DEBUG OUTPUT OF SECONDLAYER = " & Tel_Dump(T1.Value));
-				--end if;
 				TL.Process(True, T1, T2);
 				if Ch <= Spec.Checkpoints'Last and then
 						Pos = Spec.Checkpoints(Ch).Loc

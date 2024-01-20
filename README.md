@@ -80,6 +80,7 @@ Repository-Inhaltsübersicht
 	 |
 	 +-- README.md                 -- diese Beschreibung
 	 |
+	 +-- LICENSE.txt               -- Lizenz für die Uhr
 	 +-- LICENSE-THIRDPARTY.txt    -- Lizenzübersicht für Komponenten
 	 |
 	 +-- dcf77vrd.gpr/alire.toml   -- Alire-Projektdateien zum Kompilieren
@@ -100,7 +101,7 @@ und dann jeweils wieder verworfen.
  * Externe Antenne
  * 4 Knöpfe zur Steuerung -- 3 Taster (_Modus, Zurück, Weiter_) und ein
    Druckschalter (Wecker Ein/Aus)
- * 5V VFD SPI-Displaymodul 128x64px
+ * 5V VFD SPI-Displaymodul 128x64 px
  * Buzzer als Weckalarm
  * Lichtsensor zur automatischen Helligkeitsanpassung
 
@@ -185,11 +186,11 @@ Buzzer werden über npn-Transistoren geschaltet.
 Der gezeigte Schaltplan entspricht weitgehend der Realisierung: Eine Abweichung
 gibt es lediglich bei der Beschaltung der nicht genutzten Kanäle des Wandlers:
 In der praktischen Umsetzung wurden hier die im Datenblatt empfohlenen und im
-Schaltplan fehlenden 10kOhm-Widerstände eingebaut, um die Robustheit weiter zu
+Schaltplan fehlenden 10kΩ-Widerstände eingebaut, um die Robustheit weiter zu
 erhöhen.
 
 Der prinzipielle Aufbau ist so gestaltet, dass in den digitalen Signalen jeweils
-1kOhm-Widerstände sitzen, um bei Fehlern zu verhindern, dass große Ströme
+1kΩ-Widerstände sitzen, um bei Fehlern zu verhindern, dass große Ströme
 fließen können. Die Schalter- und Tastereingaben sind hardwareseitig mit
 Kondensatoren entprellt. Die Schottky-Diode D1 verhindert, dass bei Anschluss
 der USB-Schnittstelle am Raspi das VFD gespeist wird (es würde zu viel Strom
@@ -214,13 +215,33 @@ lassn sich ohne eigenes Platinenlayout Schaltungen realisieren.
 
 ![Verdrahtungsplan für Loch-Streifenrasterplatine](dcf77vfd_raspi_clock_att/verdrahtungsplan.png)
 
-Auf dem dargsetllten Verdrahtungsplan sind die 10kOhm-Widerstände zum Schutz
+Auf dem dargsetllten Verdrahtungsplan sind die 10kΩ-Widerstände zum Schutz
 des Pegelwandlers noch nicht eingezeichnet, da diese erst bei der Bestückung
 eingebaut wurden.
 
 Bei den gelb markierten Drahtbrücken ist auf die Bestückungsreihenfolge zu
 achten: Diese liegen teilweise unterhalb von anderen Teilen und müssen daher
 vor diesen eingebaut werden.
+
+## Antennenverbindung
+
+Die Details zur Antennenverbindung sind in den Plänen nicht angegeben und daher
+hier in einem eigenen Abschnitt angegeben. Der Antennenstecker und das Kabel
+wurden folgendermaßen belegt:
+
+Kabel  Bedeutung  Pin
+-----  ---------  ---
+gelb   +5V        1
+weiß   +3.3V      2
+grün   Signal     3
+braun  GND        4
+
+Für das ELV-Antennemodul genügen die 3.3V, die auch der Maximalwert sind, der
+über _Signal_ ausgegeben werden darf. Falls ein Antennenmodul eine andere
+Versorgungsspannung benötigt oder eine bessere Filterschaltung für die
+Spannungsversorgung vorgeschaltet werden soll, können dank des 4-poligen
+Steckers und Kabels aber auch die 5V des Netzteils direkt angezapft werden,
+solange das Signal dann wieder mit Bezug auf die 3.3V ausgegeben wird.
 
 Softwaredesign
 ==============
@@ -321,9 +342,7 @@ spätestens vor der 1. Inbetriebnahme abzugleichen.
 
 Die Software und Hardwarebeschreibung in diesem Repository sind
 _freie Software_. Damit ist bspw. ein Nachbau ohne Zahlung von Lizenzgebühren
-möglich.
-
-Alles in diesem Repository enthaltene außer `release/` und
+möglich. Alles in diesem Repository enthaltene außer `release/` und
 `src/dcf77_display-font.ads` steht unter folgender Expat-Lizenz:
 
 ~~~
@@ -354,8 +373,8 @@ Da diese Entwicklung unter Anderem eine Schriftart unter SIL OFL und die
 Hardwareabstraktion zur Programmierung des RP2040 mittels Ada verwendet, sind
 weitere Lizenzen für diese Komponenten anwendbar, die sich auf den im Repository
 enthaltenen Ordner `release/` und die Datei `src/dcf77_display-font.ads`
-auswirken. Alle anwendbaren Lizenzen sind in der Datei `LICENSE-THIRDPARTY.txt`
-zusammengestellt.
+auswirken. Alle anwendbaren Lizenzen für diese Komponenten sind in der Datei
+`LICENSE-THIRDPARTY.txt` zusammengestellt.
 
 ## Software
 
@@ -427,7 +446,7 @@ reichelt.de   2       Stiftleiste 1x20-pol RM2.54       0.36          0.72      
 reichelt.de   1       Stiftleiste 2x10-pol RM2.54       0.35          0.35           [MPE 087-2-020](https://www.reichelt.de/stiftleisten-2-54-mm-2x10-gerade-mpe-087-2-020-p119898.html)
 reichelt.de   2       Transceiver (1 Reserve)           0.70          1.40           [SN 74HCT245N TEX](https://www.reichelt.de/transceiver-octal-4-5--5-5-v-pdip-20-sn-74hct245n-tex-p219305.html)
 reichelt.de   1       VFD-Displaymodul 5V               39.30         39.30          [LCD-128X64BK AA](https://www.reichelt.de/nicht-mehr-lieferbar-lcd-128x64bk-aa-p197556.html)
-reichelt.de   1       Widerstand 100 Ohm, 2W            0.10          0.10           [VIS PRO200020103](https://www.reichelt.de/widerstand-metallschicht-100-ohm-2-w-5--vis-pr0200020103-p284585.html)
+reichelt.de   1       Widerstand 100Ω, 2W               0.10          0.10           [VIS PRO200020103](https://www.reichelt.de/widerstand-metallschicht-100-ohm-2-w-5--vis-pr0200020103-p284585.html)
 reichelt.de   1       Versandkosten (immer)             5.95          5.95            
 Vorrat        1       Anschlusskabel für Lichtsensor                                  
 Vorrat        3       Kabelbinder                                                     
@@ -435,13 +454,13 @@ Vorrat                Lötzinn bleifrei                                      
 Vorrat        1       npn-Transistor klein                                            
 Vorrat        1       npn-Transistor Leistung                                         
 Vorrat        3       Schaltlitze Schalteranschluss                                   
-Vorrat        1       Widerstand 220kOhm                                              
+Vorrat        1       Widerstand 220kΩ                                                
 
 *) Packungsgröße, effektiv wurden nicht alle Teile verbaut,
 Vorrat := Wurde nicht extra für dieses Projekt eingekauft und daher auch nicht
 in den Kosten erfasst.
 
-Gesamtkosten nur für benötigte Teile 193.97€ davon 9.95€ Versand
+Gesamtkosten nur für benötigte Teile 193.97€ davon 9.95€ Versand.
 
 ## Hardwarezusammenbau
 
@@ -452,6 +471,17 @@ Da das Antennenkabel relativ starr ist, gibt es ggfs. Sinn, es etwas länger
 (bspw. 2m) zu wählen, damit man eine Chance hat, die Antenne auszurichten, ohne,
 dass sie sich aufgrund der Starrheit des Kabels wieder in die falsche Position
 dreht.
+
+## Skizzen zu Komponenten
+
+Zum fehlerfreien Zusammenbau der Uhr wurden einige Skizzen angefertigt. Für den
+Nachbau können diese gerne zu Rate gezogen werden, sollten aber anhand der
+tatsächlich vorliegenden Teile, Pläne und Datenblätter kontrolliert werden, da
+bspw. bei den Maßen des Displays Unstimmigkeiten bestehen können.
+
+![madoc010750 -- Skizzen zu Einzelteilen -- Displaymaße können abweichen!](dcf77vfd_raspi_clock_att/madoc010750edit)
+
+![madoc010753 -- Skizze zur Übertagung der Abstände auf das Gehäuse -- Displaymaße können abweichen!](dcf77vfd_raspi_clock_att/madoc010753edit)
 
 Tests
 =====
@@ -633,21 +663,26 @@ Ihre Bedeutung ist nachfolgend erläutert.
 
 ### CTRInfo
 
-Der CTRInfo-Bildschirm zeigt 6 Zahlenwerte, die interne Variablen des
+Der CTRInfo-Bildschirm zeigt Zahlenwerte, die interne Variablen des
 Uhrprogramms anzeigen:
 
- 1. Die erste Zahl zeigt `LL.Get_Fault`.
- 2. Die zweite Zahl zeigt `Secondlayer.Get_Fault`.
- 3. Die dritte Zahl zeigt die am Umgebungshelligkeitssensor erkannte Helligkeit
-    (`Light_Sensor_Reading`) im Bereich 0..100 (praktisch werden nur Werte bis
-    knapp über 80 erreicht).
- 4. Die vierte Zahl zeigt `Bitlayer.Get_Unidentified`.
- 5. Die fünfte Zahl zeigt `Bitlayer.Get_Overflow`.
- 6. Die sechste Zahl zeigt `Bitlayer.Get_Delay / 1000` und betägt typischerweise
-    um die 70.
+Erste Zeile
 
-Wenn in Feld 1 und 4 hohe Zahlen stehen, kann das ein Indikator für gestörten
-Signalempfang sein.
+ 1. `Bitlayer.Get_Unidentified`.
+ 2. `Bitlayer.Get_Discarded`.
+ 3. `Bitlayer.Get_Overflown`.
+ 4. `Bitlayer.Get_Delay / 1000` (typischerweise um die 70)
+
+Zweite Zeile
+
+ 1. `LL.Get_Fault`.
+ 2. `Secondlayer.Get_Fault`.
+ 3. Die am Umgebungshelligkeitssensor erkannte Helligkeit
+    (`Light_Sensor_Reading`) im Bereich 0..100. Praktisch werden nur Werte bis
+    knapp über 80 erreicht.
+
+Wenn `Unidentified`, `Discarded` oder `LL.Get_Fault` hohe Werte zeigen, kann das
+ein Indikator für gestörten Signalempfang bzw. falsche Antennenausrichtung sein.
 
 ### QOSInfo
 
@@ -662,8 +697,60 @@ Uhrenbetrieb immer weiter zu Gunsten von 1 abnehmen.
 Die hinteren drei Bildschirme geben Auskunft über die Firmwareversion, den
 Softwareentwickler und Kontaktinformationen zum Softwareentwickler.
 
-## Eigene Antenne anschließen
+Hilfreiche Links
+================
 
-_TODO ..._
+Interner Link:
+[dcf77_vfd_roehren_bausatz_dcf77_melody(37)](../37/dcf77_vfd_roehren_bausatz_dcf77_melody.xhtml) --
+ein weiteres DCF77-VFD-Projekt, welches beim Ma_Sys.ma dokumentiert ist, jedoch in diesem Fall auf Basis eines Bausatzes.
 
-_TODO INC INFO FROM MADOCS: madoc010750, madoc010751, maodc010752, madoc010753_ 
+_Blinkenlight Experiments_ (blinkenlight.net) enthält und erklärt ebenfalls eine
+umfangreiche DCF77-Uhrenimplementierung. Diese hat noch eine größere
+“Fertigungstiefe”, da sie auch auf den Analogteil des Signalempfangs eingeht,
+der in der Ma_Sys.ma-Implementierung komplett auf das DCF77-Antennenmodul
+abgewälzt wird. Besonders intereessante Unterseiten:
+
+ * <https://blog.blinkenlight.net/experiments/dcf77/dcf77-receiver-modules/>
+ * <https://blog.blinkenlight.net/experiments/dcf77/binary-clock/>
+ * <https://blog.blinkenlight.net/experiments/dcf77/phase-detection/>
+ * <https://blog.blinkenlight.net/experiments/dcf77/second-decoder/>
+ * <https://blog.blinkenlight.net/experiments/dcf77/decoding-everything/>
+ * <https://blog.blinkenlight.net/experiments/dcf77/local-clock/>
+ * <https://blog.blinkenlight.net/experiments/dcf77/the-clock/>
+
+### DCF77-Elektronik
+
+ * <https://www.redesmadrid.com/?page_id=4>
+ * <https://www.eeweb.com/dcf77-preamplifier/> -- Vorverstärker
+
+### VFD-Elektronik
+
+ * <https://bastelnmitelektronik.jimdo.com/bauteile-werkzeuge-aufbau/bauteilebeschreibungen/vakuumfluoreszenzanzeige/> --
+   Erklärung zu VFD-Funktionsprinzip und -Ansteuerung
+ * <https://vfdclock.jimdofree.com/2013/04/26/inrc09ss49t%E5%9E%8Bvfd%E6%98%BE%E7%A4%BA%E6%A8%A1%E5%9D%97%E7%9A%84%E5%88%B6%E4%BD%9C/> --
+   Selbstbau eines VFD-Displaymoduls (auf Chinesisch!)
+ * <https://medium.com/@rxseger/reverse-engineering-the-pinout-of-vacuum-fluorescent-displays-vfds-hnv11ss27-fip7fm7-and-hnv-8a00b0530b52> --
+   Reverse-Engineering der Pinbelegung eines DCF77-Displays
+
+### Sonstige Elektronik
+
+ * <https://electronics.stackexchange.com/questions/97889/bidirectional-5-v-to-3-3-v-level-shifter>
+   -- Logik-Pegelwandler
+ * <https://www.redesmadrid.com/?page_id=360> -- Empfang von RDS statt DCF77
+ * <https://www.avrfreaks.net/s/topic/a5C3l000000UQ46EAG/t113988> -- Ansteuerung
+   vieler 7-Segmentanzeigen (man kann ein ähnliches Problem bekommen, wenn man
+   versucht, damit eine DCF77-Uhr zu bauen, die volle Datumsanzeige ermöglicht)
+
+### DCF77-Uhrenprojekte
+
+ * <https://www.instructables.com/Arduino-VFD-Display-Clock-Tutorial-A-Guide-To-VFD-/> --
+   mit Beschreibung und Reverse-Engineering von bestehenden Displays
+ * <https://www.dg7xo.de/selbstbau/dcf77_radio_clock.html> --
+   mit 2x20 VFD-Display
+ * <http://www.stefan-buchgeher.info/elektronik/dcf_uhr_cpld/dcf_uhr_cpld.html#Kap1> --
+   mit LED 7-Segmentanzeigen auf Basis eines
+   _Complex Programmable Logic Device_ (CPLD)
+ * <https://www.mikrocontroller.net/articles/DCF77-Funkwecker_mit_AVR> --
+   mit LED 7-Segmentanzeigen auf Basis eines ATmega8.
+ * <https://www.mikrocontroller.net/topic/151260> -- ein ähnliches Projekt mit
+   Implementierung in Assembler (auch ATmega8) und incl. Diskussion.

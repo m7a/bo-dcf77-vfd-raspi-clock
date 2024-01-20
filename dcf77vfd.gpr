@@ -18,8 +18,6 @@ project Dcf77vfd is
 			"-gnatwe",       -- Warnings as errors
 			"-O3", "-gnatn", -- Optimization and inlining
 			-- "-Og", "-g"   -- alt.: For ddebugging
-			-- TODO CURRENTLY THERE IS A BUG IN SECONDLAYER PROCESISNG
-			-- THAT ONLY OCCURS ON THE TARGET SYSTEM WHERE IT HALTS.
 			"-gnatp",        -- Suppress runtime checks
 			"-gnatyd",       -- DOS Lines    \
 			"-gnatyM80",     -- Line Length   |_ Style settings
