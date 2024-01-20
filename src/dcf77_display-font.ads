@@ -3,7 +3,13 @@
 -- Copyright (c) 2010-2014 Dimitar Toshkov Zhekov,
 -- with Reserved Font Name "Terminus Font".
 --
--- see LICENSE-THIRDPARTY.txt for OFL copy
+-- see LICENSE-THIRDPARTY.txt for a copy of the SIL Open Font License
+--
+-- Note that this file contains a subset of the font and may thus be considered
+--      a modified copy but no font name is presented to the user.
+--      Also, this source code file was created in VIM running in URXVT with the
+--      display font set to Terminus Font and can thus be considered a “document
+--      created using the Font Software”.
 package DCF77_Display.Font is
 
 	-- Wasteful but chip is large enough so why not...

@@ -9,39 +9,20 @@ keywords: ["dcf77", "uhr", "rp2040"]
 x-masysma-version: 1.0.0
 x-masysma-website: https://masysma.net/...
 x-masysma-repository: https://www.github.com/m7a/bo-dcf77vfd-raspi-clock
-x-masysma-owned: 1
 x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
 ---
 Bugs
 ====
 
-Achtung: Diese Selbstbau-Uhr ist aktuell noch in einer Testphase. Sie enthält
-noch kritische Bugs, die zu falscher Zeitanzeige führen können.
+**Achtung**: Diese Selbstbau-Uhr ist aktuell noch in einer Testphase. Sie
+enthält noch kritische Bugs, die zu falscher Zeitanzeige führen können.
 
 Notizen:
 
-~~~
- -> QOS9 observed in test GUI (maybe leap sec case related if that is in the
-    test data. happens after some long time only?)
-
- -> QOS9 and time 20years in the future observed in “real” test.
-    These outrages occur with high missed interrupt collection (400 times) and
-    high missed bitlayer decoding (100 times) along with some secondlayer resets
-    (20 times). It seems that maybe in event of “wrong interrupts” the SW could
-    protect from processing the data at the bitlayer already and rather output
-    “no signal” under such disturbing circumstances. However, it is unclear how
-    that could be detected exactly in practice. First fix the other QOS9 issue.
-
- -> In another case, the clock crashed (halted). This should never happen.
-
- -> In at least one case, a time 10min in the future was observed.
-
- -> Font lic topic
-    ! Problem: GPL incompatible w/ SIL OFL. Must change project license to
-	    account for that and specify that the display header contains 
-    data that is not under the chosen lic! !
-    https://github.com/FortAwesome/Font-Awesome/issues/1124
-~~~
+ * QOS9 observed in test GUI (maybe leap sec case related if that is in the
+   test data. happens after some long time only?)
+ * In at least one case, the clock crashed (halted). This should never happen.
+ * In at least one case, a time 10min in the future was observed.
 
 Übersicht
 =========
@@ -99,8 +80,7 @@ Repository-Inhaltsübersicht
 	 |
 	 +-- README.md                 -- diese Beschreibung
 	 |
-	 +-- LICENSE.txt               -- freie Softwarelizenz für die Uhr
-	 +-- LICENSE-THIRDPARTY.txt    -- und für genutzte Komponenten
+	 +-- LICENSE-THIRDPARTY.txt    -- Lizenzübersicht für Komponenten
 	 |
 	 +-- dcf77vrd.gpr/alire.toml   -- Alire-Projektdateien zum Kompilieren
 	 |
@@ -339,27 +319,43 @@ spätestens vor der 1. Inbetriebnahme abzugleichen.
 
 ## Lizenz
 
-	Ma_Sys.ma DCF77 VFD Raspi Clock
-	(c) 2018-2024 Ma_Sys.ma <info@masysma.net>
-	
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-	
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
 Die Software und Hardwarebeschreibung in diesem Repository sind
-_freie Software_. Daher ist u.A. ein Nachbau ohne Zahlung von Lizenzgebühren
-möglich. Für Details, vgl. `LICENSE.txt` im Repository.
+_freie Software_. Damit ist bspw. ein Nachbau ohne Zahlung von Lizenzgebühren
+möglich.
 
-Da diese Entwicklung unter Anderem die Terminus-Schriftart und die
+Alles in diesem Repository enthaltene außer `release/` und
+`src/dcf77_display-font.ads` steht unter folgender Expat-Lizenz:
+
+~~~
+MIT License
+
+Ma_Sys.ma DCF77 VFD Raspi Clock (c) 2018-2024 Ma_Sys.ma <info@masysma.net>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+~~~
+
+Da diese Entwicklung unter Anderem eine Schriftart unter SIL OFL und die
 Hardwareabstraktion zur Programmierung des RP2040 mittels Ada verwendet, sind
-weitere Lizenzen für diese Komponenten anwendbar. Sie sind in der Datei
-`LICENSE-THIRDPARTY.txt` zusammengestellt.
+weitere Lizenzen für diese Komponenten anwendbar, die sich auf den im Repository
+enthaltenen Ordner `release/` und die Datei `src/dcf77_display-font.ads`
+auswirken. Alle anwendbaren Lizenzen sind in der Datei `LICENSE-THIRDPARTY.txt`
+zusammengestellt.
 
 ## Software
 
