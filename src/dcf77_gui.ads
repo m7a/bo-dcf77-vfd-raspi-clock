@@ -104,7 +104,7 @@ private
 					Next_Edit, Left, Right: in Boolean);
 	procedure Update_Screen(G: in out GUI);
 	procedure Add_Time(G: in out GUI; XI: in Pos_X; YI: in Pos_Y;
-				FI: in Font; Underline: in Underline_Info);
+				FI: in Font_Size; Underline: in Underline_Info);
 	procedure Add_Date(G: in out GUI; Underline: in Underline_Info);
 	procedure Add_QOS(G: in out GUI; YI: in Pos_Y);
 	procedure Add_AL(G: in out GUI; YI: in Pos_Y;

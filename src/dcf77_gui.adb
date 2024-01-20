@@ -479,7 +479,7 @@ package body DCF77_GUI is
 
 	-- H (1), M (3), S (5)
 	procedure Add_Time(G: in out GUI; XI: in Pos_X; YI: in Pos_Y;
-				FI: in Font; Underline: in Underline_Info) is
+			FI: in Font_Size; Underline: in Underline_Info) is
 		CW: constant Pos_X             := Get_Letter_Width(FI);
 		SP: constant SB.Bounded_String := SB.To_Bounded_String(":");
 		IU:          Natural           := G.Screen_Idx;

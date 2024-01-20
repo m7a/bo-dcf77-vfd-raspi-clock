@@ -1,6 +1,8 @@
 with Interfaces;
 use  Interfaces;
 
+with DCF77_Display.Font;
+
 package body DCF77_Display is
 
 	procedure Init(Ctx: in out Disp; LL: in DCF77_Low_Level.LLP) is
@@ -95,9 +97,9 @@ package body DCF77_Display is
 				Ctx.Set_Address(Addr);
 				case Item.F is
 				when Small => Ctx.LL.SPI_Display_Transfer(
-						Font_Small_Data(C)(RX), Data);
+						Font.Small_Data(C)(RX), Data);
 				when Large => Ctx.LL.SPI_Display_Transfer(
-						Font_Large_Data(C)(RX), Data);
+						Font.Large_Data(C)(RX), Data);
 				end case;
 				Ctx.LL.Delay_Micros(1);
 				Addr := Addr + 8;
@@ -114,7 +116,7 @@ package body DCF77_Display is
 						or else
 					    (RX = Letter_Width and then Line_R)
 					then (16#fffc#)
-					else Font_Small_Data(C)(RX));
+					else Font.Small_Data(C)(RX));
 				if Item.ULB then
 					Line := Line or 16#0004#;
 				end if;
@@ -142,7 +144,7 @@ package body DCF77_Display is
 		end if;
 	end Add;
 
-	function Get_Letter_Width(F: in Font) return Pos_X is
+	function Get_Letter_Width(F: in Font_Size) return Pos_X is
 						(if F = Large then 16 else 8);
 
 	procedure Set_Address(Ctx: in out Disp; Addr: in U16) is
