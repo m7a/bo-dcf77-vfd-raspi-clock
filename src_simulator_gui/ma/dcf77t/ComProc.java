@@ -126,6 +126,9 @@ class ComProc extends Thread {
 			ustat.alarmLED = str2bool(args);
 			break;
 		case "log":
+			// TODO X HACK - SHOULD PREFER TO DISPLAY IN GUI AND
+			// allow filtering the non-interesting events in log!
+			System.out.println("[ADALOG  ] " + args);
 			outLog.accept("[ADALOG  ] " + args);
 			break;
 		default:
