@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<dcf77testdata descr="qos10">
+<dcf77testdata descr="qos12">
 	<usefor test="qos" descr="09.12.2023 00:54:00-01:11:00 Test QOS9"/>
 	<input offset="0">
 		<tel val="010010110000000000101001010110000000100100011010011100010013"/> <!-- Sa, 09.12.23 00:54:00 -->
