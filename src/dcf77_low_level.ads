@@ -71,8 +71,7 @@ private
 						Mode: in SPI_Display_Mode);
 	pragma Warnings(On,  "formal parameter ""Ctx"" is not referenced");
 
-	procedure Handle_DCF_Interrupt(Pin: RP.GPIO.GPIO_Pin;
-					Trigger: RP.GPIO.Interrupt_Triggers);
+	procedure Handle_DCF_Interrupt;
 
 	type LL is tagged limited record
 		ADC0_Light: RP.ADC.ADC_Channel;

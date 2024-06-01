@@ -1,7 +1,9 @@
 with RP.Clock;
 with HAL.SPI;
 with HAL.UART;
-with RP.GPIO.Interrupts;
+with RP_Interrupts;
+with RP2040_SVD.TIMER;
+with RP2040_SVD.Interrupts;
 with Interfaces;
 use  Interfaces;
 
@@ -16,6 +18,7 @@ package body DCF77_Low_Level is
 	pragma Warnings(Off, "formal parameter ""Ctx"" is not referenced");
 
 	procedure Init(Ctx: in out LL) is
+		use type HAL.Uint32; -- import + operator
 	begin
 		-- Clocks and Timers
 		RP.Clock.Initialize(Pico.XOSC_Frequency);
@@ -25,9 +28,6 @@ package body DCF77_Low_Level is
 
 		-- Digital Inputs
 		DCF.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
-		DCF.Enable_Interrupt(RP.GPIO.Rising_Edge);
-		DCF.Enable_Interrupt(RP.GPIO.Falling_Edge);
-		RP.GPIO.Interrupts.Attach_Handler(DCF, Handle_DCF_Interrupt'Access);
 		Not_Ta_G.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_L.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
 		Not_Ta_R.Configure(RP.GPIO.Input, RP.GPIO.Pull_Up);
@@ -62,6 +62,17 @@ package body DCF77_Low_Level is
 			others    => <>                    -- Loopback = False
 		));
 
+		-- Initial delay of 100ms before starting to read DCF77 data
+		-- from antenna
+		RP2040_SVD.TIMER.TIMER_Periph.ALARM1 := RP2040_SVD.TIMER.
+						Timer_Periph.TIMERAWL + 100_000;
+		RP2040_SVD.TIMER.TIMER_Periph.INTE.ALARM_1 := True;
+		RP_Interrupts.Attach_Handler(
+			Handler => Handle_DCF_Interrupt'Access,
+			Id      => RP2040_SVD.Interrupts.TIMER_IRQ_1_Interrupt,
+			Prio    => RP_Interrupts.Interrupt_Priority'First
+		);
+
 		-- UART (https://pico-doc.synack.me/#uart)
 		-- https://github.com/JeremyGrosser/pico_examples/blob/master/
 		-- uart_echo/src/main.adb
@@ -70,43 +81,37 @@ package body DCF77_Low_Level is
 		UART_Port.Configure; -- use default 115200 8n1
 	end Init;
 	
-	-- This parameter is present in the fixed API but currently unused.
-	pragma Warnings(Off, "formal parameter ""Pin"" is not referenced");
-	procedure Handle_DCF_Interrupt(Pin: RP.GPIO.GPIO_Pin;
-					Trigger: RP.GPIO.Interrupt_Triggers) is
-	pragma Warnings(On,  "formal parameter ""Pin"" is not referenced");
-		Now:       constant Time := Time(RP.Timer.Clock);
-		Now_Start: constant Time := Now - Interrupt_Start_Ticks;
+	procedure Handle_DCF_Interrupt is
+		use type HAL.Uint32; -- import + operator
+		-- Inverted by antenna design
+		Val: constant Boolean := not DCF.Get;
 	begin
-		case Trigger is
-		when RP.GPIO.Rising_Edge =>
-			-- Input voltage 0/1 transition means DCF77 1/0
-			-- transition. End of a "high" signal
-			if Interrupt_Start_Ticks = 0 or
-					(Interrupt_Pending_Read and
-						(Now_Start < Interrupt_Out_Ticks
-						or Now_Start > 300_000)) or
-					Now_Start < 10_000 then
-				Inc_Saturated(Interrupt_Fault,
-							Interrupt_Fault_Max);
-			else
-				Interrupt_Pending_Read := True;
-				Interrupt_Out_Ticks    := Now_Start;
-			end if;
-		when RP.GPIO.Falling_Edge =>
-			-- Input voltage 1/0 transition means DCF77 0/1
-			-- transition. Begin of a "high" signal
-			if Interrupt_Pending_Read and Now_Start > 300_000 then
+		-- ack and trigger again in 7ms
+		RP2040_SVD.TIMER.TIMER_Periph.INTR.ALARM_1 := True;
+		RP2040_SVD.TIMER.TIMER_Periph.ALARM1 :=
+			RP2040_SVD.TIMER.TIMER_Periph.ALARM1 + 7_000;
+		RP2040_SVD.TIMER.TIMER_Periph.INTE.ALARM_1 := True;
+
+		if Val then
+			if Interrupt_Start_Ticks = 0 then
+				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
+			elsif Interrupt_Pending_Read then
 				Inc_Saturated(Interrupt_Fault,
 							Interrupt_Fault_Max);
 				Interrupt_Pending_Read := False;
+				Interrupt_Start_Ticks  := Time(RP.Timer.Clock);
 			end if;
-			if not Interrupt_Pending_Read then
-				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
+		else
+			if Interrupt_Start_Ticks /= 0 and
+						not Interrupt_Pending_Read then
+				Interrupt_Out_Ticks := Time(RP.Timer.Clock) -
+							Interrupt_Start_Ticks;
+				Interrupt_Pending_Read := True;
 			end if;
-		when others => 
-			Inc_Saturated(Interrupt_Fault, Interrupt_Fault_Max);
-		end case;
+			-- TODO z COULD ADD SOME SORT OF "ALL ZERO" RECOGNIZTION?
+			--        => better "No_Signal" recogniztion than a
+			--        timeout?
+		end if;
 	end Handle_DCF_Interrupt;
 
 	function Get_Time_Micros(Ctx: in out LL) return Time is

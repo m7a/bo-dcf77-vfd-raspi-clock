@@ -1,0 +1,11 @@
+name = "timertest"
+description = "Ma_Sys.ma DCF77 VFD Module Clock - TIMER TEST"
+version = "0.0.1"
+
+authors = ["Linux-Fan"]
+maintainers = ["Linux-Fan <Ma_Sys.ma@web.de>"]
+maintainers-logins = ["m7a"]
+
+executables = ["timertest"]
+[[depends-on]]
+pico_bsp = "^2.0.0"
