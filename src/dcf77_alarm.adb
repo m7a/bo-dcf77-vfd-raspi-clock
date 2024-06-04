@@ -1,3 +1,6 @@
+with DCF77_TM_Layer_Shared;
+use  DCF77_TM_Layer_Shared;
+
 package body DCF77_Alarm is
 
 	----------------------------------------------------[ Implementation ]--
@@ -13,8 +16,7 @@ package body DCF77_Alarm is
 		Ctx.AL_Has_Changed := False;
 	end Init;
 
-	procedure Process(Ctx: in out Alarm;
-					DT_Now_Prime: in DCF77_Timelayer.TM) is
+	procedure Process(Ctx: in out Alarm; DT_Now_Prime: in TM) is
 		Is_EN: constant Boolean := Ctx.LL.Read_Alarm_Switch_Is_Enabled;
 	begin
 		case Ctx.S is
@@ -71,16 +73,14 @@ package body DCF77_Alarm is
 		Ctx.AL_Has_Changed := False;
 	end Process;
 
-	procedure Start_Buzzing(Ctx: in out Alarm;
-					DT_Now_Prime: in DCF77_Timelayer.TM) is
+	procedure Start_Buzzing(Ctx: in out Alarm; DT_Now_Prime: in TM) is
 	begin
 		Ctx.LL.Set_Buzzer_Enabled(True);
 		Ctx.Blink_CTR := 0; -- Buzzing always implies blinking!
 		-- compute time to stop at the latest if no user interaction
 		-- happens in the meantime!
 		Ctx.DT_Stop_Buzz := DT_Now_Prime;
-		DCF77_Timelayer.Advance_TM_By_Sec(Ctx.DT_Stop_Buzz,
-							Buzz_Timeout_Seconds);
+		Advance_TM_By_Sec(Ctx.DT_Stop_Buzz, Buzz_Timeout_Seconds);
 		Ctx.S := AL_Buzz;
 	end Start_Buzzing;
 
@@ -91,7 +91,7 @@ package body DCF77_Alarm is
 	end Run_Blink;
 
 	function Check_For_Time_Of_Alarm(Ctx: in out Alarm;
-			DT_Now_Prime: in DCF77_Timelayer.TM) return Boolean is
+					DT_Now_Prime: in TM) return Boolean is
 		-- (1) TIME(dtNow') >= tAL equiv
 		--	Current timestamp is after configured AL time
 		Time_DT_Now_Prime_GE_T_AL: constant Boolean :=
@@ -148,7 +148,7 @@ package body DCF77_Alarm is
 		return C1 or C2 or C3 or C4;
 	end Check_For_Time_Of_Alarm;
 
-	function ">="(A, B: in DCF77_Timelayer.TM) return Boolean is
+	function ">="(A, B: in TM) return Boolean is
 		(A.Y > B.Y or else
 		(A.Y = B.Y and then
 			(A.M > B.M or else
@@ -166,13 +166,10 @@ package body DCF77_Alarm is
 			))
 		));
 
-	function "<"(A, B: in DCF77_Timelayer.TM) return Boolean is
-		(not (A >= B));
+	function "<"(A, B: in TM) return Boolean is (not (A >= B));
 
-	function Date(T: in DCF77_Timelayer.TM) return Date_T is
-		(Y => T.Y, M => T.M, D => T.D);
-	function Time(T: in DCF77_Timelayer.TM) return Time_T is
-		(H => T.H, I => T.I, S => T.S);
+	function Date(T: in TM) return Date_T is (Y => T.Y, M => T.M, D => T.D);
+	function Time(T: in TM) return Time_T is (H => T.H, I => T.I, S => T.S);
 
 	function ">="(A, B: in Time_T) return Boolean is
 		(A.H > B.H or else

@@ -1,6 +1,8 @@
 with DCF77_Functions;
 use  DCF77_Functions; -- x Num_To_Str_L2, L4
 with DCF77_Types;
+with DCF77_TM_Layer_Shared;
+use  DCF77_TM_Layer_Shared;
 
 with Interfaces;
 use  Interfaces;
@@ -45,6 +47,7 @@ package body DCF77_GUI is
 
 		S.Bitlayer.Init(S.LL);
 		S.Secondlayer.Init;
+		S.Minutelayer.Init;
 		S.Timelayer.Init;
 
 		S.ALS.Init;
@@ -58,6 +61,7 @@ package body DCF77_GUI is
 
 	procedure Loop_Pre(S: in out Program_State) is
 		Bitlayer_Has_New: Boolean;
+		Exch: DCF77_TM_Layer_Shared.TM_Exchange;
 	begin
 		S.LL.Debug_Dump_Interrupt_Info;
 
@@ -68,9 +72,10 @@ package body DCF77_GUI is
 		Bitlayer_Has_New := S.Bitlayer_Reading /= DCF77_Types.No_Update;
 
 		if Bitlayer_Has_New then
-			S.Timelayer.Process(True, -- Bitlayer_Has_New,
+			S.Minutelayer.Process(True, -- Bitlayer_Has_New,
 						S.Secondlayer_Telegram_1,
-						S.Secondlayer_Telegram_2);
+						S.Secondlayer_Telegram_2, Exch);
+			S.Timelayer.Process(Exch);
 		end if;
 
 		S.Light_Sensor_Reading := S.LL.Read_Light_Sensor;
@@ -167,9 +172,9 @@ package body DCF77_GUI is
 		end Edit_AL_Group;
 
 		function Edit_Datetime_Group return Boolean is
-			CDT:         DCF77_Timelayer.TM := G.S.Datetime;
-			YH:          Natural            := CDT.Y  /  100;
-			Y:           Natural            := CDT.Y mod 100;
+			CDT:         TM      := G.S.Datetime;
+			YH:          Natural := CDT.Y  /  100;
+			Y:           Natural := CDT.Y mod 100;
 			Has_Changes: Boolean;
 		begin
 			case G.A is
@@ -193,16 +198,15 @@ package body DCF77_GUI is
 				-- Currently requires that the day is valid
 				-- within month. Should be OK due to Y-M-D order
 				-- of editing!
-				Has_Changes := Edit(CDT.D,
-					DCF77_Timelayer.Month_Lengths(if
-						CDT.M = 2 and DCF77_Timelayer.
-							Is_Leap_Year(CDT.Y)
-						then 0 else CDT.M));
+				Has_Changes := Edit(CDT.D, Month_Lengths(if
+					CDT.M = 2 and Is_Leap_Year(CDT.Y)
+					then 0 else CDT.M));
 			when others =>
 				return False;
 			end case;
 			if Has_Changes then
 				G.S.Timelayer.Set_TM_By_User_Input(CDT);
+				G.S.Minutelayer.Set_TM_By_User_Input(CDT);
 			end if;
 			return True;
 		end Edit_Datetime_Group;
@@ -442,8 +446,8 @@ package body DCF77_GUI is
 			G.Add_Menu(Menu_Home);
 		when Select_I_QOS =>
 			G.Add_Time(0, 0, Small, Underline_None);
-			G.Add_Info("QOSInfo",
-				"+1 23 45 678  9", G.S.Timelayer.Get_QOS_Stats);
+			G.Add_Info("QOSInfo", "+1 23 45 678  9",
+						G.S.Minutelayer.Get_QOS_Stats);
 			G.Add_Menu(Menu_Home);
 		when Select_I_Last_1 =>
 			G.Add_Time(0, 0, Small, Underline_None);
@@ -458,11 +462,11 @@ package body DCF77_GUI is
 			-- indentation exceeded
 			G.Add_Info("Ver.1/3",
 			"Version 01.00.00", "Date" &
-			Num_To_Str_L4(DCF77_Timelayer.Time_Of_Compilation.Y) &
-			Num_To_Str_L2(DCF77_Timelayer.Time_Of_Compilation.M) &
-			Num_To_Str_L2(DCF77_Timelayer.Time_Of_Compilation.D) &
-			Num_To_Str_L2(DCF77_Timelayer.Time_Of_Compilation.H) &
-			Num_To_Str_L2(DCF77_Timelayer.Time_Of_Compilation.I));
+			Num_To_Str_L4(Time_Of_Compilation.Y) &
+			Num_To_Str_L2(Time_Of_Compilation.M) &
+			Num_To_Str_L2(Time_Of_Compilation.D) &
+			Num_To_Str_L2(Time_Of_Compilation.H) &
+			Num_To_Str_L2(Time_Of_Compilation.I));
 			G.Add_Menu(Menu_Home);
 		when Select_I_Ver_2 =>
 			G.Add_Time(0, 0, Small, Underline_None);
@@ -588,11 +592,13 @@ package body DCF77_GUI is
 	end Add_Date;
 
 	procedure Add_QOS(G: in out GUI; YI: in Pos_Y) is
+		QOS_Info: constant String(1..2) := (G.S.Timelayer.Get_QOS_Sym,
+						G.S.Minutelayer.Get_QOS_Sym);
 	begin
-		G.Screen_Idx := G.Screen_Idx + 1;
-		G.Screen(G.Screen_Idx) := (X => 0, Y => YI, Msg => Describe_QOS(
-					G.S.Timelayer.Get_Quality_Of_Service),
-				others => <>);
+		G.Screen_Idx           := G.Screen_Idx + 1;
+		G.Screen(G.Screen_Idx) := (X => 0, Y => YI,
+					Msg => SB.To_Bounded_String(QOS_Info),
+					others => <>);
 	end Add_QOS;
 
 	procedure Add_AL(G: in out GUI; YI: in Pos_Y;
@@ -636,24 +642,6 @@ package body DCF77_GUI is
 		end if;
 		G.Screen_Idx := IU;
 	end Add_AL;
-
-	function Describe_QOS(Q: in DCF77_Timelayer.QOS)
-						return SB.Bounded_String is
-		use DCF77_Timelayer;
-		QOS_Descr: constant array (QOS) of SB.Bounded_String := (
-			QOS1       => SB.To_Bounded_String("+1"),
-        		QOS2       => SB.To_Bounded_String("+2"),
-        		QOS3       => SB.To_Bounded_String("+3"),
-        		QOS4       => SB.To_Bounded_String("o4"),
-        		QOS5       => SB.To_Bounded_String("o5"),
-        		QOS6       => SB.To_Bounded_String("o6"),
-        		QOS7       => SB.To_Bounded_String("-7"),
-        		QOS8       => SB.To_Bounded_String("-8"),
-        		QOS9_ASYNC => SB.To_Bounded_String("-9")
-		);
-	begin
-		return QOS_Descr(Q);
-	end Describe_QOS;
 
 	procedure Add_Menu(G: in out GUI; Lbl: in Menu_Green) is
 		S_Minus: constant SB.Bounded_String := SB.To_Bounded_String(

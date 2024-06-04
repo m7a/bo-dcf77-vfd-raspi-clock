@@ -159,7 +159,8 @@ package body DCF77_Test_Data is
 
 	function XML_To_Checkpoint(Atts: in Sax.Attributes.Attributes'Class)
 							return Checkpoint is
-		function String_To_TM(S: in String) return DCF77_Timelayer.TM
+		function String_To_TM(S: in String)
+						return DCF77_TM_Layer_Shared.TM
 						with Pre => S'Length = 19 is
 			S0: constant Integer := S'First;
 		begin
@@ -178,7 +179,7 @@ package body DCF77_Test_Data is
 	begin
 		return (Loc => Natural'Value(Atts.Get_Value("loc")),
 			Val => String_To_TM(Atts.Get_Value("val")),
-			Q => DCF77_Timelayer.QOS'Value(Atts.Get_Value("qos")));
+			Q => DCF77_Minutelayer.QOS'Value(Atts.Get_Value("qos")));
 	end XML_To_Checkpoint;
 
 	procedure End_Element(Handler: in out Reader;
@@ -196,11 +197,11 @@ package body DCF77_Test_Data is
 	end End_Element;
 
 	function Length_To_Validity(Len: in Natural) return
-					DCF77_ST_Layer_Shared.Telegram_State is
+					DCF77_SM_Layer_Shared.Telegram_State is
 	begin
 		case Len is
-		when 60 => return DCF77_ST_Layer_Shared.Valid_60;
-		when 61 => return DCF77_ST_Layer_Shared.Valid_61;
+		when 60 => return DCF77_SM_Layer_Shared.Valid_60;
+		when 61 => return DCF77_SM_Layer_Shared.Valid_61;
 		-- when others => Invalid; -- not here, see Assert
 		when others => raise Assertion_Error with
 			"Length must be 60 or 61. Found " & Natural'Image(Len);
@@ -208,7 +209,7 @@ package body DCF77_Test_Data is
 	end Length_To_Validity;
 
 	function Tel_To_Telegram(Spt: in DCF77_Test_Data.Tel)
-				return DCF77_ST_Layer_Shared.Telegram is
+				return DCF77_SM_Layer_Shared.Telegram is
 				(Length_To_Validity(Spt.Len), Spt.Val(0 .. 59));
 
 end DCF77_Test_Data;

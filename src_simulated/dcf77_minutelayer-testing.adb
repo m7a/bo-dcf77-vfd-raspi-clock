@@ -1,14 +1,12 @@
-package body DCF77_Timelayer.Testing is
+package body DCF77_Minutelayer.Testing is
 
 	function Are_Ones_Compatible(AD, BD: in BCD_Digit) return Boolean is
-				(DCF77_Timelayer.Are_Ones_Compatible(AD, BD));
-	function Is_Leap_Year(Y: in Natural) return Boolean is
-				(DCF77_Timelayer.Is_Leap_Year(Y));
+				(DCF77_Minutelayer.Are_Ones_Compatible(AD, BD));
 
 	function Test_Recover_Ones(Preceding_Minute_Ones: in Minute_Buf;
 					Preceding_Minute_Idx: in Minute_Buf_Idx)
 					return Integer is
-		TTL: Timelayer;
+		TTL: Minutelayer;
 	begin
 		TTL.Init;
 		TTL.Preceding_Minute_Ones := Preceding_Minute_Ones;
@@ -17,13 +15,13 @@ package body DCF77_Timelayer.Testing is
 	end Test_Recover_Ones;
 
 	function Decode(Tel: in Telegram) return TM is
-		TTL: Timelayer;
+		TTL: Minutelayer;
 	begin
 		TTL.Init;
 		return TTL.Decode(Tel);
 	end Decode;
 
 	function TM_To_Telegram(T: in TM) return Telegram is
-					(DCF77_Timelayer.TM_To_Telegram(T));
+					(DCF77_Minutelayer.TM_To_Telegram(T));
 
-end DCF77_Timelayer.Testing;
+end DCF77_Minutelayer.Testing;

@@ -8,7 +8,6 @@ package body DCF77_Minutelayer is
 	procedure Init(Ctx: in out Minutelayer) is
 	begin
 		Ctx.YH                     := TM0.Y / 100;
-		Ctx.DCF77_Enabled          := True;
 		Ctx.Preceding_Minute_Ones  := (others => (others => No_Update));
 		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
 		Ctx.Seconds_Since_Prev     := Unknown;
@@ -22,8 +21,12 @@ package body DCF77_Minutelayer is
 
 	procedure Process(Ctx: in out Minutelayer;
 					Has_New_Bitlayer_Signal: in Boolean;
-					Telegram_1, Telegram_2: in Telegram) is
+					Telegram_1, Telegram_2: in Telegram;
+					Exch: out TM_Exchange) is
 	begin
+		Exch.Is_Leapsec  := False;
+		Exch.Is_New_Sec  := Has_New_Bitlayer_Signal;
+		Exch.DST_Delta_H := 0;
 		-- Always handle second if detected
 		if Has_New_Bitlayer_Signal then
 			-- Add one sec to current time handling leap seconds and
@@ -56,21 +59,41 @@ package body DCF77_Minutelayer is
 
 			if Ctx.Seconds_Left_In_Minute = 1 and
 					Ctx.Current.S = Sec_Last_In_Min then
+				Exch.Is_Leapsec := True;
 				Ctx.Current.S := 60; -- special leap second case
 			else
 				if Ctx.Current.S >= Sec_Last_In_Min then
 					Ctx.Next_Minute_Coming(Telegram_1,
-								Telegram_2);
+						Telegram_2, Exch.DST_Delta_H);
 				end if;
 				Advance_TM_By_Sec(Ctx.Current, 1);
 			end if;
 		end if;
-		if Telegram_1.Valid /= Invalid and Ctx.DCF77_Enabled then
+		if Telegram_1.Valid /= Invalid then
+			-- It seems it may not be necessary to set this here
+			-- because in theory, New Telegram
+			-- => New_Bitlayer_Signal even if that signal is just
+			-- of type “NO Signal”. However, for now prefer to
+			-- update the clock with New Second here as to assure
+			-- that valid telegrams are always processed. This
+			-- slightly errors on the side of wrong data but
+			-- the overall improvements from the new Timelayer
+			-- are expected to reduce errors so much that it may
+			-- not matter already. Could revisit this to get out
+			-- the last "10%" of the design sometime later...
+			--   Actually, already the old implementation only
+			-- ever entered this procedure with
+			-- Has_New_Bitlayer_Signal = True hence it should all be
+			-- OK!
+			Exch.Is_New_Sec := True;
+			-- End of minute is also new second
 			Ctx.Process_New_Telegram(Telegram_1, Telegram_2);
 			if Ctx.EOH_DST_Switch = DST_Applied then
 				Ctx.EOH_DST_Switch := DST_No_Change;
 			end if;
 		end if;
+		Exch.Proposed     := Ctx.Current;
+		Exch.Is_Confident := Ctx.Current_QOS = QOS1;
 		-- maintain information about the statistics of the occurrence
 		-- of the individual QOS levels
 		if Has_New_Bitlayer_Signal then
@@ -86,12 +109,11 @@ package body DCF77_Minutelayer is
 	-- minute is X9 i.e. next minute will be Y0 with Y = X+1 (or more fields
 	-- changed...)
 	procedure Next_Minute_Coming(Ctx: in out Minutelayer; Telegram_1,
-						Telegram_2: in Telegram) is
+			Telegram_2: in Telegram; DST_Delta_H: in out Integer) is
 	begin
 		-- If this is the only opinion we get here, it essentially means
 		-- that we are not in sync!
 		Ctx.Current_QOS := QOS9_ASYNC;
-
 		if Ctx.Current.I = Sec_Last_In_Min and
 					Ctx.EOH_DST_Switch /= DST_No_Change then
 			-- Minor hack: Only supports leap if not across
@@ -102,9 +124,11 @@ package body DCF77_Minutelayer is
 			case Ctx.EOH_DST_Switch is
 			when DST_To_Summer =>
 				-- summer = UTF+2, +1h
+				DST_Delta_H   := +1;
 				Ctx.Current.H := Ctx.Current.H + 1;
 			when DST_To_Winter =>
 				-- winter = UTC+1, -1h
+				DST_Delta_H   := -1;
 				Ctx.Current.H := Ctx.Current.H - 1;
 			when others =>
 				-- ignore
@@ -151,51 +175,6 @@ package body DCF77_Minutelayer is
 			Val_Rem := Val_Rem / 2;
 		end loop;
 	end WMBC;
-
-	-- Not leap-second aware for now
-	-- assert seconds < 12000, otherwise may output incorrect results!
-	-- Currently does not work with negative times (implement them for
-	-- special DST case by directly changing the hours `i` field).
-	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural) is
-		-- In case of leap year, access index 0 to return length of 29
-		-- days for Feburary in leap years.
-		function Get_Month_Length return Natural is
-				(Month_Lengths(if (T.M = 2 and
-					Is_Leap_Year(T.Y)) then 0 else T.M));
-
-		Min_Per_Hour:    constant Natural := 60;
-		Hours_Per_Day:   constant Natural := 24;
-		Months_Per_Year: constant Natural := 12;
-
-		ML: Natural; -- month length cache variable
-	begin
-		T.S := T.S + Seconds;
-		if T.S >= Sec_Per_Min then
-			T.I := T.I + T.S /   Sec_Per_Min;
-			T.S :=       T.S mod Sec_Per_Min;
-			if T.I >= Min_Per_Hour then
-				T.H := T.H + T.I /   Min_Per_Hour;
-				T.I :=       T.I mod Min_Per_Hour;
-				if T.H >= Hours_Per_Day then
-					T.D := T.D + T.H /   Hours_Per_Day;
-					T.H :=       T.H mod Hours_Per_Day;
-					ML  := Get_Month_Length;
-					if T.D > ML then
-						T.D := T.D - ML;
-						T.M := T.M + 1;
-						if T.M > Months_Per_Year then
-							T.M := 1;
-							T.Y := T.Y + 1;
-						end if;
-					end if;
-				end if;
-			end if;
-		end if;
-	end Advance_TM_By_Sec;
-
-	-- https://en.wikipedia.org/wiki/Leap_year
-	function Is_Leap_Year(Y: in Natural) return Boolean is (((Y mod 4) = 0)
-				and (((Y mod 100) /= 0) or ((Y mod 400) = 0)));
 
 	procedure Process_New_Telegram(Ctx: in out Minutelayer; Telegram_1_In,
 						Telegram_2_In: in Telegram) is
@@ -730,10 +709,17 @@ package body DCF77_Minutelayer is
 		end if;
 	end Cross_Check_By_X_Eliminate;
 
-	function Get_Current(Ctx: in Minutelayer) return TM is (Ctx.Current);
-
-	function Get_Quality_Of_Service(Ctx: in Minutelayer) return QOS is
-							(Ctx.Current_QOS);
+	function Get_QOS_Sym(Ctx: in Minutelayer) return Character is
+		QOS_Descr: constant array (QOS) of Character := (
+			QOS1       => '1', QOS2       => '2',
+			QOS3       => '3', QOS4       => '4',
+			QOS5       => '5', QOS6       => '6',
+			QOS7       => '7', QOS8       => '8',
+			QOS9_ASYNC => '9'
+		);
+	begin
+		return QOS_Descr(Ctx.Current_QOS);
+	end Get_QOS_Sym;
 
 	procedure Set_TM_By_User_Input(Ctx: in out Minutelayer; T: in TM) is
 	begin
@@ -748,18 +734,9 @@ package body DCF77_Minutelayer is
 		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
 	end Set_TM_By_User_Input;
 
-	function Is_DCF77_Enabled(Ctx: in Minutelayer) return Boolean is
-							(Ctx.DCF77_Enabled);
-
-	procedure Set_DCF77_Enabled(Ctx: in out Minutelayer; En: in Boolean) is
-	begin
-		Ctx.Seconds_Since_Prev   := Unknown;
-		Ctx.Current_QOS          := QOS9_ASYNC;
-		Ctx.Prev_Telegram.Valid  := Invalid;
-		Ctx.Preceding_Minute_Idx := Minute_Buf_Idx'Last;
-		Ctx.DCF77_Enabled        := En;
-	end Set_DCF77_Enabled;
-
+	-- TODO THIS SCREEN IS REALLY NOT USEFUL ANYMORE IT SHOULD BE REPLACED
+	--      BY SOMETHING MORE USEFUL (SUGGEST TO USE THREE COUNTERS
+	--      P1/PX/P9 -> helps more from experience)
 	function Get_QOS_Stats(Ctx: in Minutelayer) return String is
 		type Sum_T is mod 2**64;
 

@@ -6,15 +6,16 @@ with Ada.Containers.Indefinite_Vectors;
 
 with DCF77_Offsets;
 with DCF77_Types;
-with DCF77_ST_Layer_Shared;
+with DCF77_SM_Layer_Shared;
 with DCF77_Secondlayer;
 with DCF77_Secondlayer.Testing;
-with DCF77_Timelayer;
+with DCF77_TM_Layer_Shared;
+with DCF77_Minutelayer;
 
 with DCF77_Test_Support;
 use  DCF77_Test_Support;
 with DCF77_Test_Data;
-with DCF77_Timelayer_Unit_Test;
+with DCF77_Minutelayer_Unit_Test;
 
 procedure DCF77_Test_Runner is
 
@@ -23,48 +24,65 @@ procedure DCF77_Test_Runner is
 	use type DCF77_Test_Data.ST.Bounded_String;
 	use type DCF77_Types.Bits;
 	use type DCF77_Types.Reading;
-	use type DCF77_ST_Layer_Shared.Telegram_State;
+	use type DCF77_SM_Layer_Shared.Telegram_State;
 
 	---------------------------------------------------------[ Test Uses ]--
 
 	procedure Run_QOS(Spec: in DCF77_Test_Data.Spec) is
-		use type DCF77_Timelayer.TM;
-		use type DCF77_Timelayer.QOS;
+		use type DCF77_TM_Layer_Shared.TM;
+		use type DCF77_Minutelayer.QOS;
+
+		function Transform_Back_To_QOS(C: in Character)
+						return DCF77_Minutelayer.QOS is
+			use DCF77_Minutelayer; -- QOS
+		begin
+			case C is
+			when '1'    => return QOS1;
+			when '2'    => return QOS2;
+			when '3'    => return QOS3;
+			when '4'    => return QOS4;
+			when '5'    => return QOS5;
+			when '6'    => return QOS6;
+			when '7'    => return QOS7;
+			when '8'    => return QOS8;
+			when '9'    => return QOS9_ASYNC;
+			when others => return QOS9_ASYNC;
+			end case;
+		end Transform_Back_To_QOS;
 
 		Prefix: constant String := DCF77_Test_Data.ST.To_String(
 					Spec.Use_For(DCF77_Test_Data.Test_QOS));
 
 		Active: Boolean := True;
-		TL:     DCF77_Timelayer.Timelayer;
+		TL:     DCF77_Minutelayer.Minutelayer;
 		Ch:     Natural := 1;
+		Exch:   DCF77_TM_Layer_Shared.TM_Exchange;
 
 		procedure Eval_At_Checkpoint is
 		begin
-			if TL.Get_Current /= Spec.Checkpoints(Ch).Val then
+			if Exch.Proposed /= Spec.Checkpoints(Ch).Val then
 				Test_Fail(Prefix & " at loc=" &
 					Natural'Image(Spec.Checkpoints(CH).Loc)
 					& " expected " &
 					TM_To_String(Spec.Checkpoints(Ch).Val) &
 					", got " &
-					TM_To_String(TL.Get_Current) & " at " &
-					DCF77_Timelayer.QOS'Image(
-					TL.Get_Quality_Of_Service));
+					TM_To_String(Exch.Proposed) & " at " &
+					TL.Get_QOS_Sym);
 				Active := False;
-			elsif TL.Get_Quality_Of_Service /=
+			elsif Transform_Back_To_QOS(TL.Get_QOS_Sym) /=
 						Spec.Checkpoints(Ch).Q then
 				Test_Fail(Prefix & " at loc=" &
 					Natural'Image(Spec.Checkpoints(CH).Loc)
 					& " expected " &
-					DCF77_Timelayer.QOS'Image(
+					DCF77_Minutelayer.QOS'Image(
 					Spec.Checkpoints(Ch).Q) & ", but found "
-					& DCF77_Timelayer.QOS'Image(
-					TL.Get_Quality_Of_Service));
+					& TL.Get_QOS_Sym);
 				Active := False;
 			end if;
 		end Eval_At_Checkpoint;
 
 		Pos:    Natural := 0;
-		T1, T2: DCF77_ST_Layer_Shared.Telegram := (others => <>);
+		T1, T2: DCF77_SM_Layer_Shared.Telegram := (others => <>);
 		SL:     DCF77_Secondlayer.Secondlayer;
 	begin
 		SL.Init;
@@ -72,7 +90,7 @@ procedure DCF77_Test_Runner is
 		for Line of Spec.Input loop
 			for I in  0 .. Line.Len - 1 loop
 				SL.Process(Line.Val(I), T1, T2);
-				TL.Process(True, T1, T2);
+				TL.Process(True, T1, T2, Exch);
 				if Ch <= Spec.Checkpoints'Last and then
 						Pos = Spec.Checkpoints(Ch).Loc
 						then
@@ -135,9 +153,9 @@ procedure DCF77_Test_Runner is
 				Spec.Use_For(DCF77_Test_Data.Secondlayer));
 		Expect:   DCF77_Types.Bits := Spec.Output(Spec.Output'Last).Val;
 		Ctx:      DCF77_Secondlayer.Secondlayer;
-		Cmp_Buf:  DCF77_ST_Layer_Shared.Telegram := (others => <>);
-		Tel_1:    DCF77_ST_Layer_Shared.Telegram := (others => <>);
-		Tel_2:    DCF77_ST_Layer_Shared.Telegram := (others => <>);
+		Cmp_Buf:  DCF77_SM_Layer_Shared.Telegram := (others => <>);
+		Tel_1:    DCF77_SM_Layer_Shared.Telegram := (others => <>);
+		Tel_2:    DCF77_SM_Layer_Shared.Telegram := (others => <>);
 
 		--Seq:    Natural := 1;
 	begin
@@ -150,7 +168,7 @@ procedure DCF77_Test_Runner is
 				--		Natural'Image(Seq) & "<");
 				--Seq := Seq + 1;
 				--DCF77_Secondlayer.Testing.Debug_Dump_State(Ctx);
-				if Tel_1.Valid /= DCF77_ST_Layer_Shared.Invalid
+				if Tel_1.Valid /= DCF77_SM_Layer_Shared.Invalid
 				then
 					Cmp_Buf := Tel_1;
 					Tel_1   := (others => <>);
@@ -196,8 +214,8 @@ procedure DCF77_Test_Runner is
 
 	procedure Run_X_Eliminate(Spec: in DCF77_Test_Data.Spec) is
 
-		Tel_Out: DCF77_ST_Layer_Shared.Telegram;
-		Tel_In:  DCF77_ST_Layer_Shared.Telegram;
+		Tel_Out: DCF77_SM_Layer_Shared.Telegram;
+		Tel_In:  DCF77_SM_Layer_Shared.Telegram;
 		Last_RS: Boolean := True;
 		Prefix: constant String := DCF77_Test_Data.ST.To_String(
 				Spec.Use_For(DCF77_Test_Data.X_Eliminate));
@@ -206,8 +224,8 @@ procedure DCF77_Test_Runner is
 		for I in 2 .. Spec.Input'Length loop
 			Tel_Out := DCF77_Test_Data.Tel_To_Telegram(
 								Spec.Input(I));
-			Last_RS := DCF77_ST_Layer_Shared.X_Eliminate(
-				Tel_In.Valid = DCF77_ST_Layer_Shared.Valid_61,
+			Last_RS := DCF77_SM_Layer_Shared.X_Eliminate(
+				Tel_In.Valid = DCF77_SM_Layer_Shared.Valid_61,
 				Tel_In, Tel_Out);
 			Tel_In := Tel_Out;
 		end loop;
@@ -227,7 +245,7 @@ procedure DCF77_Test_Runner is
 			Test_Fail(Prefix &
 				" -- output validity mismatch: expected=" &
 				Natural'Image(Spec.Output(1).Len) & ", got=" &
-				DCF77_ST_Layer_Shared.Telegram_State'Image(
+				DCF77_SM_Layer_Shared.Telegram_State'Image(
 				Tel_Out.Valid));
 		else
 			Test_Pass(Prefix);
@@ -236,7 +254,7 @@ procedure DCF77_Test_Runner is
 
 	procedure Run_Unit_Tests is
 	begin
-		DCF77_Timelayer_Unit_Test.Run;
+		DCF77_Minutelayer_Unit_Test.Run;
 	end Run_Unit_Tests;
 
 	----------------------------------------------------[ Runner Details ]--

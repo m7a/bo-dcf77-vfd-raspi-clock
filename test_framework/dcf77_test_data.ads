@@ -6,8 +6,9 @@ with Sax.Attributes;
 with Unicode.CES;
 
 with DCF77_Types;
-with DCF77_ST_Layer_Shared;
-with DCF77_Timelayer;
+with DCF77_SM_Layer_Shared;
+with DCF77_TM_Layer_Shared;
+with DCF77_Minutelayer;
 
 package DCF77_Test_Data is
 
@@ -25,8 +26,8 @@ package DCF77_Test_Data is
 
 	type Checkpoint is record
 		Loc: Natural;
-		Val: DCF77_Timelayer.TM;
-		Q:   DCF77_Timelayer.QOS;
+		Val: DCF77_TM_Layer_Shared.TM;
+		Q:   DCF77_Minutelayer.QOS;
 	end record;
 
 	type Tel_Array        is array (Natural range <>) of Tel;
@@ -50,9 +51,9 @@ package DCF77_Test_Data is
 
 	function String_To_Tel(Val: in String) return Tel;
 	function Length_To_Validity(Len: in Natural)
-				return DCF77_ST_Layer_Shared.Telegram_State;
+				return DCF77_SM_Layer_Shared.Telegram_State;
 	function Tel_To_Telegram(Spt: in DCF77_Test_Data.Tel)
-				return DCF77_ST_Layer_Shared.Telegram;
+				return DCF77_SM_Layer_Shared.Telegram;
 
 private
 

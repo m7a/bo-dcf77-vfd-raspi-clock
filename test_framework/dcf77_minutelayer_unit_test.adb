@@ -1,15 +1,17 @@
 with DCF77_Types;
 use  DCF77_Types;
-with DCF77_ST_Layer_Shared;
-with DCF77_Timelayer;
-use  DCF77_Timelayer;
-with DCF77_Timelayer.Testing;
+with DCF77_SM_Layer_Shared;
+with DCF77_TM_Layer_Shared;
+use  DCF77_TM_Layer_Shared;
+with DCF77_Minutelayer;
+use  DCF77_Minutelayer;
+with DCF77_Minutelayer.Testing;
 
 with DCF77_Test_Data; -- String_To_Tel
 with DCF77_Test_Support;
 use  DCF77_Test_Support;
 
-package body DCF77_Timelayer_Unit_Test is
+package body DCF77_Minutelayer_Unit_Test is
 
 	procedure Run is
 	begin
@@ -76,7 +78,7 @@ package body DCF77_Timelayer_Unit_Test is
 		RS: Boolean;
 	begin
 		for I in Test_Vector'Range loop
-			RS := DCF77_Timelayer.Testing.Are_Ones_Compatible(
+			RS := DCF77_Minutelayer.Testing.Are_Ones_Compatible(
 					Test_Vector(I).AD, Test_Vector(I).BD);
 			if RS = Test_Vector(I).RS then
 				Test_Pass(Prefix & TVD(Test_Vector(I)));
@@ -107,7 +109,7 @@ package body DCF77_Timelayer_Unit_Test is
 		RS: Boolean;
 	begin
 		for I in Test_Vector'Range loop
-			RS := DCF77_Timelayer.Testing.Is_Leap_Year(
+			RS := DCF77_TM_Layer_Shared.Is_Leap_Year(
 							Test_Vector(I).Y);
 			if RS = Test_Vector(I).Is_Leap then
 				Test_Pass(Prefix & TVD(Test_Vector(I)));
@@ -161,7 +163,7 @@ package body DCF77_Timelayer_Unit_Test is
 	begin
 		for I in Test_Vector'Range loop
 			CMP := Test_Vector(I).Input_TM;
-			DCF77_Timelayer.Advance_TM_By_Sec(CMP,
+			DCF77_TM_Layer_Shared.Advance_TM_By_Sec(CMP,
 						Test_Vector(I).Delta_Sec);
 			if CMP = Test_Vector(I).Output_TM then
 				Test_Pass(Prefix & TVD(Test_Vector(I)));
@@ -179,7 +181,8 @@ package body DCF77_Timelayer_Unit_Test is
 			Preceding_Minute_Ones: Minute_Buf;
 			Expected_Result:       Integer;
 		end record;
-		BCD: Minute_Buf renames DCF77_Timelayer.BCD_Comparison_Sequence;
+		BCD: Minute_Buf renames
+				DCF77_Minutelayer.BCD_Comparison_Sequence;
 		Nothing: constant BCD_Digit := (others => No_Signal);
 		Test_Vector: constant array (1 .. 18) of TV := (
 			-- test 1-3: recover from all-complete BCDs
@@ -242,7 +245,7 @@ package body DCF77_Timelayer_Unit_Test is
 		Result: Integer;
 	begin
 		for I in Test_Vector'Range loop
-			Result := DCF77_Timelayer.Testing.Test_Recover_Ones(
+			Result := DCF77_Minutelayer.Testing.Test_Recover_Ones(
 					Test_Vector(I).Preceding_Minute_Ones,
 					Test_Vector(I).Preceding_Minute_Idx);
 			if Result = Test_Vector(I).Expected_Result then
@@ -267,7 +270,7 @@ package body DCF77_Timelayer_Unit_Test is
 		Result: TM;
 	begin
 		for I in Test_Vector'Range loop
-			Result := DCF77_Timelayer.Testing.Decode(
+			Result := DCF77_Minutelayer.Testing.Decode(
 						DCF77_Test_Data.Tel_To_Telegram(
 						DCF77_Test_Data.String_To_Tel(
 						Test_Vector(I).Tel)));
@@ -285,20 +288,21 @@ package body DCF77_Timelayer_Unit_Test is
 	end Test_Decode;
 
 	procedure Test_Telegram_Identity is
-		use type DCF77_ST_Layer_Shared.Telegram;
+		use type DCF77_SM_Layer_Shared.Telegram;
 
 		Test_Vector: constant array (1 .. 1) of Tel_Conv_TV := (
-			1 => ("333333333333333333333100000030110103100001333010000100000033", (2002, 2, 21, 16, 1, 0))
+			1 => ("333333333333333333333100000030110103100001333010000100000033",
+				(2002, 2, 21, 16, 1, 0))
 		);
 		Prefix: constant String := "encode/identity ";
-		Result: DCF77_ST_Layer_Shared.Telegram;
-		Expect: DCF77_ST_Layer_Shared.Telegram;
+		Result: DCF77_SM_Layer_Shared.Telegram;
+		Expect: DCF77_SM_Layer_Shared.Telegram;
 	begin
 		for I in Test_Vector'Range loop
 			Expect := DCF77_Test_Data.Tel_To_Telegram(
 						DCF77_Test_Data.String_To_Tel(
 						Test_Vector(I).Tel));
-			Result := DCF77_Timelayer.Testing.TM_To_Telegram(
+			Result := DCF77_Minutelayer.Testing.TM_To_Telegram(
 						Test_Vector(I).Time);
 			if Result = Expect then
 				Test_Pass(Prefix & TM_To_String(
@@ -312,4 +316,4 @@ package body DCF77_Timelayer_Unit_Test is
 		end loop;
 	end Test_Telegram_Identity;
 
-end DCF77_Timelayer_Unit_Test;
+end DCF77_Minutelayer_Unit_Test;

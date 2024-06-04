@@ -37,7 +37,7 @@ package body DCF77_Test_Support is
 		Put_Line("    [ OK ] " & Msg);
 	end Test_Pass;
 
-	function TM_To_String(T: in DCF77_Timelayer.TM) return String is
+	function TM_To_String(T: in DCF77_TM_Layer_Shared.TM) return String is
 			(Num_To_Str_L4(T.Y) & "-" & Num_To_Str_L2(T.M) &
 			"-" & Num_To_Str_L2(T.D) & " " & Num_To_Str_L2(T.H) &
 			":" & Num_To_Str_L2(T.I) & ":" & Num_To_Str_L2(T.S));

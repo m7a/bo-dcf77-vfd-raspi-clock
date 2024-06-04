@@ -2,12 +2,14 @@ with DCF77_Display;
 use  DCF77_Display;
 with DCF77_Types;
 with DCF77_Bitlayer;
-with DCF77_ST_Layer_Shared;
+with DCF77_SM_Layer_Shared;
 with DCF77_Secondlayer;
+with DCF77_Minutelayer;
 with DCF77_Timelayer;
 with DCF77_Low_Level;
 with DCF77_Ambient_Light_Sensor;
 with DCF77_Alarm;
+with DCF77_TM_Layer_Shared;
 
 package DCF77_GUI is
 
@@ -26,6 +28,7 @@ private
 		-- Timekeeping
 		Bitlayer:               aliased DCF77_Bitlayer.Bitlayer;
 		Secondlayer:            aliased DCF77_Secondlayer.Secondlayer;
+		Minutelayer:            aliased DCF77_Minutelayer.Minutelayer;
 		Timelayer:              aliased DCF77_Timelayer.Timelayer;
 		-- Support Layers
 		ALS:                    aliased DCF77_Ambient_Light_Sensor.ALS;
@@ -35,9 +38,9 @@ private
 		Light_Sensor_Reading:   DCF77_Low_Level.Light_Value;
 		Brightness_Setting:     DCF77_Display.Brightness;
 		Bitlayer_Reading:       DCF77_Types.Reading;
-		Secondlayer_Telegram_1: DCF77_ST_Layer_Shared.Telegram;
-		Secondlayer_Telegram_2: DCF77_ST_Layer_Shared.Telegram;
-		Datetime:               DCF77_Timelayer.TM;
+		Secondlayer_Telegram_1: DCF77_SM_Layer_Shared.Telegram;
+		Secondlayer_Telegram_2: DCF77_SM_Layer_Shared.Telegram;
+		Datetime:               DCF77_TM_Layer_Shared.TM;
 	end record;
 
 	procedure Init(S: in out Program_State);
@@ -109,8 +112,6 @@ private
 	procedure Add_QOS(G: in out GUI; YI: in Pos_Y);
 	procedure Add_AL(G: in out GUI; YI: in Pos_Y;
 						Underline: in Underline_Info);
-	function Describe_QOS(Q: in DCF77_Timelayer.QOS)
-						return SB.Bounded_String;
 	procedure Add_Menu(G: in out GUI; Lbl: in Menu_Green);
 	procedure Add_Option_DCF77(G: in out GUI;
 						Underline: in Underline_Info);

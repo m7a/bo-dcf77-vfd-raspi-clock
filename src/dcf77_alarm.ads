@@ -1,5 +1,5 @@
 with DCF77_Low_Level;
-with DCF77_Timelayer;
+with DCF77_TM_Layer_Shared;
 
 package DCF77_Alarm is
 
@@ -14,7 +14,7 @@ package DCF77_Alarm is
 
 	procedure Init(Ctx: in out Alarm; LLI: in DCF77_Low_Level.LLP);
 	procedure Process(Ctx: in out Alarm;
-					DT_Now_Prime: in DCF77_Timelayer.TM);
+				DT_Now_Prime: in DCF77_TM_Layer_Shared.TM);
 
 	-- GUI API
 	function Get_AL_Time(Ctx: in Alarm) return Time_T;
@@ -53,26 +53,26 @@ private
 		S:  State;
 
 		-- Store Date and Time of when the alarm checking started
-		DT_Now: DCF77_Timelayer.TM;
+		DT_Now: DCF77_TM_Layer_Shared.TM;
 
 		-- While buzzing this specifies a timeout after which the
 		-- buzzing should halt i.e. switch to AL_Timeout.
-		DT_Stop_Buzz: DCF77_Timelayer.TM;
+		DT_Stop_Buzz: DCF77_TM_Layer_Shared.TM;
 
 		-- Maintain state for blinkin in AL_Buzz and AL_Timeout states
 		Blink_CTR: Blink;
 	end record;
 
 	procedure Start_Buzzing(Ctx: in out Alarm;
-					DT_Now_Prime: in DCF77_Timelayer.TM);
+				DT_Now_Prime: in DCF77_TM_Layer_Shared.TM);
 	procedure Run_Blink(Ctx: in out Alarm);
-	function Check_For_Time_Of_Alarm(Ctx: in out Alarm;
-			DT_Now_Prime: in DCF77_Timelayer.TM) return Boolean;
+	function Check_For_Time_Of_Alarm(Ctx: in out Alarm; DT_Now_Prime:
+				in DCF77_TM_Layer_Shared.TM) return Boolean;
 
-	function ">="(A, B: in DCF77_Timelayer.TM) return Boolean;
-	function "<"(A, B: in DCF77_Timelayer.TM) return Boolean;
-	function Date(T: in DCF77_Timelayer.TM) return Date_T;
-	function Time(T: in DCF77_Timelayer.TM) return Time_T;
+	function ">="(A, B: in DCF77_TM_Layer_Shared.TM) return Boolean;
+	function "<"(A, B: in DCF77_TM_Layer_Shared.TM) return Boolean;
+	function Date(T: in DCF77_TM_Layer_Shared.TM) return Date_T;
+	function Time(T: in DCF77_TM_Layer_Shared.TM) return Time_T;
 	function ">="(A, B: in Time_T) return Boolean;
 
 end DCF77_Alarm;

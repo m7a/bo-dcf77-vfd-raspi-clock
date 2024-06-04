@@ -51,4 +51,4 @@ private
 	function X_Eliminate_Entry(TVI: in Reading; TVO: in out Reading)
 							return Boolean;
 
-end DCF77_ST_Layer_Shared;
+end DCF77_SM_Layer_Shared;

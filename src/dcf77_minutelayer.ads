@@ -2,6 +2,8 @@ with DCF77_Types;
 use  DCF77_Types;
 with DCF77_SM_Layer_Shared;
 use  DCF77_SM_Layer_Shared;
+with DCF77_TM_Layer_Shared;
+use  DCF77_TM_Layer_Shared;
 
 package DCF77_Minutelayer is
 
@@ -17,53 +19,18 @@ package DCF77_Minutelayer is
 		QOS9_ASYNC  -- -9 -- async count from last
 	);
 
-	type TM is record
-		Y: Natural; -- Year   0..9999
-		M: Natural; -- Month  1..12
-		D: Natural; -- Day    1..31
-		H: Natural; -- Hour   0..23
-		I: Natural; -- Minute 0..59
-		S: Natural; -- Second 0..60 (60 = leapsec case)
-	end record;
-
 	type Minutelayer is tagged limited private;
-
-	Time_Of_Compilation: constant TM := (2024, 6, 1, 19, 4, 45);
-
-	-- public because it is of interest to GUI, too!
-	Month_Lengths: constant array (0 .. 12) of Natural := (
-		29, --  0: leap year February
-		31, --  1: January
-		28, --  2: February
-		31, --  3: March
-		30, --  4: April
-		31, --  5: May
-		30, --  6: June
-		31, --  7: July
-		31, --  8: August
-		30, --  9: September
-		31, -- 10: October
-		30, -- 11: November
-		31  -- 12: December
-	);
 
 	procedure Init(Ctx: in out Minutelayer);
 	procedure Process(Ctx: in out Minutelayer;
 					Has_New_Bitlayer_Signal: in Boolean;
-					Telegram_1, Telegram_2: in Telegram);
-	function Get_Current(Ctx: in Minutelayer) return TM;
+					Telegram_1, Telegram_2: in Telegram;
+					Exch: out TM_Exchange);
 
 	-- GUI interaction
-	function Get_Quality_Of_Service(Ctx: in Minutelayer) return QOS;
 	procedure Set_TM_By_User_Input(Ctx: in out Minutelayer; T: in TM);
-	function Is_DCF77_Enabled(Ctx: in Minutelayer) return Boolean;
-	procedure Set_DCF77_Enabled(Ctx: in out Minutelayer; En: in Boolean);
+	function Get_QOS_Sym(Ctx: in Minutelayer) return Character;
 	function Get_QOS_Stats(Ctx: in Minutelayer) return String;
-
-	-- Procedure is also useful for alarm implementation!
-	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural);
-	-- Function is also useful for GUI implementation!
-	function Is_Leap_Year(Y: in Natural) return Boolean;
 
 -- Visible for testing only --
 
@@ -93,12 +60,6 @@ private
 	Unknown:  constant Integer := -1;
 	Prev_Max: constant Integer := 32767; -- historical value per int16_t
 
-	-- DST_Applied: If we have just switched betwen DST/regular then ignore
-	-- announce bit for this very minute to not switch backwards again in
-	-- the next minute.
-	type DST_Switch is (DST_No_Change, DST_To_Summer, DST_To_Winter,
-								DST_Applied);
-
 	type Stat_Entry is mod 2**32;
 	type QOS_Stats_Array is array(QOS) of Stat_Entry;
 
@@ -108,11 +69,6 @@ private
 		-- arrives at YH crossing and may fall back to leading “20” such
 		-- as long as nothing was entered by the user explicitly.
 		YH:                     Natural;
-
-		-- Bypass processing except for date & time computation based
-		-- on preceding value. Can be used to operate the clock manually
-		-- and for time drift debugging purposes.
-		DCF77_Enabled:          Boolean;
 
 		-- Ring buffer of last minute ones bits.
 		Preceding_Minute_Ones:  Minute_Buf;
@@ -141,7 +97,7 @@ private
 	TM0: constant TM := Time_Of_Compilation;
 
 	procedure Next_Minute_Coming(Ctx: in out Minutelayer; Telegram_1,
-						Telegram_2: in Telegram);
+			Telegram_2: in Telegram; DST_Delta_H: in out Integer);
 	function TM_To_Telegram_10min(T: in TM) return Telegram;
 	procedure WMBC(TR: in out Telegram; Offset, Length, Value: in Natural);
 	procedure Process_New_Telegram(Ctx: in out Minutelayer; Telegram_1_In,
