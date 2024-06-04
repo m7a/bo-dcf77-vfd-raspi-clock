@@ -82,14 +82,15 @@ package body DCF77_Low_Level is
 	end Init;
 	
 	procedure Handle_DCF_Interrupt is
-		use type HAL.Uint32; -- import + operator
+		use type HAL.UInt32; -- import + operator
 		-- Inverted by antenna design
 		Val: constant Boolean := not DCF.Get;
+		DT: Time;
 	begin
 		-- ack and trigger again in 7ms
 		RP2040_SVD.TIMER.TIMER_Periph.INTR.ALARM_1 := True;
 		RP2040_SVD.TIMER.TIMER_Periph.ALARM1 :=
-			RP2040_SVD.TIMER.TIMER_Periph.ALARM1 + 7_000;
+				RP2040_SVD.TIMER.TIMER_Periph.ALARM1 + 7_000;
 		RP2040_SVD.TIMER.TIMER_Periph.INTE.ALARM_1 := True;
 
 		if Val then
@@ -104,13 +105,25 @@ package body DCF77_Low_Level is
 		else
 			if Interrupt_Start_Ticks /= 0 and
 						not Interrupt_Pending_Read then
-				Interrupt_Out_Ticks := Time(RP.Timer.Clock) -
+				DT := Time(RP.Timer.Clock) -
 							Interrupt_Start_Ticks;
-				Interrupt_Pending_Read := True;
+				-- Act like we never saw the “1” for very
+				-- short spikes
+				if DT < 10_000 then
+					Inc_Saturated(Interrupt_Fault,
+							Interrupt_Fault_Max);
+					Interrupt_Start_Ticks := 0;
+				-- give 2nd chance to complete the signal if
+				-- it appears too short but there were
+				-- definitely multiple “1” readings
+				elsif DT < 30_000 then
+					Inc_Saturated(Interrupt_Fault,
+							Interrupt_Fault_Max);
+				else
+					Interrupt_Out_Ticks    := DT;
+					Interrupt_Pending_Read := True;
+				end if;
 			end if;
-			-- TODO z COULD ADD SOME SORT OF "ALL ZERO" RECOGNIZTION?
-			--        => better "No_Signal" recogniztion than a
-			--        timeout?
 		end if;
 	end Handle_DCF_Interrupt;
 

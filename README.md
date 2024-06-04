@@ -7,7 +7,7 @@ lang: de-DE
 author: ["Linux-Fan, Ma_Sys.ma (Ma_Sys.ma@web.de)"]
 keywords: ["dcf77", "uhr", "rp2040"]
 x-masysma-version: 1.0.0
-x-masysma-website: https://masysma.net/...
+x-masysma-website: https://masysma.net/37/dcf77vfd_raspi_clock.xhtml
 x-masysma-repository: https://www.github.com/m7a/bo-dcf77vfd-raspi-clock
 x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
 ---
@@ -199,7 +199,7 @@ ziehen).
 Der Feldeffekttransistor 2N7000 ist ein diskreter Logikwandler von den 5V des
 Displays auf die 3.3V des Raspi. Da die Software von dieser
 Kommunikationsrichtung keinen Gebrauch macht, könnte man ihn vermutlich auch
-nicht bestücken, ohne die Funktionalität einzuschränken.
+weglassen, ohne die Funktionalität einzuschränken.
 
 Die mit TX/RX/GND-bezeichneten Punkte sind für eine Stiftleiste zum Anschluss
 eines Seriell-Wandlers gedacht, damit man am Rechner die Ausgaben des Programmes
@@ -702,7 +702,8 @@ Hilfreiche Links
 
 Interner Link:
 [dcf77_vfd_roehren_bausatz_dcf77_melody(37)](../37/dcf77_vfd_roehren_bausatz_dcf77_melody.xhtml) --
-ein weiteres DCF77-VFD-Projekt, welches beim Ma_Sys.ma dokumentiert ist, jedoch in diesem Fall auf Basis eines Bausatzes.
+ein weiteres DCF77-VFD-Projekt, welches beim Ma_Sys.ma dokumentiert ist, jedoch
+in diesem Fall auf Basis eines Bausatzes.
 
 _Blinkenlight Experiments_ (blinkenlight.net) enthält und erklärt ebenfalls eine
 umfangreiche DCF77-Uhrenimplementierung. Diese hat noch eine größere
