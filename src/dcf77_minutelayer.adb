@@ -3,9 +3,9 @@ use  DCF77_Offsets;
 with DCF77_Functions;
 use  DCF77_Functions;
 
-package body DCF77_Timelayer is
+package body DCF77_Minutelayer is
 
-	procedure Init(Ctx: in out Timelayer) is
+	procedure Init(Ctx: in out Minutelayer) is
 	begin
 		Ctx.YH                     := TM0.Y / 100;
 		Ctx.DCF77_Enabled          := True;
@@ -20,7 +20,7 @@ package body DCF77_Timelayer is
 		Ctx.QOS_Stats              := (others => 0);
 	end Init;
 
-	procedure Process(Ctx: in out Timelayer;
+	procedure Process(Ctx: in out Minutelayer;
 					Has_New_Bitlayer_Signal: in Boolean;
 					Telegram_1, Telegram_2: in Telegram) is
 	begin
@@ -85,7 +85,7 @@ package body DCF77_Timelayer is
 	-- Store out_current as prev if +1 yields a new minute and our current
 	-- minute is X9 i.e. next minute will be Y0 with Y = X+1 (or more fields
 	-- changed...)
-	procedure Next_Minute_Coming(Ctx: in out Timelayer; Telegram_1,
+	procedure Next_Minute_Coming(Ctx: in out Minutelayer; Telegram_1,
 						Telegram_2: in Telegram) is
 	begin
 		-- If this is the only opinion we get here, it essentially means
@@ -197,7 +197,7 @@ package body DCF77_Timelayer is
 	function Is_Leap_Year(Y: in Natural) return Boolean is (((Y mod 4) = 0)
 				and (((Y mod 100) /= 0) or ((Y mod 400) = 0)));
 
-	procedure Process_New_Telegram(Ctx: in out Timelayer; Telegram_1_In,
+	procedure Process_New_Telegram(Ctx: in out Minutelayer; Telegram_1_In,
 						Telegram_2_In: in Telegram) is
 		type Tristate is (Unset, B_True, B_False);
 		function B2T(B: in Boolean) return Tristate is
@@ -482,7 +482,7 @@ package body DCF77_Timelayer is
 		return True;
 	end Has_Minute_Tens;
 
-	procedure Add_Minute_Ones_To_Buffer(Ctx: in out Timelayer;
+	procedure Add_Minute_Ones_To_Buffer(Ctx: in out Minutelayer;
 							Tel: in Telegram) is
 	begin
 		Ctx.Preceding_Minute_Idx := Ctx.Preceding_Minute_Idx + 1;
@@ -491,7 +491,7 @@ package body DCF77_Timelayer is
 				Offset_Minute_Ones + Length_Minute_Ones - 1);
 	end Add_Minute_Ones_To_Buffer;
 
-	procedure Decode_And_Populate_DST_Switch(Ctx: in out Timelayer;
+	procedure Decode_And_Populate_DST_Switch(Ctx: in out Minutelayer;
 							Tel: in Telegram) is
 		Announce:   constant Reading := Tel.Value(Offset_DST_Announce);
 		-- It is either 10 = currently summer time
@@ -519,7 +519,7 @@ package body DCF77_Timelayer is
 		end if; -- else ignore if no data available
 	end Decode_And_Populate_DST_Switch;
 
-	function Decode_Tens(Ctx: in Timelayer; Tel: in Telegram) return TM is
+	function Decode_Tens(Ctx: in Minutelayer; Tel: in Telegram) return TM is
 		RV: TM := Ctx.Decode(Tel);
 	begin
 		Discard_Ones(RV);
@@ -531,7 +531,7 @@ package body DCF77_Timelayer is
 		T.I := (T.I / 10) * 10;
 	end Discard_Ones;
 
-	function Decode(Ctx: in Timelayer; Tel: in Telegram) return TM is
+	function Decode(Ctx: in Minutelayer; Tel: in Telegram) return TM is
 		Ign_Parity: Parity_State := Parity_Sum_Undefined;
 
 		-- Read and Decode
@@ -554,7 +554,7 @@ package body DCF77_Timelayer is
 	end Decode;
 
 	-- @return true if no differences were detected
-	function Decode_Check(Ctx: in out Timelayer; Tel: in Telegram)
+	function Decode_Check(Ctx: in out Minutelayer; Tel: in Telegram)
 							return Boolean is
 		TMN_Interm: constant TM      := Ctx.Decode(Tel);
 		RV:         constant Boolean := Ctx.Current = TMN_Interm;
@@ -564,7 +564,7 @@ package body DCF77_Timelayer is
 	end Decode_Check;
 
 	-- @return value if ones were recovered successfully, -1 if not
-	function Recover_Ones(Ctx: in out Timelayer) return Integer is
+	function Recover_Ones(Ctx: in out Minutelayer) return Integer is
 		Found_Idx:     Integer := Unknown;
 		Idx_Preceding: Minute_Buf_Idx := Ctx.Preceding_Minute_Idx;
 		Idx_Delta:     Minute_Buf_Idx;
@@ -647,7 +647,7 @@ package body DCF77_Timelayer is
 	-- Problem is: In realy, all cases seem to be covered by QOS5.
 	-- We leave it enabled for now despite the fact that there is no known
 	-- case to “need” this for recovery...
-	function Try_QOS6(Ctx: in out Timelayer; Telegram_1: in Telegram)
+	function Try_QOS6(Ctx: in out Minutelayer; Telegram_1: in Telegram)
 							return Boolean is
 		Try_Time:         TM := Ctx.Prev;
 		Virtual_Telegram: Telegram;
@@ -682,7 +682,7 @@ package body DCF77_Timelayer is
 	-- @param Telegram_1 is in out but output is never processed by
 	--        outside procedure. It only saves us from performing an
 	--        additional copy of the input.
-	function Cross_Check_By_X_Eliminate(Ctx: in out Timelayer;
+	function Cross_Check_By_X_Eliminate(Ctx: in out Minutelayer;
 				Telegram_1: in out Telegram) return Boolean is
 		Current_Minus_One:                 TM := Ctx.Prev;
 		Current_Plus_One:                  TM := Ctx.Current;
@@ -730,12 +730,12 @@ package body DCF77_Timelayer is
 		end if;
 	end Cross_Check_By_X_Eliminate;
 
-	function Get_Current(Ctx: in Timelayer) return TM is (Ctx.Current);
+	function Get_Current(Ctx: in Minutelayer) return TM is (Ctx.Current);
 
-	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS is
+	function Get_Quality_Of_Service(Ctx: in Minutelayer) return QOS is
 							(Ctx.Current_QOS);
 
-	procedure Set_TM_By_User_Input(Ctx: in out Timelayer; T: in TM) is
+	procedure Set_TM_By_User_Input(Ctx: in out Minutelayer; T: in TM) is
 	begin
 		-- import data
 		Ctx.YH                     := T.Y / 100;
@@ -748,10 +748,10 @@ package body DCF77_Timelayer is
 		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
 	end Set_TM_By_User_Input;
 
-	function Is_DCF77_Enabled(Ctx: in Timelayer) return Boolean is
+	function Is_DCF77_Enabled(Ctx: in Minutelayer) return Boolean is
 							(Ctx.DCF77_Enabled);
 
-	procedure Set_DCF77_Enabled(Ctx: in out Timelayer; En: in Boolean) is
+	procedure Set_DCF77_Enabled(Ctx: in out Minutelayer; En: in Boolean) is
 	begin
 		Ctx.Seconds_Since_Prev   := Unknown;
 		Ctx.Current_QOS          := QOS9_ASYNC;
@@ -760,7 +760,7 @@ package body DCF77_Timelayer is
 		Ctx.DCF77_Enabled        := En;
 	end Set_DCF77_Enabled;
 
-	function Get_QOS_Stats(Ctx: in Timelayer) return String is
+	function Get_QOS_Stats(Ctx: in Minutelayer) return String is
 		type Sum_T is mod 2**64;
 
 		S1:   constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS1));
@@ -788,4 +788,4 @@ package body DCF77_Timelayer is
 			Num_To_Str_L2(P9);
 	end Get_QOS_Stats;
 
-end DCF77_Timelayer;
+end DCF77_Minutelayer;

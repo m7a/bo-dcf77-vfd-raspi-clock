@@ -1,7 +1,7 @@
 with DCF77_Types;
 use  DCF77_Types;
-with DCF77_ST_Layer_Shared;
-use  DCF77_ST_Layer_Shared;
+with DCF77_SM_Layer_Shared;
+use  DCF77_SM_Layer_Shared;
 
 package DCF77_Secondlayer is
 

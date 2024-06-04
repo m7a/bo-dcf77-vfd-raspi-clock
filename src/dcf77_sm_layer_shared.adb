@@ -1,4 +1,4 @@
-package body DCF77_ST_Layer_Shared is
+package body DCF77_SM_Layer_Shared is
 
 	function X_Eliminate(Telegram_1_Is_Leap: in Boolean;
 				Telegram_1: in Telegram;
@@ -223,4 +223,4 @@ package body DCF77_ST_Layer_Shared is
 		return Rslt;
 	end Decode_BCD;
 
-end DCF77_ST_Layer_Shared;
+end DCF77_SM_Layer_Shared;

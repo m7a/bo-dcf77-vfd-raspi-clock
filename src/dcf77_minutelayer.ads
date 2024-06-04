@@ -1,9 +1,9 @@
 with DCF77_Types;
 use  DCF77_Types;
-with DCF77_ST_Layer_Shared;
-use  DCF77_ST_Layer_Shared;
+with DCF77_SM_Layer_Shared;
+use  DCF77_SM_Layer_Shared;
 
-package DCF77_Timelayer is
+package DCF77_Minutelayer is
 
 	type QOS is (
 		QOS1,       -- +1 -- perfectly synchronized
@@ -26,7 +26,7 @@ package DCF77_Timelayer is
 		S: Natural; -- Second 0..60 (60 = leapsec case)
 	end record;
 
-	type Timelayer is tagged limited private;
+	type Minutelayer is tagged limited private;
 
 	Time_Of_Compilation: constant TM := (2024, 6, 1, 19, 4, 45);
 
@@ -47,18 +47,18 @@ package DCF77_Timelayer is
 		31  -- 12: December
 	);
 
-	procedure Init(Ctx: in out Timelayer);
-	procedure Process(Ctx: in out Timelayer;
+	procedure Init(Ctx: in out Minutelayer);
+	procedure Process(Ctx: in out Minutelayer;
 					Has_New_Bitlayer_Signal: in Boolean;
 					Telegram_1, Telegram_2: in Telegram);
-	function Get_Current(Ctx: in Timelayer) return TM;
+	function Get_Current(Ctx: in Minutelayer) return TM;
 
 	-- GUI interaction
-	function Get_Quality_Of_Service(Ctx: in Timelayer) return QOS;
-	procedure Set_TM_By_User_Input(Ctx: in out Timelayer; T: in TM);
-	function Is_DCF77_Enabled(Ctx: in Timelayer) return Boolean;
-	procedure Set_DCF77_Enabled(Ctx: in out Timelayer; En: in Boolean);
-	function Get_QOS_Stats(Ctx: in Timelayer) return String;
+	function Get_Quality_Of_Service(Ctx: in Minutelayer) return QOS;
+	procedure Set_TM_By_User_Input(Ctx: in out Minutelayer; T: in TM);
+	function Is_DCF77_Enabled(Ctx: in Minutelayer) return Boolean;
+	procedure Set_DCF77_Enabled(Ctx: in out Minutelayer; En: in Boolean);
+	function Get_QOS_Stats(Ctx: in Minutelayer) return String;
 
 	-- Procedure is also useful for alarm implementation!
 	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural);
@@ -102,7 +102,7 @@ private
 	type Stat_Entry is mod 2**32;
 	type QOS_Stats_Array is array(QOS) of Stat_Entry;
 
-	type Timelayer is tagged limited record
+	type Minutelayer is tagged limited record
 		-- Year Hundreds defaults to compile-time value but may be
 		-- changed by user input. Clock does not care if it by itself
 		-- arrives at YH crossing and may fall back to leading “20” such
@@ -119,7 +119,7 @@ private
 		Preceding_Minute_Idx:   Minute_Buf_Idx;
 
 		Prev:                   TM;
-		Prev_Telegram:          DCF77_ST_Layer_Shared.Telegram;
+		Prev_Telegram:          DCF77_SM_Layer_Shared.Telegram;
 
 		Seconds_Since_Prev:     Integer; -- -1 = unknown
 		Seconds_Left_In_Minute: Natural; -- 0 = next minute
@@ -140,33 +140,33 @@ private
 	-- reference time point
 	TM0: constant TM := Time_Of_Compilation;
 
-	procedure Next_Minute_Coming(Ctx: in out Timelayer; Telegram_1,
+	procedure Next_Minute_Coming(Ctx: in out Minutelayer; Telegram_1,
 						Telegram_2: in Telegram);
 	function TM_To_Telegram_10min(T: in TM) return Telegram;
 	procedure WMBC(TR: in out Telegram; Offset, Length, Value: in Natural);
-	procedure Process_New_Telegram(Ctx: in out Timelayer; Telegram_1_In,
+	procedure Process_New_Telegram(Ctx: in out Minutelayer; Telegram_1_In,
 						Telegram_2_In: in Telegram);
 	function Recover_BCD(Tel: in out Telegram) return Recovery;
 	procedure Drain_Assert(X: in Boolean);
 	function Has_Minute_Tens(Tel: in Telegram) return Boolean;
-	procedure Add_Minute_Ones_To_Buffer(Ctx: in out Timelayer;
+	procedure Add_Minute_Ones_To_Buffer(Ctx: in out Minutelayer;
 							Tel: in Telegram);
-	procedure Decode_And_Populate_DST_Switch(Ctx: in out Timelayer;
+	procedure Decode_And_Populate_DST_Switch(Ctx: in out Minutelayer;
 							Tel: in Telegram);
-	function Decode_Tens(Ctx: in Timelayer; Tel: in Telegram) return TM;
+	function Decode_Tens(Ctx: in Minutelayer; Tel: in Telegram) return TM;
 	procedure Discard_Ones(T: in out TM);
-	function Decode(Ctx: in Timelayer; Tel: in Telegram) return TM;
-	function Decode_Check(Ctx: in out Timelayer; Tel: in Telegram)
+	function Decode(Ctx: in Minutelayer; Tel: in Telegram) return TM;
+	function Decode_Check(Ctx: in out Minutelayer; Tel: in Telegram)
 							return Boolean;
-	function Recover_Ones(Ctx: in out Timelayer) return Integer;
+	function Recover_Ones(Ctx: in out Minutelayer) return Integer;
 	function Are_Ones_Compatible(AD, BD: in BCD_Digit) return Boolean;
 	function Check_If_Compat_By_X_Eliminate(
 				Virtual_Telegram: in out Telegram;
 				Telegram_1: in Telegram) return Boolean;
 	function TM_To_Telegram(T: in TM) return Telegram;
-	function Try_QOS6(Ctx: in out Timelayer; Telegram_1: in Telegram)
+	function Try_QOS6(Ctx: in out Minutelayer; Telegram_1: in Telegram)
 							return Boolean;
-	function Cross_Check_By_X_Eliminate(Ctx: in out Timelayer;
+	function Cross_Check_By_X_Eliminate(Ctx: in out Minutelayer;
 				Telegram_1: in out Telegram) return Boolean;
 
-end DCF77_Timelayer;
+end DCF77_Minutelayer;

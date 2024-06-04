@@ -3,8 +3,8 @@ use  DCF77_Types;
 with DCF77_Offsets;
 use  DCF77_Offsets;
 
--- Shared Functions between Secondlayer and Timelayer.
-package DCF77_ST_Layer_Shared is
+-- Shared Functions between Secondlayer and Minutelayer.
+package DCF77_SM_Layer_Shared is
 
 	type Telegram_State is (Invalid, Valid_60, Valid_61);
 	type Telegram is record
