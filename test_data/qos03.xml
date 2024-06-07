@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dcf77testdata descr="qos03">
-	<usefor test="qos" descr="22.04.2019 22:41:00-22:43:00 with recovery from QOS2-&gt;QOS1"/>
+	<usefor test="qos"  descr="22.04.2019 22:41:00-22:43:00 with recovery from QOS2-&gt;QOS1"/>
+	<usefor test="time" descr="22.04.2019 22:41:00-22:43:00 with recovery from QOS2-&gt;QOS1"/>
 	<input offset="0">
 		<!-- 22.04.2019 22:41:00 -->
 		<tel val="000010001011000001001100000100100010010001100001001001100013"/>
@@ -12,8 +13,8 @@
 	<output recovery_ok="1">
 		<tel val="001100000001101001001110000110100010010001100001001001100013"/>
 	</output>
-	<checkpoint loc="59"  val="2019-04-22 22:41:00" qos="QOS1"/>
-	<checkpoint loc="119" val="2019-04-22 22:42:00" qos="QOS2"/>
-	<checkpoint loc="120" val="2019-04-22 22:42:01" qos="QOS2"/>
-	<checkpoint loc="179" val="2019-04-22 22:43:00" qos="QOS1"/>
+	<checkpoint loc="59"  val="2019-04-22 22:41:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="119" val="2019-04-22 22:42:00" qos="QOS2" sym="+"/>
+	<checkpoint loc="120" val="2019-04-22 22:42:01" qos="QOS2" sym="+"/>
+	<checkpoint loc="179" val="2019-04-22 22:43:00" qos="QOS1" sym="+"/>
 </dcf77testdata>

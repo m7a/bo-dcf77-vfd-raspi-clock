@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<dcf77testdata descr="qos09">
-	<usefor test="secondlayer" descr="09.12.2023 00:54:00-01:11:00 Test QOS4 - final outcome"/>
-	<usefor test="qos"         descr="09.12.2023 00:54:00-01:11:00 Test QOS4"/>
-	<usefor test="time"        descr="09.12.2023 00:54:00-01:11:00 Test QOS4"/>
+<dcf77testdata descr="qos11time">
+	<usefor test="time" descr="09.12.2023 00:54:00-01:11:00 Test QOS8 - time outcome"/>
 	<input offset="0">
 		<tel val="010010110000000000101001010110000000100100011010011100010013"/> <!-- Sa, 09.12.23 00:54:00 -->
 		<tel val="000001110001111000101101010100000000100100011010011100010013"/> <!-- Sa, 09.12.23 00:55:00 -->
@@ -22,12 +20,9 @@
 		<tel val="011010110100101000101000103311000001100100011010011100010013"/> <!-- Sa, 09.12.23 01:08:00 -->
 		<tel val="011110110110101000101100103301000001100100011010011100010013"/> <!-- Sa, 09.12.23 01:09:00 -->
 		<!-- turn of minute tens -->
-		<tel val="001010010011110000101000013311000001100100011010011100010013"/> <!-- Sa, 09.12.23 01:10:00 -->
+		<!-- jump one forward -->
 		<tel val="011100001010010000101100013301000001100100011010011100010013"/> <!-- Sa, 09.12.23 01:11:00 -->
 	</input>
-	<output recovery_ok="1">
-		<tel val="011100001010010000101100013301000001100100011010011100010013"/>
-	</output>
 	<checkpoint loc="59"   val="2023-12-09 00:54:00" qos="QOS1" sym="+"/>
 	<checkpoint loc="119"  val="2023-12-09 00:55:00" qos="QOS1" sym="+"/>
 	<checkpoint loc="179"  val="2023-12-09 00:56:00" qos="QOS1" sym="+"/>
@@ -42,9 +37,8 @@
 	<checkpoint loc="719"  val="2023-12-09 01:05:00" qos="QOS3" sym="+"/>
 	<checkpoint loc="779"  val="2023-12-09 01:06:00" qos="QOS3" sym="+"/>
 	<checkpoint loc="839"  val="2023-12-09 01:07:00" qos="QOS3" sym="+"/>
-	<!-- a little unclear why we have these intermediate QOS5 here, but accept that for now -->
 	<checkpoint loc="899"  val="2023-12-09 01:08:00" qos="QOS5" sym="+"/>
 	<checkpoint loc="959"  val="2023-12-09 01:09:00" qos="QOS5" sym="+"/>
-	<checkpoint loc="1019" val="2023-12-09 01:10:00" qos="QOS4" sym="+"/>
-	<checkpoint loc="1079" val="2023-12-09 01:11:00" qos="QOS4" sym="+"/>
+	<!-- lower layer reports 11, hence async... -->   
+	<checkpoint loc="1019" val="2023-12-09 01:10:00" qos="QOS8" sym="-"/>
 </dcf77testdata>

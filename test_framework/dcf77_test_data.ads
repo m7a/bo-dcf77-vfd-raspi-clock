@@ -16,7 +16,7 @@ package DCF77_Test_Data is
 	Empty: ST.Bounded_String renames ST.Null_Bounded_String;
 
 	type Uses is (None, X_Eliminate, Secondlayer, Check_BCD, Test_QOS,
-			Unit);
+			Timelayer, Unit);
 
 	type Tel is record
 		Len: Natural := 60;
@@ -28,6 +28,7 @@ package DCF77_Test_Data is
 		Loc: Natural;
 		Val: DCF77_TM_Layer_Shared.TM;
 		Q:   DCF77_Minutelayer.QOS;
+		Sym: Character;
 	end record;
 
 	type Tel_Array        is array (Natural range <>) of Tel;

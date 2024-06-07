@@ -2,6 +2,7 @@
 <dcf77testdata descr="qos08">
 	<usefor test="secondlayer" descr="22.04.2019 22:41:00-22:52:00 Test QOS5 - final outcome"/>
 	<usefor test="qos"         descr="22.04.2019 22:41:00-22:52:00 Test QOS5"/>
+	<usefor test="time"        descr="22.04.2019 22:41:00-22:52:00 Test QOS5"/>
 	<input offset="0">
 		<!-- 22.04.2019 22:41:00             v 1: minute tens end-->
 		<tel val="000010001011000001001100000300100010010001100001001001100013"/>
@@ -31,21 +32,21 @@
 	<output recovery_ok="1">
 		<tel val="000110110110001001001010033310100010010001100001001001100013"/>
 	</output>
-	<checkpoint loc="59"  val="2019-04-22 22:41:00" qos="QOS1"/>
-	<checkpoint loc="119" val="2019-04-22 22:42:00" qos="QOS1"/>
-	<checkpoint loc="179" val="2019-04-22 22:43:00" qos="QOS1"/>
-	<checkpoint loc="239" val="2019-04-22 22:44:00" qos="QOS1"/>
-	<checkpoint loc="299" val="2019-04-22 22:45:00" qos="QOS1"/>
-	<checkpoint loc="359" val="2019-04-22 22:46:00" qos="QOS1"/>
-	<checkpoint loc="419" val="2019-04-22 22:47:00" qos="QOS1"/>
-	<checkpoint loc="479" val="2019-04-22 22:48:00" qos="QOS1"/>
-	<checkpoint loc="539" val="2019-04-22 22:49:00" qos="QOS1"/>
+	<checkpoint loc="59"  val="2019-04-22 22:41:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="119" val="2019-04-22 22:42:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="179" val="2019-04-22 22:43:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="239" val="2019-04-22 22:44:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="299" val="2019-04-22 22:45:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="359" val="2019-04-22 22:46:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="419" val="2019-04-22 22:47:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="479" val="2019-04-22 22:48:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="539" val="2019-04-22 22:49:00" qos="QOS1" sym="+"/>
 	<!--
 		Cross-out leads to no telegram appearing, but a prev value
 		is synthesized and also the current minute is consistent
 		with what was before hence reach QOS5
 	-->
-	<checkpoint loc="599" val="2019-04-22 22:50:00" qos="QOS5"/>
-	<checkpoint loc="659" val="2019-04-22 22:51:00" qos="QOS5"/>
-	<checkpoint loc="719" val="2019-04-22 22:52:00" qos="QOS5"/>
+	<checkpoint loc="599" val="2019-04-22 22:50:00" qos="QOS5" sym="+"/>
+	<checkpoint loc="659" val="2019-04-22 22:51:00" qos="QOS5" sym="+"/>
+	<checkpoint loc="719" val="2019-04-22 22:52:00" qos="QOS5" sym="+"/>
 </dcf77testdata>

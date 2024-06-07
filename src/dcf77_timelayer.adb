@@ -72,6 +72,7 @@ package body DCF77_Timelayer is
 			-- If confident and matches what we know for hours and
 			-- minutes may apply DST switch to output directly.
 			if Exch.Is_Confident then
+				-- TODO ASTAT SOMEHOW THESE CASES ARE NOT EXECUTED!
 				if Exch.DST_Delta_H = 1
 						and Ctx.Before.H = 2
 						and Ctx.Before.M = 0
@@ -82,6 +83,8 @@ package body DCF77_Timelayer is
 						and Ctx.Before.M = 0
 						and Ctx.Before.S = 0 then
 					Ctx.Before.H := 2;
+				--elsif Exch.DST_Delta_H = -1 then TODO DEBUG...
+				--	Ada.Text_IO.Put_Line("H = " & 
 				end if;
 			end if;
 

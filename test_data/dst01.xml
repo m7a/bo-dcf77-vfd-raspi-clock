@@ -2,6 +2,8 @@
 <dcf77testdata descr="dst01">
 	<usefor test="secondlayer" descr="26.10.2008 02:57:00-02:03:00 CEST to CET"/>
 	<usefor test="qos"         descr="26.10.2008 02:57:00-02:03:00 CEST to CET"/>
+	<!-- TODO THIS TEST CURRENTLY FAILS BUT IT SHOULDN'T - SOMEHOW DST SWITCH DOES NOT CROSS CORRECTLY TO NEXT LAYER. ANALYZING ... -->
+	<usefor test="time"        descr="26.10.2008 02:57:00-02:03:00 CEST to CET"/>
 	<input offset="0">
 		<!--                      v DST Announce Bit -->
 		<tel val="010100000100011011001111010110100001011001111000010001000003"/> <!-- 26.10.08 02:57:00, SZ Announce -->
@@ -15,11 +17,11 @@
 	<output recovery_ok="1">
 		<tel val="010011101011110000101110000000100001011001111000010001000003"/>
 	</output>
-	<checkpoint loc="59"  val="2008-10-26 02:57:00" qos="QOS1"/>
-	<checkpoint loc="119" val="2008-10-26 02:58:00" qos="QOS1"/>
-	<checkpoint loc="179" val="2008-10-26 02:59:00" qos="QOS1"/>
-	<checkpoint loc="239" val="2008-10-26 02:00:00" qos="QOS1"/>
-	<checkpoint loc="299" val="2008-10-26 02:01:00" qos="QOS1"/>
-	<checkpoint loc="359" val="2008-10-26 02:02:00" qos="QOS1"/>
-	<checkpoint loc="419" val="2008-10-26 02:03:00" qos="QOS1"/>
+	<checkpoint loc="59"  val="2008-10-26 02:57:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="119" val="2008-10-26 02:58:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="179" val="2008-10-26 02:59:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="239" val="2008-10-26 02:00:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="299" val="2008-10-26 02:01:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="359" val="2008-10-26 02:02:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="419" val="2008-10-26 02:03:00" qos="QOS1" sym="+"/>
 </dcf77testdata>

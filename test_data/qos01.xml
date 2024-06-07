@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dcf77testdata descr="qos01">
-	<usefor test="qos" descr="13.04.2019 17:00:00-17:01:01 go down to QOS9 for invalid data"/>
+	<usefor test="qos"  descr="13.04.2019 17:00:00-17:01:01 go down to QOS9 for invalid data"/>
+	<usefor test="time" descr="13.04.2019 17:00:00-17:01:01 consistent world view + for timelayer"/>
 	<input offset="0">
 		<!-- 13.04.2019 17:00:00 -->
 		<tel val="000000000000000000101000000001110100110010011001001001100013"/>
@@ -10,7 +11,7 @@
 		<tel val="0"/>
 	</input>
 	<output recovery_ok="0"/>
-	<checkpoint loc="59"  val="2019-04-13 17:00:00" qos="QOS1"/>
-	<checkpoint loc="119" val="2019-04-13 17:01:00" qos="QOS9_ASYNC"/>
-	<checkpoint loc="120" val="2019-04-13 17:01:01" qos="QOS9_ASYNC"/>
+	<checkpoint loc="59"  val="2019-04-13 17:00:00" qos="QOS1"       sym="+"/>
+	<checkpoint loc="119" val="2019-04-13 17:01:00" qos="QOS9_ASYNC" sym="+"/>
+	<checkpoint loc="120" val="2019-04-13 17:01:01" qos="QOS9_ASYNC" sym="+"/>
 </dcf77testdata>

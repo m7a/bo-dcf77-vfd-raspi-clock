@@ -11,6 +11,7 @@ with DCF77_Secondlayer;
 with DCF77_Secondlayer.Testing;
 with DCF77_TM_Layer_Shared;
 with DCF77_Minutelayer;
+with DCF77_Timelayer;
 
 with DCF77_Test_Support;
 use  DCF77_Test_Support;
@@ -27,6 +28,68 @@ procedure DCF77_Test_Runner is
 	use type DCF77_SM_Layer_Shared.Telegram_State;
 
 	---------------------------------------------------------[ Test Uses ]--
+
+	procedure Run_Timelayer(Spec: in DCF77_Test_Data.Spec) is
+		use type DCF77_TM_Layer_Shared.TM;
+
+		Prefix: constant String := DCF77_Test_Data.ST.To_String(
+				Spec.Use_For(DCF77_Test_Data.Timelayer));
+		Active: Boolean := True;
+		Ch:     Natural := 1;
+		TL:     DCF77_Timelayer.Timelayer;
+
+		procedure Eval_At_Checkpoint is
+		begin
+			if TL.Get_Current /= Spec.Checkpoints(Ch).Val then
+				Test_Fail(Prefix & " at loc=" &
+					Natural'Image(Spec.Checkpoints(CH).Loc)
+					& " expected " &
+					TM_To_String(Spec.Checkpoints(Ch).Val) &
+					", got " &
+					TM_To_String(TL.Get_Current) & " at " &
+					TL.Get_QOS_Sym);
+				Active := False;
+			elsif TL.Get_QOS_Sym /= Spec.Checkpoints(Ch).Sym then
+				Test_Fail(Prefix & " at loc=" &
+					Natural'Image(Spec.Checkpoints(CH).Loc)
+					& " expected " &
+					Spec.Checkpoints(Ch).Sym &
+					", but found " & TL.Get_QOS_Sym);
+				Active := False;
+			end if;
+		end Eval_At_Checkpoint;
+
+		Pos:    Natural := 0;
+		T1, T2: DCF77_SM_Layer_Shared.Telegram := (others => <>);
+		SL:     DCF77_Secondlayer.Secondlayer;
+		ML:     DCF77_Minutelayer.Minutelayer;
+		Exch:   DCF77_TM_Layer_Shared.TM_Exchange;
+	begin
+		SL.Init;
+		ML.Init;
+		TL.Init;
+		for Line of Spec.Input loop
+			for I in  0 .. Line.Len - 1 loop
+				SL.Process(Line.Val(I), T1, T2);
+				ML.Process(True, T1, T2, Exch);
+				TL.Process(Exch);
+				if Ch <= Spec.Checkpoints'Last and then
+						Pos = Spec.Checkpoints(Ch).Loc
+						then
+					if Spec.Checkpoints(Ch).Sym /= '_' then
+						Eval_At_Checkpoint;
+					end if;
+					Ch := Ch + 1;
+				end if;
+				Pos := Pos + 1;
+				exit when not Active;
+			end loop;
+			exit when not Active;
+		end loop;
+		if Active then
+			Test_Pass(Prefix);
+		end if;
+	end Run_Timelayer;
 
 	procedure Run_QOS(Spec: in DCF77_Test_Data.Spec) is
 		use type DCF77_TM_Layer_Shared.TM;
@@ -94,6 +157,7 @@ procedure DCF77_Test_Runner is
 				if Ch <= Spec.Checkpoints'Last and then
 						Pos = Spec.Checkpoints(Ch).Loc
 						then
+					-- TODO x MAYBE DEFINE QOS VALUE S.T. CAN SKIP HERE?
 					Eval_At_Checkpoint;
 					Ch := Ch + 1;
 				end if;
@@ -327,6 +391,7 @@ procedure DCF77_Test_Runner is
 		when DCF77_Test_Data.Secondlayer => Run_Secondlayer(Spec);
 		when DCF77_Test_Data.Check_BCD   => Run_Check_BCD(Spec);
 		when DCF77_Test_Data.Test_QOS    => Run_QOS(Spec);
+		when DCF77_Test_Data.Timelayer   => Run_Timelayer(Spec);
 		when others => raise Constraint_Error with
 				"Cannot run test """ &
 				DCF77_Test_Data.ST.To_String(Spec.Descr) &

@@ -72,6 +72,8 @@ package body DCF77_Test_Data is
 			return Check_BCD;
 		elsif S = "qos" then
 			return Test_QOS;
+		elsif S = "time" then
+			return Timelayer;
 		elsif S = "unit" then
 			return Unit;
 		else
@@ -176,10 +178,15 @@ package body DCF77_Test_Data is
 				I => Natural'Value(S(S0 + 14 .. S0 + 15)),
 				S => Natural'Value(S(S0 + 17 .. S0 + 18)));
 		end String_To_TM;
+
+		Sym_Str: constant String := (if Atts.Get_Index("sym") = -1
+					then "_" else Atts.Get_Value("sym"));
 	begin
 		return (Loc => Natural'Value(Atts.Get_Value("loc")),
 			Val => String_To_TM(Atts.Get_Value("val")),
-			Q => DCF77_Minutelayer.QOS'Value(Atts.Get_Value("qos")));
+			Q => DCF77_Minutelayer.QOS'Value(Atts.Get_Value("qos")),
+			Sym => (if Sym_Str'Length = 1
+				then Sym_Str(Sym_Str'First) else '_'));
 	end XML_To_Checkpoint;
 
 	procedure End_Element(Handler: in out Reader;

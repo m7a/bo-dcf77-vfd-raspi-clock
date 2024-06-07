@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dcf77testdata descr="qos12">
-	<usefor test="qos" descr="09.12.2023 00:54:00-01:11:00 Test QOS9"/>
+	<usefor test="qos"  descr="09.12.2023 00:54:00-01:11:00 Test QOS9"/>
+	<usefor test="time" descr="09.12.2023 00:54:00-01:11:00 Test QOS9"/>
 	<input offset="0">
 		<tel val="010010110000000000101001010110000000100100011010011100010013"/> <!-- Sa, 09.12.23 00:54:00 -->
 		<tel val="000001110001111000101101010100000000100100011010011100010013"/> <!-- Sa, 09.12.23 00:55:00 -->
@@ -29,23 +30,23 @@
 		<tel val="033333333333333333333333333333333333333333333333333333333333"/> <!-- Sa, 09.12.23 01:12:00 -->
 		<tel val="033333333333333333333333333333333333333333333333333333333333"/>
 	</input>
-	<checkpoint loc="59"   val="2023-12-09 00:54:00" qos="QOS1"/>
-	<checkpoint loc="119"  val="2023-12-09 00:55:00" qos="QOS1"/>
-	<checkpoint loc="179"  val="2023-12-09 00:56:00" qos="QOS1"/>
-	<checkpoint loc="239"  val="2023-12-09 00:57:00" qos="QOS1"/>
-	<checkpoint loc="299"  val="2023-12-09 00:58:00" qos="QOS1"/>
-	<checkpoint loc="359"  val="2023-12-09 00:59:00" qos="QOS1"/>
-	<checkpoint loc="419"  val="2023-12-09 01:00:00" qos="QOS3"/>
-	<checkpoint loc="479"  val="2023-12-09 01:01:00" qos="QOS3"/>
-	<checkpoint loc="539"  val="2023-12-09 01:02:00" qos="QOS3"/>
-	<checkpoint loc="599"  val="2023-12-09 01:03:00" qos="QOS3"/>
-	<checkpoint loc="659"  val="2023-12-09 01:04:00" qos="QOS3"/>
-	<checkpoint loc="719"  val="2023-12-09 01:05:00" qos="QOS3"/>
-	<checkpoint loc="779"  val="2023-12-09 01:06:00" qos="QOS3"/>
-	<checkpoint loc="839"  val="2023-12-09 01:07:00" qos="QOS3"/>
-	<checkpoint loc="899"  val="2023-12-09 01:08:00" qos="QOS5"/>
-	<checkpoint loc="959"  val="2023-12-09 01:09:00" qos="QOS5"/>
-	<checkpoint loc="1019" val="2023-12-09 01:10:00" qos="QOS9_ASYNC"/>
+	<checkpoint loc="59"   val="2023-12-09 00:54:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="119"  val="2023-12-09 00:55:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="179"  val="2023-12-09 00:56:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="239"  val="2023-12-09 00:57:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="299"  val="2023-12-09 00:58:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="359"  val="2023-12-09 00:59:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="419"  val="2023-12-09 01:00:00" qos="QOS3" sym="+"/>
+	<checkpoint loc="479"  val="2023-12-09 01:01:00" qos="QOS3" sym="+"/>
+	<checkpoint loc="539"  val="2023-12-09 01:02:00" qos="QOS3" sym="+"/>
+	<checkpoint loc="599"  val="2023-12-09 01:03:00" qos="QOS3" sym="+"/>
+	<checkpoint loc="659"  val="2023-12-09 01:04:00" qos="QOS3" sym="+"/>
+	<checkpoint loc="719"  val="2023-12-09 01:05:00" qos="QOS3" sym="+"/>
+	<checkpoint loc="779"  val="2023-12-09 01:06:00" qos="QOS3" sym="+"/>
+	<checkpoint loc="839"  val="2023-12-09 01:07:00" qos="QOS3" sym="+"/>
+	<checkpoint loc="899"  val="2023-12-09 01:08:00" qos="QOS5" sym="+"/>
+	<checkpoint loc="959"  val="2023-12-09 01:09:00" qos="QOS5" sym="+"/>
+	<checkpoint loc="1019" val="2023-12-09 01:10:00" qos="QOS9_ASYNC" sym="+"/>
 	<!-- a little strange that it goes to QOS5 here, but OK for now? -->
-	<checkpoint loc="1079" val="2023-12-09 01:11:00" qos="QOS5"/>
+	<checkpoint loc="1079" val="2023-12-09 01:11:00" qos="QOS5" sym="+"/>
 </dcf77testdata>
