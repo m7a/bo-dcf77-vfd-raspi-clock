@@ -286,19 +286,29 @@ zwei Telegramme synthetisiert: Telegram_1 enthält das zuletzt vollständig
 empfangene (“aktuelle”) Telegramm und Telegram_2 alles, was zum vorherigen
 Minuten-Zehnerstand zugeordnet werden konnte.
 
-Der _Timelayer_ nutzt diese Daten, um die eigentliche Decodierung durchzuführen.
-Im einfachsten Fall ist der Empfang (nahezu) perfekt und das Datum und die
-Uhrzeit lassen sich aus dem Telegram_1 vollständig decodieren. In diesem Fall
-wird „perfekte Empfangsqualität” mittels _Quality Of Service 1_ (QOS1)
-signalisiert. Falls eine derart einfache Decodierung nicht möglich ist, werden
-verschiedene Verfahren zum Einsatz gebracht, um die fehlenden Daten zu
+Der _Minutelayer_ nutzt diese Daten, um die eigentliche Decodierung
+durchzuführen. Im einfachsten Fall ist der Empfang (nahezu) perfekt und das
+Datum und die Uhrzeit lassen sich aus dem Telegram_1 vollständig decodieren. In
+diesem Fall wird „perfekte Empfangsqualität” mittels _Quality Of Service 1_
+(QOS1) signalisiert. Falls eine derart einfache Decodierung nicht möglich ist,
+werden verschiedene Verfahren zum Einsatz gebracht, um die fehlenden Daten zu
 ermitteln, wobei mit höherem QOS-Wert die Qualität der Widerherstellung abnimmt.
 Kann das Programm überhaupt keinen Zusammenhang mehr zwischen den empfangenen
 Telegrammen und der aktuellen Uhrzeit herstellen fällt es auf `QOS9_ASYNC`
 zurück, was so viel heißt, wie dass die Uhr asynchron zum DCF77-Zeitsignal
-läuft. In diesem Fall wird anhand einer integrierten Berechnungsvorschrift
-die Uhrzeit berechnet. Schaltjahre werden auch in diesem Falle berücksichtigt,
-die Zeitumstellung jedoch nicht.
+läuft.
+
+Eine Schicht oberhalb befindet sich der _Timelayer_, der eine Konsistenzprüfung
+aufeinanderfolgender ausgegebener Uhrzeiten vornimmt und abhängig vom
+aktuellen QOS-Level den Ergebnissen des Minutelayer Priorität einräumt oder
+unter Umständen auch ein berechnetes Ergebnis gegenüber dem angeblich
+decodierten bevorzugt. Dies dient der Vermeidung von extremen Zeitsprüngen, die
+auftreten können, wenn fälschlicherweise zusätzliche Signale erkannt werden.
+Dadurch können nämlich der Secondlayer und Minutelayer durcheinander geraten und
+fehlerhafte Datums- und Uhrzeitinformationen liefern. Der Status des Timelayers
+wird mit einem Zeichen (`+`, `o` oder `-`) dargestellt, wobei `+` darauf
+hinweist, dass die Berechnungen mit den Beobachtungen übereinstimmen und somit
+eine synchronisierte und verlässliche Uhrzeit angezeigt wird.
 
 ## Hardwareabstraktion
 
