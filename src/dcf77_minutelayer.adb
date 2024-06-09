@@ -206,6 +206,15 @@ package body DCF77_Minutelayer is
 		Virtual_Telegram: Telegram := TM_To_Telegram(Ctx.Current);
 	begin
 		Ctx.Add_Minute_Ones_To_Buffer(Telegram_1);
+		-- TODO SMALL PROBLEM: THIS IS INCORRECT. HERE, WE DECODE AND
+		--      THEN AFTERWARDS KNOW THAT WE JUST SAW A LEAP SECOND.
+		--      THIS CAUSES 02:00:60 to be generated in place of the
+		--      expected 01:59:60. Test case xe10_201207010144_lp has
+		--      the expected data. Might need to reorganize the
+		--      minutelayer to account for this. Basically it seems we
+		--      would have to “pre-decode” at :59 as to establish wheter
+		--      :60 or :00 follows. Alternatively consider some
+		--      simplifications...
 		Ctx.Seconds_Left_In_Minute := (if Telegram_1.Valid = Valid_60
 						then Sec_Per_Min else 61);
 		Ctx.Decode_And_Populate_DST_Switch(Telegram_1);

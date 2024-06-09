@@ -4,6 +4,8 @@
 <dcf77testdata descr="xe10_201207010144_lp">
 	<usefor test="xeliminate"  descr="01:44 -> 02:03 w/ leap second"/>
 	<usefor test="secondlayer" descr="01:44 -> 02:03 w/ leap second"/>
+	<usefor test="qos"         descr="01:44 -> 02:03 w/ leap second"/>
+	<usefor test="time"        descr="01:44 -> 02:03 w/ leap second"/>
 	<input>
 		<tel val="010011011001010001011001000101000001100000111111000100100013"/>  <!-- 1  So 01.07.12 01:44:00 SZ   Einfügen einer Schaltsekunde angekündigt -->
 		<tel val="000001101101101001011101000111000001100000111111000100100013"/>  <!-- 2  So 01.07.12 01:45:00 SZ   Einfügen einer Schaltsekunde angekündigt -->
@@ -27,8 +29,29 @@
 		<tel val="010011111011010001001110000000100001100000111111000100100013"/>  <!-- 20 So 01.07.12 02:03:00 SZ -->
 	</input>
 	<output recovery_ok="1">
-		<!-- <tel val="033333333333333301001110000030100001100000111111000100100013"/> -->
-		<!-- this difference does not seem to be of significance, accept the new output -->
 		<tel val="010011111011010001001110000000100001100000111111000100100013"/>
 	</output>
+
+	<checkpoint loc="59"   val="2012-07-01 01:44:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="119"  val="2012-07-01 01:45:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="179"  val="2012-07-01 01:46:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="239"  val="2012-07-01 01:47:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="299"  val="2012-07-01 01:48:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="359"  val="2012-07-01 01:49:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="419"  val="2012-07-01 01:50:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="479"  val="2012-07-01 01:51:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="539"  val="2012-07-01 01:52:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="599"  val="2012-07-01 01:53:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="659"  val="2012-07-01 01:54:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="719"  val="2012-07-01 01:55:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="779"  val="2012-07-01 01:56:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="839"  val="2012-07-01 01:57:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="899"  val="2012-07-01 01:58:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="959"  val="2012-07-01 01:59:00" qos="QOS1" sym="+"/>
+	<!--
+	TODO CSTAT THIS FAILS...
+	<checkpoint loc="1019" val="2012-07-01 01:59:60" qos="QOS1" sym="+"/>
+	<checkpoint loc="1020" val="2012-07-01 02:00:00" qos="QOS1" sym="+"/>
+	-->
+
 </dcf77testdata>
