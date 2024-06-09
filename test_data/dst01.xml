@@ -2,7 +2,6 @@
 <dcf77testdata descr="dst01">
 	<usefor test="secondlayer" descr="26.10.2008 02:57:00-02:03:00 CEST to CET"/>
 	<usefor test="qos"         descr="26.10.2008 02:57:00-02:03:00 CEST to CET"/>
-	<!-- TODO THIS TEST CURRENTLY FAILS BUT IT SHOULDN'T - SOMEHOW DST SWITCH DOES NOT CROSS CORRECTLY TO NEXT LAYER. ANALYZING ... -->
 	<usefor test="time"        descr="26.10.2008 02:57:00-02:03:00 CEST to CET"/>
 	<input offset="0">
 		<!--                      v DST Announce Bit -->
