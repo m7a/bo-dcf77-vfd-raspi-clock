@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dcf77testdata descr="qos10">
 	<usefor test="qos"  descr="22.04.2019 22:48:00-22:50:00 Test QOS7"/>
-	<usefor test="time" descr="22.04.2019 22:48:00-22:50:00 Test QOS7"/>
 	<input offset="0">
 		<!-- 22.04.2019 22:48:00 -->
 		<tel val="011000111100011001001000100100100010010001100001001001100013"/>
@@ -14,10 +13,9 @@
 		<!-- 22.04.2019 22:51:00 again! -->
 		<tel val="010000111110000001001103033310100010010001100001001001100013"/>
 	</input>
-	<checkpoint loc="59"  val="2019-04-22 22:48:00" qos="QOS1" sym="+"/>
-	<checkpoint loc="119" val="2019-04-22 22:49:00" qos="QOS1" sym="+"/>
-	<checkpoint loc="179" val="2019-04-22 22:50:00" qos="QOS1" sym="+"/>
-	<checkpoint loc="239" val="2019-04-22 22:51:00" qos="QOS3" sym="+"/>
-	<!-- TODO WHY IS THIS + AND NOT o or something? -->
-	<checkpoint loc="299" val="2019-04-22 22:51:00" qos="QOS7" sym="+"/>
+	<checkpoint loc="59"  val="2019-04-22 22:48:00" qos="QOS1"/>
+	<checkpoint loc="119" val="2019-04-22 22:49:00" qos="QOS1"/>
+	<checkpoint loc="179" val="2019-04-22 22:50:00" qos="QOS1"/>
+	<checkpoint loc="239" val="2019-04-22 22:51:00" qos="QOS3"/>
+	<checkpoint loc="299" val="2019-04-22 22:51:00" qos="QOS7"/>
 </dcf77testdata>

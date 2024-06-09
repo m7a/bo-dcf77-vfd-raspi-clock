@@ -21,7 +21,14 @@ package body DCF77_Timelayer is
 		-- No update if no update
 		if Exch.Is_New_Sec then
 			Advance_TM_By_Sec(Ctx.Before, 1);
-			Min_EQ := Are_Minutes_Equal(Exch.Proposed, Ctx.Last);
+			-- There is also the case of seconds going back that
+			-- indicates that the minutelayer suggests to set a
+			-- time not consistent with what we have observed
+			-- before. We treat this like “non equal” although in
+			-- such cases, of course, minutes are indeed equal to
+			-- before.
+			Min_EQ := Are_Minutes_Equal(Exch.Proposed, Ctx.Last) and
+						Exch.Proposed.S > Ctx.Last.S;
 			-- If not enabled just count the seconds dumbly...
 			if Ctx.DCF77_Enabled then
 				if Min_EQ then
