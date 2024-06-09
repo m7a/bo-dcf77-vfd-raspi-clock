@@ -25,7 +25,7 @@ package DCF77_TM_Layer_Shared is
 		DST_Delta_H:  Integer;
 	end record;
 
-	Time_Of_Compilation: constant TM := (2024, 6, 1, 19, 4, 45);
+	Time_Of_Compilation: constant TM := (2024, 6, 9, 18, 32, 14);
 
 	-- public because it is of interest to GUI, too!
 	Month_Lengths: constant array (0 .. 12) of Natural := (
