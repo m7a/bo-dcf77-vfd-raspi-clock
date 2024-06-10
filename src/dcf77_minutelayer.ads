@@ -60,6 +60,11 @@ private
 	Unknown:  constant Integer := -1;
 	Prev_Max: constant Integer := 32767; -- historical value per int16_t
 
+	Leap_Sec_Processed:       constant Integer := -2;
+	No_Leap_Sec_Announced:    constant Integer := -1;
+	Leap_Sec_Newly_Announced: constant Integer := 0;
+	Leap_Sec_Time_Limit:      constant Integer := 3670;
+
 	type Stat_Entry is mod 2**32;
 	type QOS_Stats_Array is array(QOS) of Stat_Entry;
 
@@ -86,6 +91,11 @@ private
 		-- Denotes if at end of hour there will be a switch between
 		-- summer and winter time.
 		EOH_DST_Switch:         DST_Switch;
+
+		-- -1: not announced
+		-- -2: processed
+		-- >= 0 announced and n sec passed
+		Leap_Sec_State:         Integer;
 
 		QOS_Stats:              QOS_Stats_Array;
 	end record;

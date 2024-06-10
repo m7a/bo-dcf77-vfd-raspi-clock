@@ -11,11 +11,11 @@ package body DCF77_Minutelayer is
 		Ctx.Preceding_Minute_Ones  := (others => (others => No_Update));
 		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
 		Ctx.Seconds_Since_Prev     := Unknown;
-		Ctx.Seconds_Left_In_Minute := DCF77_Offsets.Sec_Per_Min;
 		Ctx.Current                := TM0;
 		Ctx.Current_QOS            := QOS9_ASYNC;
 		Ctx.Prev_Telegram          := (Valid => Invalid,
 						Value => (others => No_Signal));
+		Ctx.Leap_Sec_State         := No_Leap_Sec_Announced;
 		Ctx.QOS_Stats              := (others => 0);
 	end Init;
 
@@ -52,21 +52,57 @@ package body DCF77_Minutelayer is
 				Inc_Saturated(Ctx.Seconds_Since_Prev, Prev_Max);
 			end if;
 
-			if Ctx.Seconds_Left_In_Minute > 0 then
-				Ctx.Seconds_Left_In_Minute :=
-						Ctx.Seconds_Left_In_Minute - 1;
+			if Ctx.Leap_Sec_State >= 0 then
+				-- If leap second did not appear in time,
+				-- forget about it...
+				Ctx.Leap_Sec_State := Ctx.Leap_Sec_State + 1;
+				if Ctx.Leap_Sec_State >= Leap_Sec_Time_Limit
+									then
+					Ctx.Leap_Sec_State :=
+							No_Leap_Sec_Announced;
+					-- TODO x might be worth recording as
+					-- fault
+				end if;
 			end if;
 
-			if Ctx.Seconds_Left_In_Minute = 1 and
+			-- We must pre-handle leap second because once we
+			-- increment Current we may set it to a wrong value
+			-- in event of leap seconds...
+			-- TODO X EXTERNALIZE FUNCTION AND FIX DESCRIPTION HERE!
+			-- Leapsec handling. Leap seconds are reported while the
+			-- preceding timestamp is being displayed. We cannot easily
+			-- detect this without risking seeing “ghost leap seconds”.
+			-- Hence in this implementation we chose to post-adjust the
+			-- time by not displaying the leap second but rather repeating
+			-- the same timestamp again. It may appear to the user as if
+			-- the clock stops for about ~3sec but it then continues its
+			-- normal processing beyond the leap second.
+			if Telegram_1.Valid = Valid_61 and
+					Ctx.Leap_Sec_State > 0 and
 					Ctx.Current.S = Sec_Last_In_Min then
-				Exch.Is_Leapsec := True;
-				Ctx.Current.S := 60; -- special leap second case
-			else
+				Ctx.Current.S      := 60;
+				Exch.Proposed      := Ctx.Current;
+				Ctx.Leap_Sec_State := Leap_Sec_Processed;
+				Exch.Is_Leapsec    := True;
+			elsif Telegram_1.Value(Offset_Leap_Sec_Announce) = Bit_1 and
+					Ctx.Leap_Sec_State = No_Leap_Sec_Announced then
+				Ctx.Leap_Sec_State := Leap_Sec_Newly_Announced;
+			end if;
+
+			if not Exch.Is_Leapsec then
 				if Ctx.Current.S >= Sec_Last_In_Min then
 					Ctx.Next_Minute_Coming(Telegram_1,
 						Telegram_2, Exch.DST_Delta_H);
 				end if;
-				Advance_TM_By_Sec(Ctx.Current, 1);
+				if Ctx.Leap_Sec_State /= Leap_Sec_Processed then
+					Advance_TM_By_Sec(Ctx.Current, 1);
+				end if;
+			end if;
+
+			-- Any successfully received 0 immediately kills leap sec
+			-- concerns
+			if Telegram_1.Value(Offset_Leap_Sec_Announce) = Bit_0 then
+				Ctx.Leap_Sec_State := No_Leap_Sec_Announced;
 			end if;
 		end if;
 		if Telegram_1.Valid /= Invalid then
@@ -92,10 +128,13 @@ package body DCF77_Minutelayer is
 				Ctx.EOH_DST_Switch := DST_No_Change;
 			end if;
 		end if;
-		Exch.Proposed     := Ctx.Current;
+		if not Exch.Is_Leapsec then
+			Exch.Proposed := Ctx.Current;
+		end if;
 		Exch.Is_Confident := Ctx.Current_QOS = QOS1;
+
 		-- maintain information about the statistics of the occurrence
-		-- of the individual QOS levels
+		-- of the individual QOS levels TODO x UPDATE!
 		if Has_New_Bitlayer_Signal then
 			if Ctx.QOS_Stats(Ctx.Current_QOS) = Stat_Entry'Last then
 				Ctx.QOS_Stats := (others => 0);
@@ -176,8 +215,8 @@ package body DCF77_Minutelayer is
 		end loop;
 	end WMBC;
 
-	procedure Process_New_Telegram(Ctx: in out Minutelayer; Telegram_1_In,
-						Telegram_2_In: in Telegram) is
+	procedure Process_New_Telegram(Ctx: in out Minutelayer;
+				Telegram_1_In, Telegram_2_In: in Telegram) is
 		type Tristate is (Unset, B_True, B_False);
 		function B2T(B: in Boolean) return Tristate is
 						(if B then B_True else B_False);
@@ -206,17 +245,6 @@ package body DCF77_Minutelayer is
 		Virtual_Telegram: Telegram := TM_To_Telegram(Ctx.Current);
 	begin
 		Ctx.Add_Minute_Ones_To_Buffer(Telegram_1);
-		-- TODO SMALL PROBLEM: THIS IS INCORRECT. HERE, WE DECODE AND
-		--      THEN AFTERWARDS KNOW THAT WE JUST SAW A LEAP SECOND.
-		--      THIS CAUSES 02:00:60 to be generated in place of the
-		--      expected 01:59:60. Test case xe10_201207010144_lp has
-		--      the expected data. Might need to reorganize the
-		--      minutelayer to account for this. Basically it seems we
-		--      would have to “pre-decode” at :59 as to establish wheter
-		--      :60 or :00 follows. Alternatively consider some
-		--      simplifications...
-		Ctx.Seconds_Left_In_Minute := (if Telegram_1.Valid = Valid_60
-						then Sec_Per_Min else 61);
 		Ctx.Decode_And_Populate_DST_Switch(Telegram_1);
 
 		-- 1a. pre-adjust previous in case we can safely decode it
@@ -735,7 +763,6 @@ package body DCF77_Minutelayer is
 		-- import data
 		Ctx.YH                     := T.Y / 100;
 		Ctx.Current                := T;
-		Ctx.Seconds_Left_In_Minute := DCF77_Offsets.Sec_Per_Min - T.S;
 		-- reset remainder of state
 		Ctx.Seconds_Since_Prev     := Unknown;
 		Ctx.Current_QOS            := QOS9_ASYNC;
