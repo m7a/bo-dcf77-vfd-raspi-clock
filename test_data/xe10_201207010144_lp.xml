@@ -50,5 +50,7 @@
 	<checkpoint loc="959"  val="2012-07-01 01:59:00" qos="QOS1" sym="+"/>
 	<checkpoint loc="1019" val="2012-07-01 01:59:60" qos="QOS1" sym="+"/>
 	<checkpoint loc="1020" val="2012-07-01 02:00:00" qos="QOS1" sym="+"/>
+	<checkpoint loc="1021" val="2012-07-01 02:00:01" qos="QOS1" sym="+"/>
+	<checkpoint loc="1022" val="2012-07-01 02:00:02" qos="QOS1" sym="+"/>
 
 </dcf77testdata>

@@ -106,6 +106,9 @@ private
 	-- reference time point
 	TM0: constant TM := Time_Of_Compilation;
 
+	procedure Inc_Sec_Leap_Second_Aware(Ctx: in out Minutelayer;
+					Telegram_1, Telegram_2: in Telegram;
+					Exch: in out TM_Exchange);
 	procedure Next_Minute_Coming(Ctx: in out Minutelayer; Telegram_1,
 			Telegram_2: in Telegram; DST_Delta_H: in out Integer);
 	function TM_To_Telegram_10min(T: in TM) return Telegram;

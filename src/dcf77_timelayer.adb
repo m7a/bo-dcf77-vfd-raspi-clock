@@ -27,6 +27,13 @@ package body DCF77_Timelayer is
 			-- before. We treat this like “non equal” although in
 			-- such cases, of course, minutes are indeed equal to
 			-- before.
+			--   TODO THIS LOGIC IS FLAWED: IN GENERAL THERE CAN BE
+			--        CASES WHERE LOWER LAYER PROPOSES SOMETHING
+			--        LIKE +20sec and this matches and in other
+			--        cases its “behind” by exactly one minute and
+			--        this matches, too. We must devise a correct
+			--        criterion here that also works in event of
+			--        leap seoncds ....
 			Min_EQ := Are_Minutes_Equal(Exch.Proposed, Ctx.Last) and
 						Exch.Proposed.S > Ctx.Last.S;
 			-- If not enabled just count the seconds dumbly...

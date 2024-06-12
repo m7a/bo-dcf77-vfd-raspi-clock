@@ -27,84 +27,12 @@ package body DCF77_Minutelayer is
 		Exch.Is_Leapsec  := False;
 		Exch.Is_New_Sec  := Has_New_Bitlayer_Signal;
 		Exch.DST_Delta_H := 0;
-		-- Always handle second if detected
+
 		if Has_New_Bitlayer_Signal then
-			-- Add one sec to current time handling leap seconds and
-			-- prev management.
-			--
-			-- Two options:
-			-- (a) double compute i.e. first +1sec then see if
-			--     telegram processing is compatible if not update.
-			-- (b) only compute +1sec if we are within a minute. if
-			--     we are at the beginning of a new minute then
-			--     _first_ try to process telegram and only revert
-			--     to +1 routine if that does not successfully yield
-			--     the current time to display.
-			--
-			-- CURSEL:
-			--     (a) double compute to allow setting prev minute
-			--     from the model for cases where secondlayer does
-			--     not provide us with one. This allows using the
-			--     model without the necessity to generate previous
-			--     date values.
-
-			if Ctx.Seconds_Since_Prev /= Unknown then
-				Inc_Saturated(Ctx.Seconds_Since_Prev, Prev_Max);
-			end if;
-
-			if Ctx.Leap_Sec_State >= 0 then
-				-- If leap second did not appear in time,
-				-- forget about it...
-				Ctx.Leap_Sec_State := Ctx.Leap_Sec_State + 1;
-				if Ctx.Leap_Sec_State >= Leap_Sec_Time_Limit
-									then
-					Ctx.Leap_Sec_State :=
-							No_Leap_Sec_Announced;
-					-- TODO x might be worth recording as
-					-- fault
-				end if;
-			end if;
-
-			-- We must pre-handle leap second because once we
-			-- increment Current we may set it to a wrong value
-			-- in event of leap seconds...
-			-- TODO X EXTERNALIZE FUNCTION AND FIX DESCRIPTION HERE!
-			-- Leapsec handling. Leap seconds are reported while the
-			-- preceding timestamp is being displayed. We cannot easily
-			-- detect this without risking seeing “ghost leap seconds”.
-			-- Hence in this implementation we chose to post-adjust the
-			-- time by not displaying the leap second but rather repeating
-			-- the same timestamp again. It may appear to the user as if
-			-- the clock stops for about ~3sec but it then continues its
-			-- normal processing beyond the leap second.
-			if Telegram_1.Valid = Valid_61 and
-					Ctx.Leap_Sec_State > 0 and
-					Ctx.Current.S = Sec_Last_In_Min then
-				Ctx.Current.S      := 60;
-				Exch.Proposed      := Ctx.Current;
-				Ctx.Leap_Sec_State := Leap_Sec_Processed;
-				Exch.Is_Leapsec    := True;
-			elsif Telegram_1.Value(Offset_Leap_Sec_Announce) = Bit_1 and
-					Ctx.Leap_Sec_State = No_Leap_Sec_Announced then
-				Ctx.Leap_Sec_State := Leap_Sec_Newly_Announced;
-			end if;
-
-			if not Exch.Is_Leapsec then
-				if Ctx.Current.S >= Sec_Last_In_Min then
-					Ctx.Next_Minute_Coming(Telegram_1,
-						Telegram_2, Exch.DST_Delta_H);
-				end if;
-				if Ctx.Leap_Sec_State /= Leap_Sec_Processed then
-					Advance_TM_By_Sec(Ctx.Current, 1);
-				end if;
-			end if;
-
-			-- Any successfully received 0 immediately kills leap sec
-			-- concerns
-			if Telegram_1.Value(Offset_Leap_Sec_Announce) = Bit_0 then
-				Ctx.Leap_Sec_State := No_Leap_Sec_Announced;
-			end if;
+			Ctx.Inc_Sec_Leap_Second_Aware(Telegram_1, Telegram_2,
+									Exch);
 		end if;
+
 		if Telegram_1.Valid /= Invalid then
 			-- It seems it may not be necessary to set this here
 			-- because in theory, New Telegram
@@ -128,9 +56,14 @@ package body DCF77_Minutelayer is
 				Ctx.EOH_DST_Switch := DST_No_Change;
 			end if;
 		end if;
+
+		-- When this is a leap second, the telegram contains info that
+		-- is only relevant for next second. Hence delay reporting what
+		-- we have decoded/computed for an additional second!
 		if not Exch.Is_Leapsec then
 			Exch.Proposed := Ctx.Current;
 		end if;
+
 		Exch.Is_Confident := Ctx.Current_QOS = QOS1;
 
 		-- maintain information about the statistics of the occurrence
@@ -143,6 +76,83 @@ package body DCF77_Minutelayer is
 					Ctx.QOS_Stats(Ctx.Current_QOS) + 1;
 		end if;
 	end Process;
+
+	-- Add one sec to current time handling leap seconds and prev management
+	--
+	-- Two options:
+	-- (a) double compute i.e. first +1sec then see if telegram processing
+	--     is compatible if not update.
+	-- (b) only compute +1sec if we are within a minute. if we are at the
+	--     beginning of a new minute then _first_ try to process telegram
+	--     and only revert to +1 routine if that does not successfully yield
+	--     the current time to display.
+	--
+	-- CURSEL:
+	--     (a) double compute to allow setting prev minute from the model
+	--     for cases where secondlayer does not provide us with on. This
+	--     allows using the model without the necessity to generate previous
+	--     date values.
+	procedure Inc_Sec_Leap_Second_Aware(Ctx: in out Minutelayer;
+					Telegram_1, Telegram_2: in Telegram;
+					Exch: in out TM_Exchange) is
+	begin
+		if Ctx.Seconds_Since_Prev /= Unknown then
+			Inc_Saturated(Ctx.Seconds_Since_Prev, Prev_Max);
+		end if;
+
+		if Ctx.Leap_Sec_State >= 0 then
+			-- If leap second did not appear in time,
+			-- forget about it...
+			Ctx.Leap_Sec_State := Ctx.Leap_Sec_State + 1;
+			if Ctx.Leap_Sec_State >= Leap_Sec_Time_Limit then
+				Ctx.Leap_Sec_State := No_Leap_Sec_Announced;
+				-- TODO x might be worth recording as fault
+			end if;
+		end if;
+
+		-- Leap seconds are reported while the preceding timestamp is
+		-- being displayed. Luckily, in event of leap second, the
+		-- information about the entire telegram is readily available
+		-- from secondlayer just in time when we need to display the
+		-- leap second. 
+		--   This means we must pre-handle leap second and derive the
+		-- “Proposed” value from it because once we increment Current we
+		-- may set it to a wrong value if this is currently a leap
+		-- second case. seconds... Still increment Current as to account
+		-- for the fact that the remainder of the code remains largely
+		-- oblivious of the leap second and we just delay reporting of
+		-- what we would have told next if we had not recognized the
+		-- leap second.
+
+		if Telegram_1.Valid = Valid_61 and Ctx.Leap_Sec_State > 0 and
+					Ctx.Current.S = Sec_Last_In_Min then
+			Ctx.Current.S      := 60;
+			Ctx.Leap_Sec_State := Leap_Sec_Processed;
+			Exch.Proposed      := Ctx.Current;
+			Exch.Is_Leapsec    := True;
+		elsif Telegram_1.Value(Offset_Leap_Sec_Announce) = Bit_1 and
+				Ctx.Leap_Sec_State = No_Leap_Sec_Announced then
+			Ctx.Leap_Sec_State := Leap_Sec_Newly_Announced;
+		end if;
+
+		if not Exch.Is_Leapsec and Ctx.Current.S >= Sec_Last_In_Min then
+			Ctx.Next_Minute_Coming(Telegram_1, Telegram_2,
+							Exch.DST_Delta_H);
+		end if;
+
+		if not Exch.Is_Leapsec then
+			if Ctx.Leap_Sec_State = Leap_Sec_Processed then
+				Ctx.Leap_Sec_State := No_Leap_Sec_Announced;
+			else
+				Advance_TM_By_Sec(Ctx.Current, 1);
+			end if;
+		end if;
+
+		-- Successfully received 0 immediately kills leap sec concerns.
+		if Telegram_1.Value(Offset_Leap_Sec_Announce) = Bit_0 then
+			Ctx.Leap_Sec_State := No_Leap_Sec_Announced;
+		end if;
+	end Inc_Sec_Leap_Second_Aware;
 
 	-- Store out_current as prev if +1 yields a new minute and our current
 	-- minute is X9 i.e. next minute will be Y0 with Y = X+1 (or more fields
