@@ -15,55 +15,58 @@ package body DCF77_Timelayer is
 	end Init;
 
 	procedure Process(Ctx: in out Timelayer; Exch: in TM_Exchange) is
-		Old: constant TM := Ctx.Before;
-		Min_EQ: Boolean;
 	begin
 		-- No update if no update
 		if Exch.Is_New_Sec then
-			Advance_TM_By_Sec(Ctx.Before, 1);
-			-- There is also the case of seconds going back that
-			-- indicates that the minutelayer suggests to set a
-			-- time not consistent with what we have observed
-			-- before. We treat this like “non equal” although in
-			-- such cases, of course, minutes are indeed equal to
-			-- before.
-			--   TODO THIS LOGIC IS FLAWED: IN GENERAL THERE CAN BE
-			--        CASES WHERE LOWER LAYER PROPOSES SOMETHING
-			--        LIKE +20sec and this matches and in other
-			--        cases its “behind” by exactly one minute and
-			--        this matches, too. We must devise a correct
-			--        criterion here that also works in event of
-			--        leap seoncds ....
-			Min_EQ := Are_Minutes_Equal(Exch.Proposed, Ctx.Last) and
-						Exch.Proposed.S > Ctx.Last.S;
-			-- If not enabled just count the seconds dumbly...
-			if Ctx.DCF77_Enabled then
-				if Min_EQ then
-					Ctx.Last := Exch.Proposed;
-					-- Nothing significant changed: Only
-					-- updates in the seconds. Output is per
-					-- what we prefer
-					if Ctx.Prefer_Seconds_From_Minutelayer
-					then
-						Ctx.Before := Ctx.Last;
-					end if;
-					-- Just so you know we leave QOS as-is
-				else
-					-- Else do real processing here
-					Ctx.Process_New_Minute(Exch, Old);
-				end if;
-			else
-				-- Effectively the outcome is ignored, but we
-				-- still maintain the counter s.t. we can switch
-				-- back to DCF77 processing more easily later.
-				if Min_EQ then
-					Ctx.Last := Exch.Proposed;
-				else
-					Ctx.Set_Last_And_Count(Exch.Proposed);
-				end if;
-			end if;
+			Ctx.Process_New_Sec(Exch);
 		end if;
 	end Process;
+
+	procedure Process_New_Sec(Ctx: in out Timelayer;
+							Exch: in TM_Exchange) is
+		Old: constant TM := Ctx.Before;
+
+		-- There is also the case of seconds going back that indicates
+		-- that the minutelayer suggests to set a time not consistent
+		-- with what we have observed before. We treat this like
+		-- “non equal” although in such cases, of course, minutes are
+		-- indeed equal to -- before.
+		Min_EQ: constant Boolean :=
+				Are_Minutes_Equal(Exch.Proposed, Ctx.Last) and
+				Exch.Proposed.S > Ctx.Last.S;
+	begin
+		-- In event that we output a leap second inc by “0” is
+		-- equivalent to increasing the leap second enabled timestamp
+		-- by 1 because 60 div 60 = 1 and 60 mod 60 = 0 -> increments
+		-- minute just fine...
+		Advance_TM_By_Sec(Ctx.Before,
+					(if Ctx.Before.S = 60 then 0 else 1));
+
+		-- If not enabled just count the seconds dumbly...
+		if Ctx.DCF77_Enabled then
+			if Min_EQ then
+				Ctx.Last := Exch.Proposed;
+				-- Nothing significant changed: Only updates in
+				-- the seconds. Output is per what we prefer
+				if Ctx.Prefer_Seconds_From_Minutelayer then
+					Ctx.Before := Ctx.Last;
+				end if;
+				-- Just so you know we leave QOS as-is
+			else
+				-- Else do real processing here
+				Ctx.Process_New_Minute(Exch, Old);
+			end if;
+		else
+			-- Effectively the outcome is ignored, but we
+			-- still maintain the counter s.t. we can switch
+			-- back to DCF77 processing more easily later.
+			if Min_EQ then
+				Ctx.Last := Exch.Proposed;
+			else
+				Ctx.Set_Last_And_Count(Exch.Proposed);
+			end if;
+		end if;
+	end Process_New_Sec;
 
 	-- A comparison that ignores the seconds value
 	function Are_Minutes_Equal(A, B: in TM) return Boolean is

@@ -39,8 +39,8 @@ private
 		Before: TM;      -- What we output
 	end record;
 
+	procedure Process_New_Sec(Ctx: in out Timelayer; Exch: in TM_Exchange);
 	function Are_Minutes_Equal(A, B: in TM) return Boolean;
-
 	procedure Process_New_Minute(Ctx: in out Timelayer;
 					Exch: in TM_Exchange; Old: in TM);
 	procedure Set_Last_And_Count(Ctx: in out Timelayer; Proposed: in TM);
