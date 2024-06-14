@@ -1,5 +1,7 @@
 with DCF77_TM_Layer_Shared;
 use  DCF77_TM_Layer_Shared;
+with DCF77_QOS_Stats;
+use  DCF77_QOS_Stats;
 
 package DCF77_Timelayer is
 
@@ -15,6 +17,7 @@ package DCF77_Timelayer is
 	function Is_DCF77_Enabled(Ctx: in Timelayer) return Boolean;
 	procedure Set_DCF77_Enabled(Ctx: in out Timelayer; En: in Boolean);
 	function Get_QOS_Sym(Ctx: in Timelayer) return Character;
+	function Get_QOS_Stats(Ctx: in Timelayer) return String;
 
 private
 
@@ -32,7 +35,8 @@ private
 		-- The minutelayer's or our own computed ones?
 		Prefer_Seconds_From_Minutelayer: Boolean;
 
-		QOS_Sym: Character; -- I/+/o/- QOS symbology
+		QOS_Sym:    Character; -- I/+/o/- QOS symbology
+		QOS_Record: QOS_Stats;
 
 		Last:   TM;      -- What we received from Timelayer
 		Ctr:    Natural; -- How many TM from Timelayer were consistent

@@ -4,19 +4,21 @@ with DCF77_SM_Layer_Shared;
 use  DCF77_SM_Layer_Shared;
 with DCF77_TM_Layer_Shared;
 use  DCF77_TM_Layer_Shared;
+with DCF77_QOS_Stats;
+use  DCF77_QOS_Stats;
 
 package DCF77_Minutelayer is
 
 	type QOS is (
-		QOS1,       -- +1 -- perfectly synchronized
-		QOS2,       -- +2 -- synchr. w/ minor disturbance
-		QOS3,       -- +3 -- synchronized from prev data
-		QOS4,       -- o4 -- recovered from prev
-		QOS5,       -- o5 -- async telegram match
-		QOS6,       -- o6 -- count from prev (fishy, see code!)
-		QOS7,       -- -7 -- async might match -1
-		QOS8,       -- -8 -- async might match +1
-		QOS9_ASYNC  -- -9 -- async count from last
+		QOS1,       -- perfectly synchronized
+		QOS2,       -- synchr. w/ minor disturbance
+		QOS3,       -- synchronized from prev data
+		QOS4,       -- recovered from prev
+		QOS5,       -- async telegram match
+		QOS6,       -- count from prev (fishy, see code!)
+		QOS7,       -- async might match -1
+		QOS8,       -- async might match +1
+		QOS9_ASYNC  -- async count from last
 	);
 
 	type Minutelayer is tagged limited private;
@@ -30,6 +32,7 @@ package DCF77_Minutelayer is
 	-- GUI interaction
 	procedure Set_TM_By_User_Input(Ctx: in out Minutelayer; T: in TM);
 	function Get_QOS_Sym(Ctx: in Minutelayer) return Character;
+	function Get_Fault(Ctx: in Minutelayer) return Natural;
 	function Get_QOS_Stats(Ctx: in Minutelayer) return String;
 
 -- Visible for testing only --
@@ -65,9 +68,6 @@ private
 	Leap_Sec_Newly_Announced: constant Integer := 0;
 	Leap_Sec_Time_Limit:      constant Integer := 3670;
 
-	type Stat_Entry is mod 2**32;
-	type QOS_Stats_Array is array(QOS) of Stat_Entry;
-
 	type Minutelayer is tagged limited record
 		-- Year Hundreds defaults to compile-time value but may be
 		-- changed by user input. Clock does not care if it by itself
@@ -97,7 +97,8 @@ private
 		-- >= 0 announced and n sec passed
 		Leap_Sec_State:         Integer;
 
-		QOS_Stats:              QOS_Stats_Array;
+		Num_Fault:              Natural;
+		QOS_Record:             QOS_Stats;
 	end record;
 
 	type Recovery is (Data_Complete, Data_Incomplete_For_Minute,

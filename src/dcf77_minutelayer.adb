@@ -16,7 +16,8 @@ package body DCF77_Minutelayer is
 		Ctx.Prev_Telegram          := (Valid => Invalid,
 						Value => (others => No_Signal));
 		Ctx.Leap_Sec_State         := No_Leap_Sec_Announced;
-		Ctx.QOS_Stats              := (others => 0);
+		Ctx.Num_Fault              := 0;
+		Init(Ctx.QOS_Record);
 	end Init;
 
 	procedure Process(Ctx: in out Minutelayer;
@@ -67,13 +68,13 @@ package body DCF77_Minutelayer is
 		Exch.Is_Confident := Ctx.Current_QOS = QOS1;
 
 		-- maintain information about the statistics of the occurrence
-		-- of the individual QOS levels TODO x UPDATE!
+		-- of QOS levels
 		if Has_New_Bitlayer_Signal then
-			if Ctx.QOS_Stats(Ctx.Current_QOS) = Stat_Entry'Last then
-				Ctx.QOS_Stats := (others => 0);
-			end if;
-			Ctx.QOS_Stats(Ctx.Current_QOS) :=
-					Ctx.QOS_Stats(Ctx.Current_QOS) + 1;
+			case Ctx.Current_QOS is
+			when QOS1       => Ctx.QOS_Record.Inc(Good);
+			when QOS9_ASYNC => Ctx.QOS_Record.Inc(Bad);
+			when others     => Ctx.QOS_Record.Inc(Intermediate);
+			end case;
 		end if;
 	end Process;
 
@@ -106,7 +107,7 @@ package body DCF77_Minutelayer is
 			Ctx.Leap_Sec_State := Ctx.Leap_Sec_State + 1;
 			if Ctx.Leap_Sec_State >= Leap_Sec_Time_Limit then
 				Ctx.Leap_Sec_State := No_Leap_Sec_Announced;
-				-- TODO x might be worth recording as fault
+				Inc_Saturated(Ctx.Num_Fault, 99);
 			end if;
 		end if;
 
@@ -780,35 +781,10 @@ package body DCF77_Minutelayer is
 		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
 	end Set_TM_By_User_Input;
 
-	-- TODO THIS SCREEN IS REALLY NOT USEFUL ANYMORE IT SHOULD BE REPLACED
-	--      BY SOMETHING MORE USEFUL (SUGGEST TO USE THREE COUNTERS
-	--      P1/PX/P9 -> helps more from experience)
+	function Get_Fault(Ctx: in Minutelayer)
+					return Natural is (Ctx.Num_Fault);
+
 	function Get_QOS_Stats(Ctx: in Minutelayer) return String is
-		type Sum_T is mod 2**64;
-
-		S1:   constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS1));
-		S23:  constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS2)) +
-					Sum_T(Ctx.QOS_Stats(QOS3));
-		S45:  constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS4)) +
-					Sum_T(Ctx.QOS_Stats(QOS5));
-		S678: constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS6)) +
-					Sum_T(Ctx.QOS_Stats(QOS7)) +
-					Sum_T(Ctx.QOS_Stats(QOS8));
-		S9:   constant Sum_T := Sum_T(Ctx.QOS_Stats(QOS9_ASYNC));
-
-		-- +1 avoid div 0 and 100%
-		Sum:  constant Sum_T := (S1 + S23 + S45 + S678 + S9) / 100 + 1;
-
-		P1:   constant Natural := Natural(S1   / Sum);
-		P23:  constant Natural := Natural(S23  / Sum);
-		P45:  constant Natural := Natural(S45  / Sum);
-		P678: constant Natural := Natural(S678 / Sum);
-		P9:   constant Natural := Natural(S9   / Sum);
-	begin
-		-- Format TBL >+1 23 45 678  9<
-		return  Num_To_Str_L2(P1)  & " " & Num_To_Str_L2(P23)  & " " &
-			Num_To_Str_L2(P45) & "  " & Num_To_Str_L2(P678) & " " &
-			Num_To_Str_L2(P9);
-	end Get_QOS_Stats;
+						(Ctx.QOS_Record.Format_Report);
 
 end DCF77_Minutelayer;

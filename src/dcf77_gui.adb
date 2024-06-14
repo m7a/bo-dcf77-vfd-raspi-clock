@@ -335,9 +335,7 @@ package body DCF77_GUI is
 	begin
 		case G.A is
 		when Select_Display =>
-			-- TODO DEBUG ONLY REPLACE BY ADD TIME LARGE...
 			G.Add_Main_Display;
-			--G.Add_Date(Underline_None);
 			G.Add_QOS(112, 0);
 			if G.S.Alarm.Is_Alarm_Enabled then
 				G.Add_AL(48, Underline_None);
@@ -441,14 +439,17 @@ package body DCF77_GUI is
 									1000)),
 			L2 => Num_To_Str_L4(G.S.LL.Get_Fault) & " " &
 				Num_To_Str_L4(G.S.Secondlayer.Get_Fault) &
-				"    " &
+				" " &
+				Num_To_Str_L2(G.S.Minutelayer.Get_Fault) &
+				" " &
 				Num_To_Str_L3(Natural(G.S.Light_Sensor_Reading))
 			);
 			G.Add_Menu(Menu_Home);
 		when Select_I_QOS =>
 			G.Add_Time_Small(0, 0, Underline_None);
-			G.Add_Info("QOSInfo", "+1 23 45 678  9",
-						G.S.Minutelayer.Get_QOS_Stats);
+			G.Add_Info("QOSInfo",
+					"M " & G.S.Minutelayer.Get_QOS_Stats,
+					"T " & G.S.Timelayer.Get_QOS_Stats);
 			G.Add_Menu(Menu_Home);
 		when Select_I_Last_1 =>
 			G.Add_Time_Small(0, 0, Underline_None);
@@ -490,7 +491,7 @@ package body DCF77_GUI is
 					"/" & Num_To_Str_L2(G.S.Datetime.D);
 		IU: Natural := G.Screen_Idx;
 	begin
-		-- Time custom format
+		-- Custom time format
 		IU := IU + 1;
 		G.Screen(IU) := (X => 0, Y => 0, F => Large, Msg =>
 				SB.To_Bounded_String(Str), others => <>);
@@ -500,7 +501,7 @@ package body DCF77_GUI is
 				Msg => SB.To_Bounded_String(Num_To_Str_L2(
 				G.S.Datetime.S)), others => <>);
 
-		-- Date custom format
+		-- Custom date format
 		IU := IU + 1;
 		G.Screen(IU) := (X => 88, Y => 16, F => Small,
 				Msg => SB.To_Bounded_String(Num_To_Str_L4(

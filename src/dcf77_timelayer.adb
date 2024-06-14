@@ -12,6 +12,7 @@ package body DCF77_Timelayer is
 		Ctx.Ctr                             := 0;
 		Ctx.QOS_Sym                         := 'I';
 		Ctx.Before                          := Time_Of_Compilation;
+		Init(Ctx.QOS_Record);
 	end Init;
 
 	procedure Process(Ctx: in out Timelayer; Exch: in TM_Exchange) is
@@ -66,6 +67,12 @@ package body DCF77_Timelayer is
 				Ctx.Set_Last_And_Count(Exch.Proposed);
 			end if;
 		end if;
+
+		case Ctx.QOS_Sym is
+		when '+'    => Ctx.QOS_Record.Inc(Good);
+		when 'o'    => Ctx.QOS_Record.Inc(Intermediate);
+		when others => Ctx.QOS_Record.Inc(Bad);
+		end case;
 	end Process_New_Sec;
 
 	-- A comparison that ignores the seconds value
@@ -162,5 +169,8 @@ package body DCF77_Timelayer is
 			Ctx.QOS_Sym                         := '-';
 		end if;
 	end Set_DCF77_Enabled;
+
+	function Get_QOS_Stats(Ctx: in Timelayer) return String is
+						(Ctx.QOS_Record.Format_Report);
 
 end DCF77_Timelayer;
