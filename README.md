@@ -72,6 +72,8 @@ Repository-Inhaltsübersicht
 	 +-- test_framework/           -- Automatische Testanwendung, siehe
 	 |                                Tests/Test-Framework
 	 |
+	 +-- xdev_font/                -- Quelldaten für eigene Schriftart
+	 |
 	 +-- xdev_impl1c/              -- alte C-Implementierung, 1. Versuch
 	 |
 	 +-- xdev_impl2c/              -- alte C-Implementierung, 2. Versuch

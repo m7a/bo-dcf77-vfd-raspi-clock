@@ -53,7 +53,7 @@ package body DCF77_GUI is
 		S.ALS.Init;
 		S.Alarm.Init(S.LL);
 
-		S.LL.Log("Ma_Sys.ma DCF77 VFD / INIT CTR=45");
+		S.LL.Log("Ma_Sys.ma DCF77 VFD / INIT CTR=46");
 		S.Disp.Update((1 => (X => 16, Y => 16, F => Small,
 				Msg => SB.To_Bounded_String(
 				"INIT CTR=45"), others => <>)));
@@ -335,99 +335,100 @@ package body DCF77_GUI is
 	begin
 		case G.A is
 		when Select_Display =>
-			G.Add_Time(0, 16, Large, Underline_None);
-			G.Add_Date(Underline_None);
-			G.Add_QOS(48);
+			-- TODO DEBUG ONLY REPLACE BY ADD TIME LARGE...
+			G.Add_Main_Display;
+			--G.Add_Date(Underline_None);
+			G.Add_QOS(112, 0);
 			if G.S.Alarm.Is_Alarm_Enabled then
 				G.Add_AL(48, Underline_None);
 			end if;
 		-- alarm --
 		when Select_Alarm =>
-			G.Add_Time(32, 16, Small, Underline_None);
+			G.Add_Time_Small(32, 16, Underline_None);
 			G.Add_Date(Underline_None);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, Underline_BTLR);
 			G.Add_Menu(Menu_Next);
 		when Select_AL_H =>
-			G.Add_Time(32, 16, Small, Underline_None);
+			G.Add_Time_Small(32, 16, Underline_None);
 			G.Add_Date(Underline_None);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, 2);
 			G.Add_Menu(Menu_Edit);
 		when Select_AL_I =>
-			G.Add_Time(32, 16, Small, Underline_None);
+			G.Add_Time_Small(32, 16, Underline_None);
 			G.Add_Date(Underline_None);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, 4);
 			G.Add_Menu(Menu_Edit);
 		-- datetime --
 		when Select_Datetime =>
-			G.Add_Time(32, 16, Small, Underline_BLR);
+			G.Add_Time_Small(32, 16, Underline_BLR);
 			G.Add_Date(Underline_TLR);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Next);
 		when Select_DT_H =>
-			G.Add_Time(32, 16, Small, 1);
+			G.Add_Time_Small(32, 16, 1);
 			G.Add_Date(Underline_None);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_I =>
-			G.Add_Time(32, 16, Small, 3);
+			G.Add_Time_Small(32, 16, 3);
 			G.Add_Date(Underline_None);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_S =>
-			G.Add_Time(32, 16, Small, 5);
+			G.Add_Time_Small(32, 16, 5);
 			G.Add_Date(Underline_None);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_YH =>
-			G.Add_Time(32, 16, Small, Underline_None);
+			G.Add_Time_Small(32, 16, Underline_None);
 			G.Add_Date(1);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_Y =>
-			G.Add_Time(32, 16, Small, Underline_None);
+			G.Add_Time_Small(32, 16, Underline_None);
 			G.Add_Date(2);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_M =>
-			G.Add_Time(32, 16, Small, Underline_None);
+			G.Add_Time_Small(32, 16, Underline_None);
 			G.Add_Date(4);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		when Select_DT_D =>
-			G.Add_Time(32, 16, Small, Underline_None);
+			G.Add_Time_Small(32, 16, Underline_None);
 			G.Add_Date(6);
-			G.Add_QOS(32);
+			G.Add_QOS(0, 32);
 			G.Add_AL(32, Underline_None);
 			G.Add_Menu(Menu_Edit);
 		-- options --
 		when Select_Options =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Option_DCF77(Underline_TLR);
 			G.Add_Option_RFU(Underline_BLR);
 			G.Add_Menu(Menu_Next);
 		when Select_OPT_DCF77_EN =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Option_DCF77(1);
 			G.Add_Option_RFU(Underline_None);
 			G.Add_Menu(Menu_Toggle);
 		when Select_OPT_RFU_EN =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Option_DCF77(Underline_None);
 			G.Add_Option_RFU(1);
 			G.Add_Menu(Menu_Toggle);
 		-- info --
 		when Select_Info =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Info(
 			Title => "CTRInfo",
 			L1 => Num_To_Str_L4(G.S.Bitlayer.Get_Unidentified) &
@@ -445,20 +446,20 @@ package body DCF77_GUI is
 			);
 			G.Add_Menu(Menu_Home);
 		when Select_I_QOS =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Info("QOSInfo", "+1 23 45 678  9",
 						G.S.Minutelayer.Get_QOS_Stats);
 			G.Add_Menu(Menu_Home);
 		when Select_I_Last_1 =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Last_1;
 			G.Add_Menu(Menu_Home);
 		when Select_I_Last_2 =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Last_2;
 			G.Add_Menu(Menu_Home);
 		when Select_I_Ver_1 =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			-- indentation exceeded
 			G.Add_Info("Ver.1/3",
 			"Version 01.00.00", "Date" &
@@ -469,29 +470,57 @@ package body DCF77_GUI is
 			Num_To_Str_L2(Time_Of_Compilation.I));
 			G.Add_Menu(Menu_Home);
 		when Select_I_Ver_2 =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Info("Ver.2/3",
 					"(c) 2018-2024", "    Ma_Sys.ma");
 			G.Add_Menu(Menu_Home);
 		when Select_I_Ver_3 =>
-			G.Add_Time(0, 0, Small, Underline_None);
+			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Info("Ver.3/3",
 					"Further info:", "info@masysma.net");
 			G.Add_Menu(Menu_Home);
 		end case;
 	end Update_Screen;
 
-	-- H (1), M (3), S (5)
-	procedure Add_Time(G: in out GUI; XI: in Pos_X; YI: in Pos_Y;
-			FI: in Font_Size; Underline: in Underline_Info) is
-		CW: constant Pos_X             := Get_Letter_Width(FI);
+	-- No further options, Main is always displayed the same way...
+	procedure Add_Main_Display(G: in out GUI) is
+		Str: constant String(1 .. 5) := Num_To_Str_L2(G.S.Datetime.H) &
+					":" & Num_To_Str_L2(G.S.Datetime.I);
+		MD:  constant String(1 .. 5) := Num_To_Str_L2(G.S.Datetime.M) &
+					"/" & Num_To_Str_L2(G.S.Datetime.D);
+		IU: Natural := G.Screen_Idx;
+	begin
+		-- Time custom format
+		IU := IU + 1;
+		G.Screen(IU) := (X => 0, Y => 0, F => Large, Msg =>
+				SB.To_Bounded_String(Str), others => <>);
+
+		IU := IU + 1;
+		G.Screen(IU) := (X => 80, Y => 0, F => Small,
+				Msg => SB.To_Bounded_String(Num_To_Str_L2(
+				G.S.Datetime.S)), others => <>);
+
+		-- Date custom format
+		IU := IU + 1;
+		G.Screen(IU) := (X => 88, Y => 16, F => Small,
+				Msg => SB.To_Bounded_String(Num_To_Str_L4(
+				G.S.Datetime.Y)), others => <>);
+		IU := IU + 1;
+		G.Screen(IU) := (X => 84, Y => 32, F => Small,
+				Msg => SB.To_Bounded_String(MD), others => <>);
+
+		G.Screen_Idx := IU;
+	end Add_Main_Display;
+
+	procedure Add_Time_Small(G: in out GUI; XI: in Pos_X; YI: in Pos_Y;
+						Underline: in Underline_Info) is
 		SP: constant SB.Bounded_String := SB.To_Bounded_String(":");
 		IU:          Natural           := G.Screen_Idx;
 	begin
 		-- H (1)
 		if not (Underline = 1 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
-			G.Screen(IU) := (X => XI, Y => YI, F => FI,
+			G.Screen(IU) := (X => XI, Y => YI, F => Small,
 					Msg => SB.To_Bounded_String(
 						Num_To_Str_L2(G.S.Datetime.H)),
 					ULB => Underline = 1 or
@@ -501,12 +530,14 @@ package body DCF77_GUI is
 		end if;
 		-- Sep (2)
 		IU           := IU + 1;
-		G.Screen(IU) := (X => XI + CW * 2, Y => YI, F => FI, Msg => SP,
+		G.Screen(IU) := (X => XI + Letter_Width * 2, Y => YI,
+				F => Small, Msg => SP,
 				ULB => Underline = Underline_BLR, others => <>);
 		-- I (3)
 		if not (Underline = 3 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
-			G.Screen(IU) := (X => XI + CW * 3, Y => YI, F => FI,
+			G.Screen(IU) := (X => XI + Letter_Width * 3, Y => YI,
+					F => Small,
 					Msg => SB.To_Bounded_String(
 						Num_To_Str_L2(G.S.Datetime.I)),
 					ULB => Underline = 3 or
@@ -515,12 +546,14 @@ package body DCF77_GUI is
 		end if;
 		-- Sep (4)
 		IU           := IU + 1;
-		G.Screen(IU) := (X => XI + CW * 5, Y => YI, F => FI, Msg => SP,
+		G.Screen(IU) := (X => XI + Letter_WIdth * 5, Y => YI,
+				F => Small, Msg => SP,
 				ULB => Underline = Underline_BLR, others => <>);
 		-- S (5)
 		if not (Underline = 5 and G.Blink_Value > Blink_Lim) then
 			IU           := IU + 1;
-			G.Screen(IU) := (X => XI + CW * 6, Y => YI, F => FI,
+			G.Screen(IU) := (X => XI + Letter_Width * 6, Y => YI,
+					F => Small,
 					Msg => SB.To_Bounded_String(
 						Num_To_Str_L2(G.S.Datetime.S)),
 					ULB => Underline = 5 or
@@ -529,7 +562,7 @@ package body DCF77_GUI is
 					others => <>);
 		end if;
 		G.Screen_Idx := IU;
-	end Add_Time;
+	end Add_Time_Small;
 
 	-- YH: 1, Y:  2, M:  4, D:  6
 	procedure Add_Date(G: in out GUI; Underline: in Underline_Info) is
@@ -591,12 +624,12 @@ package body DCF77_GUI is
 		G.Screen_Idx := IU;
 	end Add_Date;
 
-	procedure Add_QOS(G: in out GUI; YI: in Pos_Y) is
+	procedure Add_QOS(G: in out GUI; XI: in Pos_X; YI: in Pos_Y) is
 		QOS_Info: constant String(1..2) := (G.S.Timelayer.Get_QOS_Sym,
 						G.S.Minutelayer.Get_QOS_Sym);
 	begin
 		G.Screen_Idx           := G.Screen_Idx + 1;
-		G.Screen(G.Screen_Idx) := (X => 0, Y => YI,
+		G.Screen(G.Screen_Idx) := (X => XI, Y => YI,
 					Msg => SB.To_Bounded_String(QOS_Info),
 					others => <>);
 	end Add_QOS;
@@ -608,8 +641,8 @@ package body DCF77_GUI is
 	begin
 		-- “AL” Prefix (1)
 		IU := IU + 1;
-		G.Screen(IU) := (X => 72, Y => YI,
-				Msg => SB.To_Bounded_String("AL"),
+		G.Screen(IU) := (X => 80, Y => YI,
+				Msg => SB.To_Bounded_String("A"),
 				ULB | ULL | ULT => Underline = Underline_BTLR,
 				others => <>);
 		-- H (2)

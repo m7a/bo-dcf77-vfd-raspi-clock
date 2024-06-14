@@ -1,0 +1,3 @@
+display width = 128
+right side panel = 40px wide
+left side panel = 88px wide @four characters means at most w=20px/char better w=18px h=64px

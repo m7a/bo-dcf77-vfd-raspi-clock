@@ -106,10 +106,11 @@ private
 	procedure Process_Navigation_Inputs(G: in out GUI;
 					Next_Edit, Left, Right: in Boolean);
 	procedure Update_Screen(G: in out GUI);
-	procedure Add_Time(G: in out GUI; XI: in Pos_X; YI: in Pos_Y;
-				FI: in Font_Size; Underline: in Underline_Info);
+	procedure Add_Main_Display(G: in out GUI);
+	procedure Add_Time_Small(G: in out GUI; XI: in Pos_X; YI: in Pos_Y;
+						Underline: in Underline_Info);
 	procedure Add_Date(G: in out GUI; Underline: in Underline_Info);
-	procedure Add_QOS(G: in out GUI; YI: in Pos_Y);
+	procedure Add_QOS(G: in out GUI; XI: in Pos_X; YI: in Pos_Y);
 	procedure Add_AL(G: in out GUI; YI: in Pos_Y;
 						Underline: in Underline_Info);
 	procedure Add_Menu(G: in out GUI; Lbl: in Menu_Green);

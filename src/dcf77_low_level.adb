@@ -4,8 +4,6 @@ with HAL.UART;
 with RP_Interrupts;
 with RP2040_SVD.TIMER;
 with RP2040_SVD.Interrupts;
-with Interfaces;
-use  Interfaces;
 
 with DCF77_Functions;
 use  DCF77_Functions; -- Inc_Saturated
@@ -199,53 +197,19 @@ package body DCF77_Low_Level is
 			Val * RP.ADC.Microvolts(Light_Value'Last) / 3_300_000));
 	end Read_Light_Sensor;
 
-	-- The low level functions (chip) only support msb first, but the
-	-- display module requires lsb first. These conversion function should
-	-- do the job clearly and efficiently.
-	function Reverse_Bits_8(V: in U8) return U8 is (
-		Shift_Left (V and 16#01#, 7) or Shift_Right(V and 16#80#, 7) or
-		Shift_Left (V and 16#02#, 5) or Shift_Right(V and 16#40#, 5) or
-		Shift_Left (V and 16#04#, 3) or Shift_Right(V and 16#20#, 3) or
-		Shift_Left (V and 16#08#, 1) or Shift_Right(V and 16#10#, 1));
-
-	function Reverse_Bits_16(V: in U16) return U16 is (
-		U16(Reverse_Bits_8(U8(Shift_Right(V and 16#ff00#, 8)))) or
-		Shift_Left(U16(Reverse_Bits_8(U8(V and 16#00ff#))), 8));
-
-	function Reverse_Bits_32(V: in U32) return U32 is (
-		U32(Reverse_Bits_16(U16(Shift_Right(V and 16#ffff0000#, 16))))
-		or
-		Shift_Left(U32(Reverse_Bits_16(U16(V and 16#0000ffff#))), 16));
-
-	procedure SPI_Display_Transfer_Gen(Ctx: in out LL; Send_Value: in Num;
+	procedure SPI_Display_Transfer_Reversed(Ctx: in out LL;
+						Send_Value: in Bytes;
 						Mode: in SPI_Display_Mode) is
 		Status: HAL.SPI.SPI_Status;
-		Value_Rev: Num := Reverse_Bits(Send_Value);
-		Data_Out: HAL.SPI.SPI_Data_8b(1 .. Len);
-		for Data_Out'Address use Value_Rev'Address;
+		Data_Out: HAL.SPI.SPI_Data_8b(1 .. Send_Value'Length);
+		for Data_Out'Address use Send_Value'Address;
 	begin
 		case Mode is
 		when Control => Control_Or_Data.Set;
 		when Data    => Control_Or_Data.Clear;
 		end case;
 		SPI_Port.Transmit(Data_Out, Status);
-	end SPI_Display_Transfer_Gen;
-
-	procedure SPI_Display_Transfer_U8 is
-		new SPI_Display_Transfer_Gen(U8, 1, Reverse_Bits_8'Access);
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U8;
-				Mode: in SPI_Display_Mode)
-				renames SPI_Display_Transfer_U8;
-	procedure SPI_Display_Transfer_U16 is
-		new SPI_Display_Transfer_Gen(U16, 2, Reverse_Bits_16'Access);
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U16;
-				Mode: in SPI_Display_Mode)
-				renames SPI_Display_Transfer_U16;
-	procedure SPI_Display_Transfer_U32 is
-		new SPI_Display_Transfer_Gen(U32, 4, Reverse_Bits_32'Access);
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U32;
-				Mode: in SPI_Display_Mode)
-				renames SPI_Display_Transfer_U32;
+	end SPI_Display_Transfer_Reversed;
 
 	procedure Log(Ctx: in out LL; Msg: in String) is
 		Msg_Cpy: constant String := Msg & Character'Val(16#0d#) &

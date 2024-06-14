@@ -15,6 +15,7 @@ package DCF77_Low_Level is
 
 	type Time        is new RP.Timer.Time;
 	type Light_Value is new Integer range 0 .. 100;
+	type Bytes       is array (Natural range <>) of U8;
 
 	type LL is tagged limited private;
 	type LLP is access all LL;
@@ -41,16 +42,9 @@ package DCF77_Low_Level is
 	procedure Set_Buzzer_Enabled(Ctx: in out LL; Enabled: in Boolean);
 	procedure Set_Alarm_LED_Enabled(Ctx: in out LL; Enabled: in Boolean);
 
-	-- Display management for common word sizes
-	-- These write with data order msb first (most significant bit first)
-	-- The actual display expects lsb first -> must convert before using
-	-- these transfer functions.
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U8;
-						Mode: in SPI_Display_Mode);
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U16;
-						Mode: in SPI_Display_Mode);
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U32;
-						Mode: in SPI_Display_Mode);
+	-- New SPI display transfer API to replace all the old approaches
+	procedure SPI_Display_Transfer_Reversed(Ctx: in out LL;
+			Send_Value: in Bytes; Mode: in SPI_Display_Mode);
 
 	function Get_Fault(Ctx: in out LL) return Natural;
 
@@ -59,17 +53,6 @@ package DCF77_Low_Level is
 	procedure Debug_Dump_Interrupt_Info(Ctx: in out LL);
 
 private
-
-	-- No idea why this warning is generated here, but it does not belong
-	-- here...
-	pragma Warnings(Off, "formal parameter ""Ctx"" is not referenced");
-	generic
-		type Num is private;
-		Len: Natural;
-		Reverse_Bits: access function (V: in Num) return Num;
-	procedure SPI_Display_Transfer_Gen(Ctx: in out LL; Send_Value: in Num;
-						Mode: in SPI_Display_Mode);
-	pragma Warnings(On,  "formal parameter ""Ctx"" is not referenced");
 
 	procedure Handle_DCF_Interrupt;
 

@@ -10,6 +10,7 @@ package DCF77_Low_Level is
 
 	type Time        is new Interfaces.Unsigned_64;
 	type Light_Value is new Integer range 0 .. 100;
+	type Bytes       is array (Natural range <>) of U8;
 
 	type LL is tagged limited private;
 	type LLP is access all LL;
@@ -36,16 +37,8 @@ package DCF77_Low_Level is
 	procedure Set_Buzzer_Enabled(Ctx: in out LL; Enabled: in Boolean);
 	procedure Set_Alarm_LED_Enabled(Ctx: in out LL; Enabled: in Boolean);
 
-	-- Display management for common word sizes
-	-- These write with data order msb first (most significant bit first)
-	-- The actual display expects lsb first -> must convert before using
-	-- these transfer functions.
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U8;
-						Mode: in SPI_Display_Mode);
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U16;
-						Mode: in SPI_Display_Mode);
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U32;
-						Mode: in SPI_Display_Mode);
+	procedure SPI_Display_Transfer_Reversed(Ctx: in out LL;
+			Send_Value: in Bytes; Mode: in SPI_Display_Mode);
 
 	function Get_Fault(Ctx: in out LL) return Natural;
 

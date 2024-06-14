@@ -26,8 +26,8 @@ use  Ada.Assertions;
 -- set_buzzer_enabled,<0|1>
 -- set_alarm_led_enabled,<0|1>
 -- spi08,<c|d>,<0..255>
--- spi16,<c|d>,<0..65535>
--- spi32,<c|d>,<0..4294967295>
+-- ~~spi16,<c|d>,<0..65535>~~
+-- ~~spi32,<c|d>,<0..4294967295>~~
 -- log,<msg>
 
 package body DCF77_Low_Level is
@@ -157,12 +157,25 @@ package body DCF77_Low_Level is
 		Cast(Ctx, "set_alarm_led_enabled," & Bool2Char(Enabled));
 	end Set_Alarm_LED_Enabled;
 
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U8;
-						Mode: in SPI_Display_Mode) is
+	procedure SPI_Display_Transfer_Reversed(Ctx: in out LL;
+			Send_Value: in Bytes; Mode: in SPI_Display_Mode) is
+		-- For legacy reasons use spi8 and reverse bits...
+		function Reverse_Bits_8(V: in U8) return U8 is (
+			Shift_Left (V and 16#01#, 7) or
+						Shift_Right(V and 16#80#, 7) or
+			Shift_Left (V and 16#02#, 5) or
+						Shift_Right(V and 16#40#, 5) or
+			Shift_Left (V and 16#04#, 3) or
+						Shift_Right(V and 16#20#, 3) or
+			Shift_Left (V and 16#08#, 1) or
+						Shift_Right(V and 16#10#, 1));
+		MC: constant Character := Mode2Char(Mode);
 	begin
-		Cast(Ctx, "spi08," & Mode2Char(Mode) & "," &
-							U8'Image(Send_Value));
-	end SPI_Display_Transfer;
+		for I in Send_Value'Range loop
+			Cast(Ctx, "spi08," & MC & "," &
+				U8'Image(Reverse_Bits_8(Send_Value(I))));
+		end loop;
+	end SPI_Display_Transfer_Reversed;
 
 	function Mode2Char(M: in SPI_Display_Mode) return Character is
 	begin
@@ -171,20 +184,6 @@ package body DCF77_Low_Level is
 		when Data    => return 'd';
 		end case;
 	end Mode2Char;
-
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U16;
-						Mode: in SPI_Display_Mode) is
-	begin
-		Cast(Ctx, "spi16," & Mode2Char(Mode) & "," &
-							U16'Image(Send_Value));
-	end SPI_Display_Transfer;
-
-	procedure SPI_Display_Transfer(Ctx: in out LL; Send_Value: in U32;
-						Mode: in SPI_Display_Mode) is
-	begin
-		Cast(Ctx, "spi32," & Mode2Char(Mode) & "," &
-							U32'Image(Send_Value));
-	end SPI_Display_Transfer;
 
 	function Get_Fault(Ctx: in out LL) return Natural is
 					(Natural'Value(Call(Ctx, "get_fault")));

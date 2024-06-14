@@ -40,12 +40,18 @@ package body DCF77_Display is
 	end Send_Seq;
 
 	procedure Send_U8(Ctx: in out Disp; Seq: in Sequence_Member) is
-		use type U8;
+		Val: constant Bytes(1 .. 1) := (1 => Reverse_Bits_8(Seq.Value));
 	begin
-		Ctx.LL.SPI_Display_Transfer(Seq.Value, Seq.Mode);
+		Ctx.LL.SPI_Display_Transfer_Reversed(Val, Seq.Mode);
 		Ctx.LL.Delay_Micros(if Seq.Mode = Control and
 				Seq.Value = GP9002_Clearscreen then 270 else 1);
 	end Send_U8;
+
+	function Reverse_Bits_8(V: in U8) return U8 is (
+		Shift_Left(V and 16#01#, 7) or Shift_Right(V and 16#80#, 7) or
+		Shift_Left(V and 16#02#, 5) or Shift_Right(V and 16#40#, 5) or
+		Shift_Left(V and 16#04#, 3) or Shift_Right(V and 16#20#, 3) or
+		Shift_Left(V and 16#08#, 1) or Shift_Right(V and 16#10#, 1));
 
 	procedure Update(Ctx: in out Disp; It: in Items;
 					New_Brightness: in Brightness
@@ -77,43 +83,29 @@ package body DCF77_Display is
 		end case;
 
 		-- clear old screen
-		Ctx.Write_Zero(Shift_Left(U16(Old_Vscreen), 10), 16#400#);
+		Ctx.Set_Address(Shift_Left(U16(Old_Vscreen), 10));
+		Ctx.LL.SPI_Display_Transfer_Reversed(Blank_Data, Data);
 	end Update;
 
 	procedure Add(Ctx: in out Disp; Item: in Display_Item) is
-		use type U32;
-
+		-- constants relevant for special case which is fixed to small
+		-- font size for now
 		Is_Special:   constant Boolean := Item.ULB or Item.ULT or
 							Item.ULL or Item.ULR;
-		Letter_Width: constant Pos_X := Get_Letter_Width(Item.F);
 
 		-- for now we blindly assume y % 8 = 0!
 		Addr:         U16 := U16(Item.X) * 8 + U16(Item.Y) / 8 +
 					Shift_Left(U16(Ctx.Vscreen), 10);
 
-		procedure Add_Simple(C: in Character) is
-		begin
-			for RX in 1 .. Letter_Width loop
-				Ctx.Set_Address(Addr);
-				case Item.F is
-				when Small => Ctx.LL.SPI_Display_Transfer(
-						Font.Small_Data(C)(RX), Data);
-				when Large => Ctx.LL.SPI_Display_Transfer(
-						Font.Large_Data(C)(RX), Data);
-				end case;
-				Ctx.LL.Delay_Micros(1);
-				Addr := Addr + 8;
-			end loop;
-		end Add_Simple;
-
 		-- For simplicity draw special stuff always as small
 		procedure Add_Special(C: in Character;
 						Line_L, Line_R: in Boolean) is
 			Line: U16;
+			L_Array: Bytes(1 .. 2);
+			for L_Array'Address use Line'Address;
 		begin
 			for RX in 1 .. Letter_Width loop
-				Line := (if (RX = 1 and then Line_L)
-						or else
+				Line := (if (RX = 1 and then Line_L) or else
 					    (RX = Letter_Width and then Line_R)
 					then (16#fffc#)
 					else Font.Small_Data(C)(RX));
@@ -123,12 +115,40 @@ package body DCF77_Display is
 				if Item.ULT then
 					Line := Line or 16#8000#;
 				end if;
+				Line := Reverse_Bits_16(Line);
 				Ctx.Set_Address(Addr);
-				Ctx.LL.SPI_Display_Transfer(Line, Data);
+				Ctx.LL.SPI_Display_Transfer_Reversed(L_Array,
+									Data);
 				Ctx.LL.Delay_Micros(1);
 				Addr := Addr + 8;
 			end loop;
 		end Add_Special;
+
+		procedure Add_Small(C: in Character) is
+			Line: U16;
+			L_Array: Bytes(1 .. 2);
+			for L_Array'Address use Line'Address;
+		begin
+			for RX in 1 .. Letter_Width loop
+				Line := Reverse_Bits_16(Font.Small_Data(C)(RX));
+				Ctx.Set_Address(Addr);
+				Ctx.LL.SPI_Display_Transfer_Reversed(L_Array,
+									Data);
+				Ctx.LL.Delay_Micros(1);
+				Addr := Addr + 8;
+			end loop;
+		end Add_Small;
+
+		procedure Add_Large(C: in Character) is
+			Value: constant Bytes :=
+				(if C = ':' then Large_Font_Data(C)(1 .. 16)
+				else Large_Font_Data(C));
+		begin
+			Ctx.Set_Address(Addr);
+			Ctx.LL.SPI_Display_Transfer_Reversed(Value, Data);
+			Ctx.LL.Delay_Micros(1);
+			Addr := Addr + Value'Length + 8;
+		end Add_Large;
 	begin
 		if Is_Special then
 			for I in 1 .. SB.Length(Item.Msg) loop
@@ -138,14 +158,22 @@ package body DCF77_Display is
 							and then Item.ULR);
 			end loop;
 		else
-			for I in 1 .. SB.Length(Item.Msg) loop
-				Add_Simple(SB.Element(Item.Msg, I));
-			end loop;
+			case Item.F is
+			when Small =>
+				for I in 1 .. SB.Length(Item.Msg) loop
+					Add_Small(SB.Element(Item.Msg, I));
+				end loop;
+			when Large =>
+				for I in 1 .. SB.Length(Item.Msg) loop
+					Add_Large(SB.Element(Item.MSG, I));
+				end loop;
+			end case;
 		end if;
 	end Add;
 
-	function Get_Letter_Width(F: in Font_Size) return Pos_X is
-						(if F = Large then 16 else 8);
+	function Reverse_Bits_16(V: in U16) return U16 is (
+		U16(Reverse_Bits_8(U8(Shift_Right(V and 16#ff00#, 8)))) or
+		Shift_Left(U16(Reverse_Bits_8(U8(V and 16#00ff#))), 8));
 
 	procedure Set_Address(Ctx: in out Disp; Addr: in U16) is
 	begin
@@ -157,13 +185,5 @@ package body DCF77_Display is
 			(GP9002_Datawrite,                     Control)
 		));
 	end Set_Address;
-
-	procedure Write_Zero(Ctx: in out Disp; Addr: in U16; N: in U16) is
-	begin
-		Ctx.Set_Address(Addr);
-		for I in 1 .. N loop
-			Ctx.Send_U8((16#00#, Data));
-		end loop;
-	end Write_Zero;
 
 end DCF77_Display;
