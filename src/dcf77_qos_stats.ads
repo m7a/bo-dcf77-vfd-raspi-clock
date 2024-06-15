@@ -10,7 +10,6 @@ package DCF77_QOS_Stats is
 private
 
 	Length_Of_Day: constant Integer := 3600 * 24;
-	Timer_Disabled: constant Integer := -1;
 
 	type QOS_Stats is tagged limited record
 		Timer:                  Integer;

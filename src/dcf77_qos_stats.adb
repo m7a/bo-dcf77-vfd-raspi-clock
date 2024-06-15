@@ -5,7 +5,7 @@ package body DCF77_QOS_Stats is
 
 	procedure Init(Ctx: in out QOS_Stats) is
 	begin
-		Ctx.Timer                  := Timer_Disabled;
+		Ctx.Timer                  := 0;
 		Ctx.Ctr_Intermediate       := 0;
 		Ctx.Ctr_Bad                := 0;
 		Ctx.Ctr_Days_With_Non_Good := 0;
