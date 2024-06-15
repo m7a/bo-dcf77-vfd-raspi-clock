@@ -11,9 +11,9 @@ package body DCF77_Functions is
 			(Digit_Lut(Num / 1000), Digit_Lut((Num mod 1000) / 100),
 			Digit_Lut((Num mod 100) / 10), Digit_Lut(Num mod 10));
 
-	function Num_To_Str_L3(Num: in Natural) return String is
-			(Digit_Lut((Num mod 1000) / 100),
-			Digit_Lut((Num mod 100) / 10), Digit_Lut(Num mod 10));
+	--function Num_To_Str_L3(Num: in Natural) return String is
+	--		(Digit_Lut((Num mod 1000) / 100),
+	--		Digit_Lut((Num mod 100) / 10), Digit_Lut(Num mod 10));
 
 	function Num_To_Str_L2(Num: in Natural) return String is
 			(Digit_Lut(Num / 10), Digit_Lut(Num mod 10));

@@ -17,6 +17,7 @@ with DCF77_Test_Support;
 use  DCF77_Test_Support;
 with DCF77_Test_Data;
 with DCF77_Minutelayer_Unit_Test;
+with DCF77_QOS_Stats_Unit_Test;
 
 procedure DCF77_Test_Runner is
 
@@ -318,6 +319,7 @@ procedure DCF77_Test_Runner is
 
 	procedure Run_Unit_Tests is
 	begin
+		DCF77_QOS_Stats_Unit_Test.Run;
 		DCF77_Minutelayer_Unit_Test.Run;
 	end Run_Unit_Tests;
 
