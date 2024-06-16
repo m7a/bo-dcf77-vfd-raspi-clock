@@ -25,56 +25,56 @@ Antenne auch bei schlechten Empfangsbedingungen möglich ist. Weiterhin ist der
 DCF77-Empfang kontinuierlich aktiv, sodass der Wechsel der Sekunden in der
 Anzeige mit dem Empfang der Signalpulse synchron erfolgt.
 
-![Ansicht der fertig aufgebauten Uhr](dcf77vfd_raspi_clock_att/picdetail2.jpg)
+![Ansicht der fertig aufgebauten Uhr](dcf77_vfd_raspi_clock_att/picdetail2.jpg)
 
 Repository-Inhaltsübersicht
 ===========================
 
 	bo-dcf77/
 	 |
-	 +-- dcf77vfd_raspi_block_att/ -- Ressourcendateien zur Webseite
+	 +-- dcf77_vfd_raspi_block_att/ -- Ressourcendateien zur Webseite
 	 |
-	 +-- doc_gui_statechart/       -- Zustandsiagramm, siehe Abschnitt
-	 |                                Bedienungsanleitung/Menünavigation
+	 +-- doc_gui_statechart/        -- Zustandsiagramm, siehe Abschnitt
+	 |                                 Bedienungsanleitung/Menünavigation
 	 |
-	 +-- release/                  -- Gesicherter Firmware-Binärstand
+	 +-- release/                   -- Gesicherter Firmware-Binärstand
 	 |
-	 +-- src/                      -- Firmwarequelltext
+	 +-- src/                       -- Firmwarequelltext
 	 |
-	 +-- src_simulated/            -- Zusatzdateien für Kompilierung zur
-	 |                                Ausführung auf einem PC-System
+	 +-- src_simulated/             -- Zusatzdateien für Kompilierung zur
+	 |                                 Ausführung auf einem PC-System
 	 |
-	 +-- src_simulated_gui/        -- Java-Simulationsanwendung, siehe
-	 |                                Tests/Simulator
+	 +-- src_simulated_gui/         -- Java-Simulationsanwendung, siehe
+	 |                                 Tests/Simulator
 	 |
-	 +-- telegram_editor/          -- (Java) DCF77-Telegrammeditor, siehe
-	 |                                Tests/Telegramm-Editor
+	 +-- telegram_editor/           -- (Java) DCF77-Telegrammeditor, siehe
+	 |                                 Tests/Telegramm-Editor
 	 |
-	 +-- test/                     -- Individuelle/Spezielle Testprogramme
-	 |                                (idr. uninteressant für Benutzer)
+	 +-- test/                      -- Individuelle/Spezielle Testprogramme
+	 |                                 (idr. uninteressant für Benutzer)
 	 |
-	 +-- test_data/                -- DCF77-Testdatensätze
-	 |                                zur Verarbeitung mit Test Framework
+	 +-- test_data/                 -- DCF77-Testdatensätze
+	 |                                 zur Verarbeitung mit Test Framework
 	 |
-	 +-- test_framework/           -- Automatische Testanwendung, siehe
-	 |                                Tests/Test-Framework
+	 +-- test_framework/            -- Automatische Testanwendung, siehe
+	 |                                 Tests/Test-Framework
 	 |
-	 +-- xdev_font/                -- Quelldaten für eigene Schriftart
+	 +-- xdev_font/                 -- Quelldaten für eigene Schriftart
 	 |
-	 +-- xdev_impl1c/              -- alte C-Implementierung, 1. Versuch
+	 +-- xdev_impl1c/               -- alte C-Implementierung, 1. Versuch
 	 |
-	 +-- xdev_impl2c/              -- alte C-Implementierung, 2. Versuch
+	 +-- xdev_impl2c/               -- alte C-Implementierung, 2. Versuch
 	 |
-	 +-- xdev_misc/                -- vorbereitende Tests/Notizen
+	 +-- xdev_misc/                 -- vorbereitende Tests/Notizen
 	 |
-	 +-- README.md                 -- diese Beschreibung
+	 +-- README.md                  -- diese Beschreibung
 	 |
-	 +-- LICENSE.txt               -- Lizenz für die Uhr
-	 +-- LICENSE-THIRDPARTY.txt    -- Lizenzübersicht für Komponenten
+	 +-- LICENSE.txt                -- Lizenz für die Uhr
+	 +-- LICENSE-THIRDPARTY.txt     -- Lizenzübersicht für Komponenten
 	 |
-	 +-- dcf77vrd.gpr/alire.toml   -- Alire-Projektdateien zum Kompilieren
+	 +-- dcf77vrd.gpr/alire.toml    -- Alire-Projektdateien zum Kompilieren
 	 |
-	 +-- build.xml                 -- Software-Bauinstruktionen für `ant`
+	 +-- build.xml                  -- Software-Bauinstruktionen für `ant`
 
 Hardwaredesign
 ==============
@@ -84,7 +84,7 @@ und dann jeweils wieder verworfen.
 
 ## Genereller Aufbau
 
-![Ansicht der Uhr mit Antenne](dcf77vfd_raspi_clock_att/picoverview.jpg)
+![Ansicht der Uhr mit Antenne](dcf77_vfd_raspi_clock_att/picoverview.jpg)
 
  * Externes 5V Steckernetzteil
  * Externe Antenne
@@ -170,7 +170,7 @@ Buzzer werden über npn-Transistoren geschaltet.
 
 ## Schaltplan
 
-![Schaltplanentwurf](dcf77vfd_raspi_clock_att/schematic.png)
+![Schaltplanentwurf](dcf77_vfd_raspi_clock_att/schematic.png)
 
 Der gezeigte Schaltplan entspricht weitgehend der Realisierung: Eine Abweichung
 gibt es lediglich bei der Beschaltung der nicht genutzten Kanäle des Wandlers:
@@ -202,7 +202,7 @@ Der Verdrahtungsplan ist für eine Loch-Streifenrasterplatine vorgesehen, bei
 der drei Löcher jeweils mit einem Streifen verbunden sind. Auf diese Weise
 lassn sich ohne eigenes Platinenlayout Schaltungen realisieren.
 
-![Verdrahtungsplan für Loch-Streifenrasterplatine](dcf77vfd_raspi_clock_att/verdrahtungsplan.png)
+![Verdrahtungsplan für Loch-Streifenrasterplatine](dcf77_vfd_raspi_clock_att/verdrahtungsplan.png)
 
 Auf dem dargsetllten Verdrahtungsplan sind die 10kΩ-Widerstände zum Schutz
 des Pegelwandlers noch nicht eingezeichnet, da diese erst bei der Bestückung
@@ -478,9 +478,9 @@ Nachbau können diese gerne zu Rate gezogen werden, sollten aber anhand der
 tatsächlich vorliegenden Teile, Pläne und Datenblätter kontrolliert werden, da
 bspw. bei den Maßen des Displays Unstimmigkeiten bestehen können.
 
-![madoc010750 -- Skizzen zu Einzelteilen -- Displaymaße können abweichen!](dcf77vfd_raspi_clock_att/madoc010750edit.png)
+![madoc010750 -- Skizzen zu Einzelteilen -- Displaymaße können abweichen!](dcf77_vfd_raspi_clock_att/madoc010750edit.png)
 
-![madoc010753 -- Skizze zur Übertagung der Abstände auf das Gehäuse -- Displaymaße können abweichen!](dcf77vfd_raspi_clock_att/madoc010753edit.png)
+![madoc010753 -- Skizze zur Übertagung der Abstände auf das Gehäuse -- Displaymaße können abweichen!](dcf77_vfd_raspi_clock_att/madoc010753edit.png)
 
 Tests
 =====
@@ -490,7 +490,7 @@ DCF77-Entwicklung (ggfs. auch in anderen Projekten) helfen können.
 
 ## Telegramm-Editor
 
-![Telegramm-Editor Screenshot](dcf77vfd_raspi_clock_att/scrteledit.png)
+![Telegramm-Editor Screenshot](dcf77_vfd_raspi_clock_att/scrteledit.png)
 
 Im Ordner `telegram_editor` befindet sich ein in Java geschriebener
 DCF77-Telegrammeditor, der sowohl Telegramme decodieren, als auch ein
@@ -500,7 +500,7 @@ der Entwicklung des 1. Implementierungsversuchs in C hilfreich waren.
 
 ## Simulator
 
-![Simulator-Screenshot mit einer Vorversion der Uhrensoftware](dcf77vfd_raspi_clock_att/scrsimulator.png)
+![Simulator-Screenshot mit einer Vorversion der Uhrensoftware](dcf77_vfd_raspi_clock_att/scrsimulator.png)
 
 Unter `src_simulated` befinden sich diverse Symlinks und einige zusätzliche
 Dateien, mit denen sich das Programm auf dem Hostsystem kompilieren und ohne
@@ -571,7 +571,7 @@ ist.
 
 ## Menünavigation
 
-![Zustandsdiagramm zur Erklärung der Menünavigation](dcf77vfd_raspi_clock_att/guistatechart)
+![Zustandsdiagramm zur Erklärung der Menünavigation](dcf77_vfd_raspi_clock_att/guistatechart)
 
 Die 4-Tasten-Bedienung folgt folgender Überlegung:
 
