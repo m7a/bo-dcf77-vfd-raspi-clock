@@ -192,7 +192,7 @@ weglassen, ohne die Funktionalität einzuschränken.
 
 Die mit TX/RX/GND-bezeichneten Punkte sind für eine Stiftleiste zum Anschluss
 eines Seriell-Wandlers gedacht, damit man am Rechner die Ausgaben des Programmes
-auch ohne Eisnchränkung durch die Displaygröße nachvollziehen kann. Dieser
+auch ohne Einschränkung durch die Displaygröße nachvollziehen kann. Dieser
 Weg war beim Debuggen hilfreich. Für die Umsetzung verschwindet die Stiftleiste
 im Gehäuse (ebenso wie der USB-Port).
 
@@ -722,6 +722,10 @@ Softwareentwickler und Kontaktinformationen zum Softwareentwickler.
 Bugs
 ====
 
+ * Wenn ich es richtig sehe geht die Uhr 1sec vor. Es ist nicht ganz klar, ob
+   sich das “gewinnbringend” lösen lässt in dem Sinne, dass man ggfs. ausnutzen
+   kann, 1sec mehr Zeit zu haben, um zu prüfen, ob wirklich die korrekte Zeit
+   berechnet wurde. In der Zwischenzeit wird der Fehler erstmal hingenommen...
  * In der Simulation wurde QOS9 beobachtet. Lag es daran, dass keine weiteren
    Eingabedaten verfügbar waren oder an einer Schaltsekunde, die nicht richtig
    verarbeitet wurde?
