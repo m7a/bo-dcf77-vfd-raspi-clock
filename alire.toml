@@ -1,6 +1,6 @@
 name = "dcf77vfd"
 description = "Ma_Sys.ma DCF77 VFD Module Clock - Raspberry Pi Pico Ada Incarnation"
-version = "0.0.1"
+version = "1.0.0"
 
 authors = ["Linux-Fan"]
 maintainers = ["Linux-Fan <Ma_Sys.ma@web.de>"]

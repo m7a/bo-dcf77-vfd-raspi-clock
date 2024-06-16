@@ -1,14 +1,14 @@
 ---
-section: 42
-x-masysma-name: dcf77vfd_raspi_clock
+section: 37
+x-masysma-name: dcf77_vfd_raspi_clock
 title: Ma_Sys.ma DCF77 VFD Raspi Clock
 date: 2023/12/17 00:09:58
 lang: de-DE
 author: ["Linux-Fan, Ma_Sys.ma (Ma_Sys.ma@web.de)"]
 keywords: ["dcf77", "uhr", "rp2040"]
 x-masysma-version: 1.0.0
-x-masysma-website: https://masysma.net/37/dcf77vfd_raspi_clock.xhtml
-x-masysma-repository: https://www.github.com/m7a/bo-dcf77vfd-raspi-clock
+x-masysma-website: https://masysma.net/37/dcf77_vfd_raspi_clock.xhtml
+x-masysma-repository: https://www.github.com/m7a/bo-dcf77-vfd-raspi-clock
 x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
 ---
 Übersicht
@@ -478,9 +478,9 @@ Nachbau können diese gerne zu Rate gezogen werden, sollten aber anhand der
 tatsächlich vorliegenden Teile, Pläne und Datenblätter kontrolliert werden, da
 bspw. bei den Maßen des Displays Unstimmigkeiten bestehen können.
 
-![madoc010750 -- Skizzen zu Einzelteilen -- Displaymaße können abweichen!](dcf77vfd_raspi_clock_att/madoc010750edit)
+![madoc010750 -- Skizzen zu Einzelteilen -- Displaymaße können abweichen!](dcf77vfd_raspi_clock_att/madoc010750edit.png)
 
-![madoc010753 -- Skizze zur Übertagung der Abstände auf das Gehäuse -- Displaymaße können abweichen!](dcf77vfd_raspi_clock_att/madoc010753edit)
+![madoc010753 -- Skizze zur Übertagung der Abstände auf das Gehäuse -- Displaymaße können abweichen!](dcf77vfd_raspi_clock_att/madoc010753edit.png)
 
 Tests
 =====
@@ -536,6 +536,12 @@ so aufgerufen werden, dass die _Line-Coverage_ mittels `lcov` ermittelt wird
 und im Ordner `cov` ein HTML-Report abgelegt wird. Dieser Report kann hilfreich
 sein, wenn man sich unsicher ist, ob ein gewisser Codeabschnitt überhaupt durch
 die Tests erreicht wird.
+
+## Serielle Ausgabe
+
+Wenn man die serielle Ausgabe überwachen will, kann man folgenden Befehl nutzen:
+
+	picocom --baud 115200 --stopbits 1 --databits 8 --parity n /dev/ttyUSB0
 
 Bedienungsanleitung
 ===================
@@ -726,11 +732,14 @@ Bugs
 Zukünftige Ideen
 ================
 
+ * Testweise Integration einer besseren Antenne
  * Verhindern von Stehenbleiben der Uhr durch Ersetzen der RFU Option mit der
    Möglichkeit, einen Watchdog einzuschalten, der die Uhr (genau 1x) neustartet,
    wenn sie stehen bleiben sollte. Man könnte entweder auf die Nachkommastelle
    der Sekunden gucken (30s bis reset) oder einfach bei jeder Schleifeniteration
    den Watchdog ansteuern (200ms bis reset)
+ * Es könnten noch weitere Tests durchgeführt werden, bspw. ein Leap Sec Expiry
+   Test oder 2.X-Tests, wie in den Notizen beschrieben...
 
 Hilfreiche Links
 ================
