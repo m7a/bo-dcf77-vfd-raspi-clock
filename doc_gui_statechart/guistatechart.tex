@@ -200,11 +200,25 @@
 	\node[above=4.5cm of lblant] (lblpwr)
 			{\colorbox{white}{\textbf{5V-Stromversorgung}}};
 
+	\node[above=3cm of lblgreen,xshift=-1cm] (lbltime)
+			{\colorbox{white}{\textbf{Uhrzeit Stunde:Minute}}};
+	\node[above=1cm of lblright,xshift=0.5cm] (lbldate)
+			{\colorbox{white}{\parbox{1.7cm}{%
+			\bfseries Datum Jahr\newline Monat/Tag}}};
+	\node[left=2cm of lblpwr,yshift=-0.5cm] (lblseconds) {%
+			\colorbox{white}{\parbox{1.3cm}{%
+			\textbf{Uhrzeit Sekunde}}}};
+	\node[above=0.2cm of lblseconds,xshift=1.5cm] (lblqos)
+			{\colorbox{white}{\textbf{Signalqualität}}};
+
+	\node[right=0.3cm of lblseconds.south east] (qosanchor) {};
+	\draw[thick,white,->] ($(lblqos.south)+(0,+0.2)$) -- (qosanchor);
+
 	\path (scrver3.center) -- +(9,-1.5) node[draw] (lblplankopf)
 		{\begin{minipage}{6cm}\begin{center}
 		Ma\_Sys.ma DCF77 VFD Raspi Clock\\
 		Bedienung und Übersicht der Anzeigezustände\\
-		2024-01-14 \qquad \cmd{info@masysma.net}
+		2024-06-16 \qquad \cmd{info@masysma.net}
 		\end{center}\end{minipage}};
 
 	\begin{pgfonlayer}{bg}

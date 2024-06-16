@@ -11,19 +11,6 @@ x-masysma-website: https://masysma.net/37/dcf77vfd_raspi_clock.xhtml
 x-masysma-repository: https://www.github.com/m7a/bo-dcf77vfd-raspi-clock
 x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
 ---
-Bugs
-====
-
-**Achtung**: Diese Selbstbau-Uhr ist aktuell noch in einer Testphase. Sie
-enthält noch kritische Bugs, die zu falscher Zeitanzeige führen können.
-
-Notizen:
-
- * QOS9 observed in test GUI (maybe leap sec case related if that is in the
-   test data. happens after some long time only?)
- * In at least one case, the clock crashed (halted). This should never happen.
- * In at least one case, a time 10min in the future was observed.
-
 Übersicht
 =========
 
@@ -540,8 +527,9 @@ den Telegrammen durch Ersetzen mit 3-Ziffern überschreibt und somit
 Empfangsprobleme simuliert.
 
 Falls man ein eigenes DCF77-Projekt entwickelt, könnten insbesondere die
-QOS-Testdaten interessant sein, da dort auch jeweils der erwartete Zeitstempel
-angegeben ist, zu dem die Eingabedaten decodiert werden sollten.
+QOS- und Timelayer-Testdaten interessant sein, da dort auch jeweils der
+erwartete Zeitstempel angegeben ist, zu dem die Eingabedaten decodiert werden
+sollten.
 
 Mittels `ant cov` im Ordner `test_framework` kann das Test-Framework auch
 so aufgerufen werden, dass die _Line-Coverage_ mittels `lcov` ermittelt wird
@@ -689,7 +677,8 @@ Zweite Zeile
 
  1. `LL.Get_Fault`.
  2. `Secondlayer.Get_Fault`.
- 3. Die am Umgebungshelligkeitssensor erkannte Helligkeit
+ 3. `Minutelayer.Get_Fault`
+ 4. Die am Umgebungshelligkeitssensor erkannte Helligkeit
     (`Light_Sensor_Reading`) im Bereich 0..100. Praktisch werden nur Werte bis
     knapp über 80 erreicht.
 
@@ -698,16 +687,50 @@ ein Indikator für gestörten Signalempfang bzw. falsche Antennenausrichtung sei
 
 ### QOSInfo
 
-Der QOSInfo-Bildschirm zeigt anteilig, wie viel Zeit die Uhr in den
-verschiedenen _Quality of Service_-Zuständen verbracht hat. Typischerweise
-sollten 1 und 9 vorherrschen. Generell bedeutet ein höherer Wert bei 1 eine
-bessere Empfangsqualität. Idealerweise sollte der Wert bei 9 mit laufendem
-Uhrenbetrieb immer weiter zu Gunsten von 1 abnehmen.
+Der QOSInfo-Bildschirm zeigt in zwei Zeilen (M für _Minutelayer_ und T für
+_Timelayer_) Informationen zur Verteilung der _Quality of Service_ in diesen
+Schichten an. Die Bedeutung der Spalten ist folgendermaßen:
+
+ 1. Spalte: Anzahl der Sekunden mit QOS schlechter als QOS1
+    (Timelayer: schlechter als `+`) und besser als QOS9 (Timelayer: `-`)
+    innerhalb der letzten 24h.
+ 2. Spalte: Anzahl der Sekunden mit QOS auf schlechtester Stufe
+    (Minutelayer: QOS9, Timelayer: `-`) innerhalb der letzten 24h.
+ 3. Spalte: Anzahl der 24h-Intervalle in denen eine der vorherigen Spalten
+    nicht 0 war.
+
+Die Idee bei dieser Aufteilung ist, dass die vorderen Spalten einen guten
+Überblick über die “aktuelle” QOS-Verteilung liefern, während die hinterste
+Spalte als Akkumulator dient. Wenn dort bspw. auch nach wochenlangem Betrieb nur
+kleine Werte stehen, dann ist der Empfang sehr gut.
+
+Solange die Uhrzeit initial noch nicht synchronisiert ist, ist die
+Empfangsqualität notwendigerweise schlecht, daher ist es normal, dass während
+der Synchronisationsphase die Zähler sekündlich hochzählen.
 
 ### Versionsinformationen
 
 Die hinteren drei Bildschirme geben Auskunft über die Firmwareversion, den
 Softwareentwickler und Kontaktinformationen zum Softwareentwickler.
+
+Bugs
+====
+
+ * In der Simulation wurde QOS9 beobachtet. Lag es daran, dass keine weiteren
+   Eingabedaten verfügbar waren oder an einer Schaltsekunde, die nicht richtig
+   verarbeitet wurde?
+ * Es wurde der Fall beobachtet, dass die Uhr stehen blieb (abstürzte). Es ist
+   unklar, ob es ein Hardware- oder Softwareproblem ist, aber ggfs. könnte man
+   hier mittels Fuzzing das Vertrauen stärken, dass die Softwareseite OK ist?
+
+Zukünftige Ideen
+================
+
+ * Verhindern von Stehenbleiben der Uhr durch Ersetzen der RFU Option mit der
+   Möglichkeit, einen Watchdog einzuschalten, der die Uhr (genau 1x) neustartet,
+   wenn sie stehen bleiben sollte. Man könnte entweder auf die Nachkommastelle
+   der Sekunden gucken (30s bis reset) oder einfach bei jeder Schleifeniteration
+   den Watchdog ansteuern (200ms bis reset)
 
 Hilfreiche Links
 ================

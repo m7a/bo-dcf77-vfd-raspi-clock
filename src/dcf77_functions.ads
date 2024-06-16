@@ -4,8 +4,8 @@ package DCF77_Functions is
 
 	function Num_To_Str_L4(Num: in Natural) return String
 						with Pre => (Num < 10000);
-	--function Num_To_Str_L3(Num: in Natural) return String
-	--					with Pre => (Num < 1000);
+	function Num_To_Str_L3(Num: in Natural) return String
+						with Pre => (Num < 1000);
 	function Num_To_Str_L2(Num: in Natural) return String
 						with Pre => (Num < 100);
 
