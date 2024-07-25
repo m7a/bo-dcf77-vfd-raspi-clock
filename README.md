@@ -6,7 +6,7 @@ date: 2023/12/17 00:09:58
 lang: de-DE
 author: ["Linux-Fan, Ma_Sys.ma (Ma_Sys.ma@web.de)"]
 keywords: ["dcf77", "uhr", "rp2040"]
-x-masysma-version: 1.0.0
+x-masysma-version: 1.0.1
 x-masysma-website: https://masysma.net/37/dcf77_vfd_raspi_clock.xhtml
 x-masysma-repository: https://www.github.com/m7a/bo-dcf77-vfd-raspi-clock
 x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
@@ -719,6 +719,19 @@ der Synchronisationsphase die Zähler sekündlich hochzählen.
 Die hinteren drei Bildschirme geben Auskunft über die Firmwareversion, den
 Softwareentwickler und Kontaktinformationen zum Softwareentwickler.
 
+Abschließende Überlegungen
+==========================
+
+Der Ansatz, live dem Signal zu folgen funktioniert prinzipiell, setzt aber sehr
+gute Empfangsbedingungen voraus. Die Annahme, dass immer entweder ein korrektes
+Signal oder gar kein Signal empfangen wird stimmt in der Praxis nicht 100%. Bei
+schlechtem Empfang werden auf diese Weise sehr leicht Störungen eingetragen,
+die zu falschen Uhrzeiten führen.
+
+Entsprechend ist das Modell anderer Funkuhren, die primär auf Basis einer
+internen RTC laufen und sich nur gelegentlich mit dem DCF77-Signal abgleichen
+nachvollziehbar und vorteilhaft.
+
 Bugs
 ====
 
@@ -744,6 +757,8 @@ Zukünftige Ideen
    den Watchdog ansteuern (200ms bis reset)
  * Es könnten noch weitere Tests durchgeführt werden, bspw. ein Leap Sec Expiry
    Test oder 2.X-Tests, wie in den Notizen beschrieben...
+ * Auf Basis der Erfahrungen aus dieser Entwicklung ließe sich sicherlich auch
+   eine gute DCF77-Funkuhr mit einem anderen Funktionsprinzip konstruieren.
 
 Hilfreiche Links
 ================
