@@ -749,6 +749,8 @@ Bugs
 Zukünftige Ideen
 ================
 
+ * In der Schritfart sind 5 und 6 schelcht unterscheidbar. Man könnte hier
+   nochmal mit einer 6 mit abgeschrägtem Haken oben experimentieren...
  * Testweise Integration einer besseren Antenne
  * Verhindern von Stehenbleiben der Uhr durch Ersetzen der RFU Option mit der
    Möglichkeit, einen Watchdog einzuschalten, der die Uhr (genau 1x) neustartet,
