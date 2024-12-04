@@ -11,11 +11,13 @@ package body DCF77_Minutelayer is
 		Ctx.Preceding_Minute_Ones  := (others => (others => No_Update));
 		Ctx.Preceding_Minute_Idx   := Minute_Buf_Idx'Last;
 		Ctx.Seconds_Since_Prev     := Unknown;
+		Ctx.Prev                   := TM0;
 		Ctx.Current                := TM0;
 		Ctx.Current_QOS            := QOS9_ASYNC;
 		Ctx.Prev_Telegram          := (Valid => Invalid,
 						Value => (others => No_Signal));
 		Ctx.Leap_Sec_State         := No_Leap_Sec_Announced;
+		Ctx.EOH_DST_Switch         := DST_No_Change;
 		Ctx.Num_Fault              := 0;
 		Init(Ctx.QOS_Record);
 	end Init;
@@ -174,12 +176,16 @@ package body DCF77_Minutelayer is
 			case Ctx.EOH_DST_Switch is
 			when DST_To_Summer =>
 				-- summer = UTF+2, +1h
-				DST_Delta_H   := +1;
-				Ctx.Current.H := Ctx.Current.H + 1;
+				if Ctx.Current.H = 1 then
+					DST_Delta_H   := +1;
+					Ctx.Current.H := Ctx.Current.H + 1;
+				end if;
 			when DST_To_Winter =>
 				-- winter = UTC+1, -1h
-				DST_Delta_H   := -1;
-				Ctx.Current.H := Ctx.Current.H - 1;
+				if Ctx.Current.H = 2 then
+					DST_Delta_H   := -1;
+					Ctx.Current.H := Ctx.Current.H - 1;
+				end if;
 			when others =>
 				-- ignore
 				null;

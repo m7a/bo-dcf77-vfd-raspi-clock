@@ -739,12 +739,15 @@ Bugs
    sich das “gewinnbringend” lösen lässt in dem Sinne, dass man ggfs. ausnutzen
    kann, 1sec mehr Zeit zu haben, um zu prüfen, ob wirklich die korrekte Zeit
    berechnet wurde. In der Zwischenzeit wird der Fehler erstmal hingenommen...
- * In der Simulation wurde QOS9 beobachtet. Lag es daran, dass keine weiteren
-   Eingabedaten verfügbar waren oder an einer Schaltsekunde, die nicht richtig
-   verarbeitet wurde?
  * Es wurde der Fall beobachtet, dass die Uhr stehen blieb (abstürzte). Es ist
    unklar, ob es ein Hardware- oder Softwareproblem ist, aber ggfs. könnte man
    hier mittels Fuzzing das Vertrauen stärken, dass die Softwareseite OK ist?
+ * In der Simulation wurde QOS9 beobachtet. Lag es daran, dass keine weiteren
+   Eingabedaten verfügbar waren oder an einer Schaltsekunde, die nicht richtig
+   verarbeitet wurde? => Nein, es steckt ein Bug dahinter, bei dem sich die Uhr
+   mit 1x falschen Daten nicht mehr wieder in den QOS1 zurückversetzen kann?
+ * Manche Zahlen (5, 6?) sind in der Schriftart schlecht unterscheidbar.
+   Die Schriftart sollte nochmal evaluiert und angepasst werden.
 
 Zukünftige Ideen
 ================

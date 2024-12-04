@@ -558,6 +558,10 @@ package body DCF77_Secondlayer is
 			return;
 		end if;
 
+		-- TODO x small problem: In event that we only have one line, we
+		--        must move the stuff leftward till 0/3. Observed in
+		--        practice (tc=reg01_m15) that it would move just one
+		--        step left and come to halt on an 1.
 		while Telegram_Start_Offset_In_Line < Sec_Per_Min and
 							not All_Checked loop
 			All_Checked := True;
@@ -783,6 +787,9 @@ package body DCF77_Secondlayer is
 				(Month_Tens_Bit = Bit_0 and Month_Ones_Bits =
 					(Bit_0, Bit_0, Bit_0, Bit_0)) then
 				return Error_11b;
+			end if;
+			if Month_Ones > 9 then
+				return Error_11c;
 			end if;
 			Update_Parity(Month_Tens_Bit, Parity_Date);
 			return OK;
