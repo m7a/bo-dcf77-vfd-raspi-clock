@@ -4,7 +4,8 @@ test_secondlayer: test_secondlayer.adb ../src/dcf77_secondlayer.adb ../src/dcf77
 test_fuzz_qos9: test_fuzz_qos9.adb
 	gnatmake -Wall --GCC=/usr/bin/afl-gcc-fast \
 		-ftracer -fweb -ffunction-sections -p \
-		-I../src_simulated -o test_fuzz_qos9 test_fuzz_qos9.adb
+		-I../src_simulated -o test_fuzz_qos9 test_fuzz_qos9.adb \
+		-largs /usr/lib/afl/afl-gcc-rt.o
 
 test_fuzz_qos9_normal: test_fuzz_qos9.adb
 	gnatmake -g -Wall -I../src_simulated \
