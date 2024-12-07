@@ -124,10 +124,9 @@ private
 	procedure Decode_And_Populate_DST_Switch(Ctx: in out Minutelayer;
 							Tel: in Telegram);
 	function Decode_Tens(Ctx: in Minutelayer; Tel: in Telegram) return TM;
+	function Is_Plausible_Date_Time(T: in TM) return Boolean;
 	procedure Discard_Ones(T: in out TM);
 	function Decode(Ctx: in Minutelayer; Tel: in Telegram) return TM;
-	function Decode_Check(Ctx: in out Minutelayer; Tel: in Telegram)
-							return Boolean;
 	function Recover_Ones(Ctx: in out Minutelayer) return Integer;
 	function Are_Ones_Compatible(AD, BD: in BCD_Digit) return Boolean;
 	function Check_If_Compat_By_X_Eliminate(

@@ -25,7 +25,11 @@ package DCF77_TM_Layer_Shared is
 		DST_Delta_H:  Integer;
 	end record;
 
-	Time_Of_Compilation: constant TM := (2024, 6, 14, 23, 12, 32);
+	Min_Per_Hour:    constant Natural := 60;
+	Hours_Per_Day:   constant Natural := 24;
+	Months_Per_Year: constant Natural := 12;
+
+	Time_Of_Compilation: constant TM := (2024, 12, 7, 16, 21, 11);
 
 	-- public because it is of interest to GUI, too!
 	Month_Lengths: constant array (0 .. 12) of Natural := (
@@ -46,6 +50,7 @@ package DCF77_TM_Layer_Shared is
 
 	-- Function is also useful for GUI implementation!
 	function Is_Leap_Year(Y: in Natural) return Boolean;
+	function Get_Month_Length(T: in TM) return Natural;
 	-- Procedure is also useful for alarm implementation!
 	procedure Advance_TM_By_Sec(T: in out TM; Seconds: in Natural);
 

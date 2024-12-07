@@ -254,7 +254,7 @@ package body DCF77_Minutelayer is
 				(if (Telegram_2.Valid /= Invalid)
 					then Recover_BCD(Telegram_2)
 					else Data_Incomplete_For_Multiple);
-		Has_Out_2_Tens: constant Boolean :=
+		Has_Out_2_Tens: Boolean :=
 				 Out_2_Recovery = Data_Complete or else
 				(Out_2_Recovery = Data_Incomplete_For_Minute
 					and then Has_Minute_Tens(Telegram_2));
@@ -266,16 +266,39 @@ package body DCF77_Minutelayer is
 
 		-- 1a. pre-adjust previous in case we can safely decode it
 		if Has_Out_2_Tens then
-			Ctx.Prev          := Ctx.Decode_Tens(Telegram_2);
-			Ctx.Prev_Telegram := Telegram_2;
+			Intermediate := Ctx.Decode_Tens(Telegram_2);
+			-- wrong data received can happen in adversarial
+			-- context (e.g. fuzzing). Discard everything if
+			-- such a case is detected.
+			if Is_Plausible_Date_Time(Intermediate) then
+				Inc_Saturated(Ctx.Num_Fault, 99);
+				Ctx.Prev          := Intermediate;
+				Ctx.Prev_Telegram := Telegram_2;
+			else
+				-- dicard the out_2, but don't throw away the
+				-- whole stuff because we may still get to
+				-- decode the primary telegram (1) successfully
+				-- for QOS1 afterwards
+				Has_Out_2_Tens         := False;
+				Ctx.Seconds_Since_Prev := Unknown;
+			end if;
 		end if;
 
 		-- 2.
 		if Out_1_Recovery = Data_Complete then
-			if not Ctx.Decode_Check(Telegram_1) and
-					Out_2_Recovery =
-					Data_Incomplete_For_Multiple then
+			Intermediate := Ctx.Decode(Telegram_1);
+			if not Is_Plausible_Date_Time(Intermediate) then
+				Inc_Saturated(Ctx.Num_Fault, 99);
 				Ctx.Seconds_Since_Prev := Unknown;
+				Ctx.Current_QOS        := QOS9_ASYNC;
+				return;
+			end if;
+			if Ctx.Current /= Intermediate then
+				Ctx.Current := Intermediate;
+				if Out_2_Recovery = Data_Incomplete_For_Multiple
+				then
+					Ctx.Seconds_Since_Prev := Unknown;
+				end if;
 			end if;
 			Ctx.Current_QOS := QOS1;
 			return;
@@ -289,6 +312,12 @@ package body DCF77_Minutelayer is
 			if Out_1_Recovery = Data_Incomplete_For_Minute and
 						Has_Minute_Tens(Telegram_1) then
 				Intermediate := Ctx.Decode_Tens(Telegram_1);
+				if not Is_Plausible_Date_Time(Intermediate) then
+					Inc_Saturated(Ctx.Num_Fault, 99);
+					Ctx.Seconds_Since_Prev := Unknown;
+					Ctx.Current_QOS        := QOS9_ASYNC;
+					return;
+				end if;
 				Advance_TM_By_Sec(Intermediate, Recovered_Ones *
 								Sec_Per_Min);
 				if Intermediate /= Ctx.Current then
@@ -559,6 +588,15 @@ package body DCF77_Minutelayer is
 		return RV;
 	end Decode_Tens;
 
+	-- leap-second aware (accepts T.S = 60)
+	function Is_Plausible_Date_Time(T: in TM) return Boolean is
+			(T.S <= Sec_Per_Min and then T.I < Min_Per_Hour and then
+			T.H < Hours_Per_Day and then T.M <= Months_Per_Year
+			-- T.M = 0 accounts for case that it is unknown and thus
+			-- not properly recoverable from a telegram.
+			and then (if T.M = 0 then T.D <= 31 else
+						T.D <= Get_Month_Length(T)));
+
 	procedure Discard_Ones(T: in out TM) is
 	begin
 		T.I := (T.I / 10) * 10;
@@ -585,16 +623,6 @@ package body DCF77_Minutelayer is
 			     RD(Offset_Minute_Ones, Length_Minute_Ones),
 			S => 0);
 	end Decode;
-
-	-- @return true if no differences were detected
-	function Decode_Check(Ctx: in out Minutelayer; Tel: in Telegram)
-							return Boolean is
-		TMN_Interm: constant TM      := Ctx.Decode(Tel);
-		RV:         constant Boolean := Ctx.Current = TMN_Interm;
-	begin
-		Ctx.Current := TMN_Interm;
-		return RV;
-	end Decode_Check;
 
 	-- @return value if ones were recovered successfully, -1 if not
 	function Recover_Ones(Ctx: in out Minutelayer) return Integer is

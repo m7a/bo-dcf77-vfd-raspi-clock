@@ -5,8 +5,8 @@ title: Ma_Sys.ma DCF77 VFD Raspi Clock
 date: 2023/12/17 00:09:58
 lang: de-DE
 author: ["Linux-Fan, Ma_Sys.ma (Ma_Sys.ma@web.de)"]
-keywords: ["dcf77", "uhr", "rp2040"]
-x-masysma-version: 1.0.1
+keywords: ["dcf77", "uhr", "rp2040", "clock", "raspi", "module", "vfd"]
+x-masysma-version: 1.1.0
 x-masysma-website: https://masysma.net/37/dcf77_vfd_raspi_clock.xhtml
 x-masysma-repository: https://www.github.com/m7a/bo-dcf77-vfd-raspi-clock
 x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
@@ -735,35 +735,19 @@ nachvollziehbar und vorteilhaft.
 Bugs
 ====
 
- * Wenn ich es richtig sehe geht die Uhr 1sec vor. Es ist nicht ganz klar, ob
-   sich das “gewinnbringend” lösen lässt in dem Sinne, dass man ggfs. ausnutzen
-   kann, 1sec mehr Zeit zu haben, um zu prüfen, ob wirklich die korrekte Zeit
-   berechnet wurde. In der Zwischenzeit wird der Fehler erstmal hingenommen...
- * Es wurde der Fall beobachtet, dass die Uhr stehen blieb (abstürzte). Es ist
-   unklar, ob es ein Hardware- oder Softwareproblem ist, aber ggfs. könnte man
-   hier mittels Fuzzing das Vertrauen stärken, dass die Softwareseite OK ist?
- * In der Simulation wurde QOS9 beobachtet. Lag es daran, dass keine weiteren
-   Eingabedaten verfügbar waren oder an einer Schaltsekunde, die nicht richtig
-   verarbeitet wurde? => Nein, es steckt ein Bug dahinter, bei dem sich die Uhr
-   mit 1x falschen Daten nicht mehr wieder in den QOS1 zurückversetzen kann?
- * Manche Zahlen (5, 6?) sind in der Schriftart schlecht unterscheidbar.
-   Die Schriftart sollte nochmal evaluiert und angepasst werden.
+Wenn ich es richtig sehe geht die Uhr 1sec vor. Es ist nicht ganz klar, ob
+sich das “gewinnbringend” lösen lässt in dem Sinne, dass man ggfs. ausnutzen
+kann, 1sec mehr Zeit zu haben, um zu prüfen, ob wirklich die korrekte Zeit
+berechnet wurde. In der Zwischenzeit wird der Fehler erstmal hingenommen...
 
-Zukünftige Ideen
+Versionshistorie
 ================
 
- * In der Schritfart sind 5 und 6 schelcht unterscheidbar. Man könnte hier
-   nochmal mit einer 6 mit abgeschrägtem Haken oben experimentieren...
- * Testweise Integration einer besseren Antenne
- * Verhindern von Stehenbleiben der Uhr durch Ersetzen der RFU Option mit der
-   Möglichkeit, einen Watchdog einzuschalten, der die Uhr (genau 1x) neustartet,
-   wenn sie stehen bleiben sollte. Man könnte entweder auf die Nachkommastelle
-   der Sekunden gucken (30s bis reset) oder einfach bei jeder Schleifeniteration
-   den Watchdog ansteuern (200ms bis reset)
- * Es könnten noch weitere Tests durchgeführt werden, bspw. ein Leap Sec Expiry
-   Test oder 2.X-Tests, wie in den Notizen beschrieben...
- * Auf Basis der Erfahrungen aus dieser Entwicklung ließe sich sicherlich auch
-   eine gute DCF77-Funkuhr mit einem anderen Funktionsprinzip konstruieren.
+Version   Datum                CTR  Beschreibung
+--------  -------------------  ---  --------------------------------------------
+01.00.00  2024-06-14 23:12:32  46-  1. Release
+01.01.00  2024-12-07 16:21:11  47   Stabilitätsverbesserungen mit Fuzzing
+                                    Schriftart '6' besser von '5' unterscheidbar
 
 Hilfreiche Links
 ================
