@@ -16,9 +16,19 @@ package DCF77_Bitlayer is
 
 private
 
-	Second_In_Us:       constant DCF77_Low_Level.Time := 1_000_000;
-	Delay_Us_Target:    constant DCF77_Low_Level.Time :=   100_000;
-	Delay_Us_Epsilon:   constant DCF77_Low_Level.Time :=    20_000;
+	Second_In_Us:            constant DCF77_Low_Level.Time := 1_000_000;
+	Delay_Us_Target:         constant DCF77_Low_Level.Time :=   100_000;
+
+	-- Wait 300ms for a signal to arrive before calling this a “no signal”
+	-- case. 250ms is the longest signal accepted (limit for “1”),
+	-- 21ms is 3x 7ms ISR execution intervals. The remainder (29ms) is extra
+	-- safety. The idea is that large values here don't really hurt us
+	-- because while the seconds will turn a little “late” they won't in
+	-- general stay at 1.3s for long amounts of time, because while
+	-- synchronized the clock stays with the signal and when out of sync
+	-- the clock is 0.3s late but still turning at 1sec intervals in
+	-- most cases.
+	Timeout_No_Signal_In_Us: constant DCF77_Low_Level.Time :=   300_000;
 
 	type Bitlayer is tagged limited record
 		-- required
@@ -32,5 +42,14 @@ private
 		Discarded:        Natural;
 		Overflown:        Natural;
 	end record;
+
+	procedure Align_To_Slice(Ctx: in out Bitlayer;
+					Time_Now: in out DCF77_Low_Level.Time);
+	function Convert_Signal_Length_To_Reading(Ctx: in out Bitlayer;
+					Signal_Length: in DCF77_Low_Level.Time)
+					return Reading;
+	function Detect_Second_Overflow(Ctx: in out Bitlayer;
+					Time_Now: in DCF77_Low_Level.Time)
+					return Reading;
 
 end DCF77_Bitlayer;

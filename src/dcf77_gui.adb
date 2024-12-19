@@ -53,10 +53,10 @@ package body DCF77_GUI is
 		S.ALS.Init;
 		S.Alarm.Init(S.LL);
 
-		S.LL.Log("Ma_Sys.ma DCF77 VFD / INIT CTR=47");
+		S.LL.Log("Ma_Sys.ma DCF77 VFD / INIT CTR=48");
 		S.Disp.Update((1 => (X => 16, Y => 16, F => Small,
 				Msg => SB.To_Bounded_String(
-				"INIT CTR=47"), others => <>)));
+				"INIT CTR=48"), others => <>)));
 	end Init;
 
 	procedure Loop_Pre(S: in out Program_State) is
@@ -463,7 +463,7 @@ package body DCF77_GUI is
 			G.Add_Time_Small(0, 0, Underline_None);
 			-- indentation exceeded
 			G.Add_Info("Ver.1/3",
-			"Version 01.01.00", "Date" &
+			"Version 01.02.00", "Date" &
 			Num_To_Str_L4(Time_Of_Compilation.Y) &
 			Num_To_Str_L2(Time_Of_Compilation.M) &
 			Num_To_Str_L2(Time_Of_Compilation.D) &

@@ -271,7 +271,6 @@ package body DCF77_Minutelayer is
 			-- context (e.g. fuzzing). Discard everything if
 			-- such a case is detected.
 			if Is_Plausible_Date_Time(Intermediate) then
-				Inc_Saturated(Ctx.Num_Fault, 99);
 				Ctx.Prev          := Intermediate;
 				Ctx.Prev_Telegram := Telegram_2;
 			else
@@ -288,7 +287,6 @@ package body DCF77_Minutelayer is
 		if Out_1_Recovery = Data_Complete then
 			Intermediate := Ctx.Decode(Telegram_1);
 			if not Is_Plausible_Date_Time(Intermediate) then
-				Inc_Saturated(Ctx.Num_Fault, 99);
 				Ctx.Seconds_Since_Prev := Unknown;
 				Ctx.Current_QOS        := QOS9_ASYNC;
 				return;
@@ -313,7 +311,6 @@ package body DCF77_Minutelayer is
 						Has_Minute_Tens(Telegram_1) then
 				Intermediate := Ctx.Decode_Tens(Telegram_1);
 				if not Is_Plausible_Date_Time(Intermediate) then
-					Inc_Saturated(Ctx.Num_Fault, 99);
 					Ctx.Seconds_Since_Prev := Unknown;
 					Ctx.Current_QOS        := QOS9_ASYNC;
 					return;

@@ -17,19 +17,55 @@ package body DCF77_Bitlayer is
 	end Init;
 
 	function Update_TIck(Ctx: in out Bitlayer) return Reading is
-		End_Of_Sec:   constant Time := Ctx.Start_Of_Sec + Second_In_Us;
+		Time_Now: Time := Ctx.LL.Get_Time_Micros;
+		Signal_Length: Time;
+		Signal_Begin: Time;
+		R: Reading;
+	begin
+		Ctx.Align_To_Slice(Time_Now);
+
+		-- When within close sequence, multiple “valid” bits are
+		-- observed, the subsequent ones are discarded as to not make
+		-- the clock run faster than intended.
+		if Ctx.LL.Read_Interrupt_Signal(Signal_Length, Signal_Begin)
+									then
+			R := Ctx.Convert_Signal_Length_To_Reading(
+								Signal_Length);
+			if R /= No_Update then
+				if Signal_Begin - Ctx.Preceding_Signal
+								< 750_000 then
+					-- We have to discard the reading if we
+					-- already had one within the preceding
+					-- 750 (800) ms.
+					Ctx.LL.Log("Discard: " &
+						Time'Image(Signal_Length));
+					DCF77_Functions.Inc_Saturated(
+							Ctx.Discarded, 9999);
+				else
+					-- If it is all good, record the signal
+					-- begin as valid time to compare
+					-- subsequent signals against
+					Ctx.Preceding_Signal := Signal_Begin;
+					Ctx.Start_Of_Sec     := Signal_Begin;
+					-- no overflow condition in event of
+					-- valid signal!
+					return R;
+				end if;
+			end if;
+		end if;
+
+		-- catch all / all “else” cases except for the good case go here
+		return Ctx.Detect_Second_Overflow(Time_Now);
+	end Update_Tick;
+
+	-- Slices are the tick interval at which the display is updated and the
+	-- interrupt readings are queried. Here, it is aligned to be every 100ms
+	-- automatically adjusting to the computation time that the preceding
+	-- code took.
+	procedure Align_To_Slice(Ctx: in out Bitlayer; Time_Now: in out Time) is
 		End_Of_Slice: constant Time := Ctx.Start_Of_Slice +
 								Delay_Us_Target;
-		Has_Reading:   Boolean := False;
-		Time_Now:      Time := Ctx.LL.Get_Time_Micros;
-		Signal_Length: Time;
-		Signal_Begin:  Time;
-		R:             Reading;
 	begin
-		-- Slices are the tick interval at which the display is updated
-		-- and the interrupt readings are queried. Here, it is aligned
-		-- to be every 100ms automatically adjusting to the computation
-		-- time that the preceding code took.
 		if Time_Now > End_Of_Slice then
 			DCF77_Functions.Inc_Saturated(Ctx.Overflown, 99);
 		else
@@ -40,64 +76,42 @@ package body DCF77_Bitlayer is
 			Time_Now := Ctx.LL.Get_Time_Micros;
 		end if;
 		Ctx.Start_Of_Slice := Time_Now;
+	end Align_To_Slice;
 
-		-- Read the interrupt signal
-		--
-		-- 50..140ms  -> zero bit
-		-- 150..250ms -> one bit
-		-- others     -> invalid reading
-		--
-		-- When within close sequence, multiple “valid” bits are
-		-- observed, the subsequent ones are discarded as to not make
-		-- the clock run faster than intended.
-		if Ctx.LL.Read_Interrupt_Signal(Signal_Length, Signal_Begin)
-									then
-			-- These signal lengths in general identify a valid
-			-- reading
-			if Signal_Length in 50_000 .. 140_000 then
-				Has_Reading := True;
-				R           := Bit_0;
-			elsif Signal_Length in 150_000 .. 250_000 then
-				Has_Reading := True;
-				R           := Bit_1;
-			else
-				R := No_Update;
-				Ctx.LL.Log("Unidentified: " & Time'Image(
-							Signal_Length));
-				DCF77_Functions.Inc_Saturated(Ctx.Unidentified,
-									9999);
-			end if;
-			-- We have to discard the reading if we already had
-			-- one within the preceding 750 (800) ms.
-			if Has_Reading and (Signal_Begin -
-					Ctx.Preceding_Signal) < 750_000 then
-				Has_Reading := False;
-				R           := No_Update;
-				Ctx.LL.Log("Discard: " &
+	-- 50..140ms  -> zero bit
+	-- 150..250ms -> one bit
+	-- others     -> invalid reading
+	function Convert_Signal_Length_To_Reading(Ctx: in out Bitlayer;
+				Signal_Length: in Time) return Reading is
+	begin
+		-- These signal lengths in general identify a valid reading
+		if Signal_Length in 50_000 .. 140_000 then
+			return Bit_0;
+		elsif Signal_Length in 150_000 .. 250_000 then
+			return Bit_1;
+		else
+			Ctx.LL.Log("Unidentified: " &
 						Time'Image(Signal_Length));
-				DCF77_Functions.Inc_Saturated(Ctx.Discarded,
-									9999);
-			else
-			-- If it is all good, record the signal begin as valid
-			-- time to compare subsequent signals against
-				Ctx.Preceding_Signal := Signal_Begin;
-			end if;
+			DCF77_Functions.Inc_Saturated(Ctx.Unidentified, 9999);
+			return No_Update;
 		end if;
-		-- If no valid signal was produced (any of no interrupt or
-		-- wrong signal length or discarded signal) then check if we
-		-- have exceeded 1sec and switch the second counter despite not
-		-- having received anything valuable. Otherwise say “No Update”.
-		if not Has_Reading then
-			R := (if Time_Now > (End_Of_Sec + Delay_Us_Epsilon)
-						then No_Signal else No_Update);
-		end if;
-		-- If anything (even No_Signal end of second) was output,
-		-- forward internal reference by one second.
-		if R /= No_Update then
+	end Convert_Signal_Length_To_Reading;
+
+	-- If no valid signal was produced (any of no interrupt or wrong signal
+	-- length or discarded signal) then check if we have exceeded 1sec and
+	-- switch the second counter despite not having received anything
+	-- valuable. Otherwise say “No Update”.
+	function Detect_Second_Overflow(Ctx: in out Bitlayer;
+					Time_Now: in Time) return Reading is
+		End_Of_Sec: constant Time := Ctx.Start_Of_Sec + Second_In_Us;
+	begin
+		if Time_Now > End_Of_Sec + Timeout_No_Signal_In_Us then
 			Ctx.Start_Of_Sec := End_Of_Sec;
+			return No_Signal;
+		else
+			return No_Update;
 		end if;
-		return R;
-	end Update_Tick;
+	end Detect_Second_Overflow;
 
 	function Get_Unidentified(Ctx: in Bitlayer) return Natural is
 							(Ctx.Unidentified);

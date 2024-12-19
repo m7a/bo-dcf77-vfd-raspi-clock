@@ -29,7 +29,7 @@ package DCF77_TM_Layer_Shared is
 	Hours_Per_Day:   constant Natural := 24;
 	Months_Per_Year: constant Natural := 12;
 
-	Time_Of_Compilation: constant TM := (2024, 12, 7, 16, 21, 11);
+	Time_Of_Compilation: constant TM := (2024, 12, 19, 23, 42, 08);
 
 	-- public because it is of interest to GUI, too!
 	Month_Lengths: constant array (0 .. 12) of Natural := (

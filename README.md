@@ -748,6 +748,8 @@ Version   Datum                CTR  Beschreibung
 01.00.00  2024-06-14 23:12:32  46-  1. Release
 01.01.00  2024-12-07 16:21:11  47   Stabilitätsverbesserungen mit Fuzzing
                                     Schriftart '6' besser von '5' unterscheidbar
+01.02.00  2024-12-19 23:42:08  48   Synchronisationsverlust bei >2 Wochen
+                                    Betriebsdauer behoben (`DCF77_Bitlayer`)
 
 Hilfreiche Links
 ================
