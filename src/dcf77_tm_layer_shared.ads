@@ -29,7 +29,11 @@ package DCF77_TM_Layer_Shared is
 	Hours_Per_Day:   constant Natural := 24;
 	Months_Per_Year: constant Natural := 12;
 
-	Time_Of_Compilation: constant TM := (2024, 12, 19, 23, 42, 08);
+	-- Not all related to the layers but it makes sense to keep all version
+	-- related information in a single source file.
+	Time_Of_Compilation: constant TM      := (2025, 1, 5, 14, 48, 49);
+	Ctr_Of_Compilation:  constant Natural := 50;
+	Version_String:      constant String  := "Version 01.03.00";
 
 	-- public because it is of interest to GUI, too!
 	Month_Lengths: constant array (0 .. 12) of Natural := (

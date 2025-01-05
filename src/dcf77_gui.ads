@@ -54,12 +54,11 @@ private
 		Select_Datetime,
 			Select_DT_H,  Select_DT_I, Select_DT_S,
 			Select_DT_YH, Select_DT_Y, Select_DT_M, Select_DT_D,
-		Select_Options,
-			Select_OPT_DCF77_EN, Select_OPT_RFU_EN,
 		Select_Info,
-			Select_I_QOS,
+			Select_I_QOS, Select_I_Bits, Select_I_Bits_Oszi,
 			Select_I_Last_1, Select_I_Last_2,
-			Select_I_Ver_1, Select_I_Ver_2, Select_I_Ver_3
+		Select_Version,
+			Select_Ver_2, Select_Ver_3
 	);
 
 	type Blink is mod 4;
@@ -114,12 +113,10 @@ private
 	procedure Add_AL(G: in out GUI; YI: in Pos_Y;
 						Underline: in Underline_Info);
 	procedure Add_Menu(G: in out GUI; Lbl: in Menu_Green);
-	procedure Add_Option_DCF77(G: in out GUI;
-						Underline: in Underline_Info);
-	procedure Add_Option(G: in out GUI; Underline: in Underline_Info;
-			YI: in Pos_Y; Label: in String; Value: in Boolean);
-	procedure Add_Option_RFU(G: in out GUI; Underline: in Underline_Info);
+	procedure Add_Info_Ctr(G: in out GUI);
 	procedure Add_Info(G: in out GUI; Title, L1, L2: in String);
+	procedure Add_Info_Bits(G: in out GUI);
+	procedure Add_Info_Oszi(G: in out GUI);
 	procedure Add_Last_1(G: in out GUI);
 	procedure Add_Last_2(G: in out GUI);
 
