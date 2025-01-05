@@ -72,13 +72,14 @@
 	\node[below=1cm of scrdate7,scr]   (scrdate7b)  {\incscr{scrdate7b}};
 	\node[below=1cm of scrdate8,scr]   (scrdate8b)  {\incscr{scrdate8b}};
 
-	\node[below=1cm of scrsep2,scr]    (scroption1) {\incscr{scroption1}};
-	\node[right=1cm of scroption1,scr] (scroption2) {\incscr{scroption2}};
-	\node[right=1cm of scroption2,scr] (scroption3) {\incscr{scroption3}};
-
-	\node[below=1cm of scroption1,scr] (scrinfo1)   {\incscr{scrinfo1}};
+	\node[below=1cm of scrsep2,scr]    (scrinfo1)   {\incscr{scrinfo1}};
 	\node[right=1cm of scrinfo1,scr]   (scrinfo2)   {\incscr{scrinfo2}};
-	\node[right=1cm of scrinfo2,scr]   (scrver1)    {\incscr{scrversion1}};
+	\node[right=1cm of scrinfo2,scr]   (scrinfo3)   {\incscr{scrinfo3}};
+	\node[right=1cm of scrinfo3,scr]   (scrinfo4)   {\incscr{scrinfo4}};
+	\node[right=1cm of scrinfo4,scr]   (scrinfo5)   {\incscr{scrinfo5}};
+	\node[right=1cm of scrinfo5,scr]   (scrinfo6)   {\incscr{scrinfo6}};
+
+	\node[below=1cm of scrinfo1,scr]   (scrver1)    {\incscr{scrversion1}};
 	\node[right=1cm of scrver1,scr]    (scrver2)    {\incscr{scrversion2}};
 	\node[right=1cm of scrver2,scr]    (scrver3)    {\incscr{scrversion3}};
 
@@ -100,13 +101,13 @@
 					node [midway,left] {\btngreen};
 	\draw[->,thick,btnblue] (scrdate1) -- +(-2,0)
 					node [midway,above] {\small links};
-	\draw[->,thick,btngreen] (scrdate1) -- (scroption1)
+	\draw[->,thick,btngreen] (scrdate1) -- (scrinfo1)
 					node [midway,left] {\btngreen};
-	\draw[->,thick,btnblue] (scroption1) -- +(-2,0)
-					node [midway,above] {\small links};
-	\draw[->,thick,btngreen] (scroption1) -- (scrinfo1)
+	\draw[->,thick,btngreen] (scrinfo1) -- (scrver1)
 					node [midway,left] {\btngreen};
 	\draw[->,thick,btnblue] (scrinfo1) -- +(-2,0)
+					node [midway,above] {\small links};
+	\draw[->,thick,btnblue] (scrver1) -- +(-2,0)
 					node [midway,above] {\small links};
 
 	\bluepairhoriz{scralm1}{scralm2}
@@ -141,44 +142,54 @@
 		(scrdate8end.center|-retpathinterm1.center) --
 		(retpathinterm1.center) node [midway,above] {rechts/zurück};
 
-	\bluepairhoriz{scroption1}{scroption2}
-	\bluepairhoriz{scroption2}{scroption3}
-	\draw[<-,thick,btngreen] (scroption2) edge[loop below,looseness=2.5]
-			(scroption2) node[below,yshift=-0.9cm] {umschalten};
-	\draw[<-,thick,btngreen] (scroption3) edge[loop below,looseness=2.5]
-			(scroption3) node[below,yshift=-0.9cm] {umschalten};
-	\draw[thick,btnblue] (scroption3) -- (scrdate8end.center|-scroption3)
-			node (scroption3end) {};
-	\path[btnblue] (scroption3) -- (scrdate8end.center|-scroption3)
-			node [midway,above] {rechts};
-	\draw[->,thick,btnblue] (scroption3end.center) -- (scrdate8end.center);
+	\draw[thick,btnblue] (scrinfo6) -- (scrdate8end.center|-scrinfo6)
+			node (scrinfo6end) {};
+	\path[btnblue] (scrinfo6) -- (scrdate8end.center|-scrinfo6)
+			node [midway,below] {rechts};
+	\draw[->,thick,btnblue] (scrinfo6end.center) -- (scrdate8end.center);
 
 	\bluepairhoriz{scrinfo1}{scrinfo2}
-	\bluepairhoriz{scrinfo2}{scrver1}
+	\bluepairhoriz{scrinfo2}{scrinfo3}
+	\bluepairhoriz{scrinfo3}{scrinfo4}
+	\bluepairhoriz{scrinfo4}{scrinfo5}
+
+	\draw[->,thick,btnblue,align=center] ($(scrinfo5.east)+(0,0.1)$) --
+		($(scrinfo6.west)+(0,0.1)$) node [midway,above]
+						{$\epsilon$\\[-0.3em] rechts};
+	\draw[<-,thick,btnblue,align=center] ($(scrinfo5.east)+(0,-0.1)$) --
+		($(scrinfo6.west)+(0,-0.1)$) node [midway,below]
+						{links\\[-0.3em] $\epsilon$};
+
 	\bluepairhoriz{scrver1}{scrver2}
 	\bluepairhoriz{scrver2}{scrver3}
-	\draw[thick,btnblue] (scrver3) -- (scroption3end.center|-scrver3)
+	\draw[thick,btnblue] (scrver3) -- (scrinfo6end.center|-scrver3)
 			node (scrver3end) {};
-	\path[btnblue] (scrver3) -- (scroption3end.center|-scrver3)
+	\path[btnblue] (scrver3) -- (scrinfo6end.center|-scrver3)
 			node [midway,above] {rechts};
-	\draw[->,thick,btnblue] (scrver3end.center) -- (scroption3end.center);
-
-	\draw[thick,btngreen] (scrinfo1) -- +(0,-1.5) node (scrinfo1bot) {};
-	\draw[thick,btngreen] (scrstartpre.center) --
-			(scrstartpre.center|-scrinfo1bot.center) --
-			(scrinfo1bot.center) node [midway,above] {\btngreen};
-	\draw[thick,btngreen] (scrinfo2) -- +(0,-1.5) node (scrinfo2bot) {};
-	\draw[->,thick,btngreen] (scrinfo2bot.center) -- (scrinfo1bot.center)
-			node [midway,above] {\btngreen};
+	\draw[->,thick,btnblue] (scrver3end.center) -- (scrinfo6end.center);
+	\draw[thick,btngreen] (scrinfo2) -- +(0,-1.2) node (scrinfo2bot) {};
+	\path[btngreen] (scrinfo2) -- +(0,-1.2) node[midway,right] {\btngreen};
+	\draw[->,thick,btngreen] (scrinfo3) -- +(0,-1.2) node[midway,right]
+								{\btngreen};
+	\draw[->,thick,btngreen] (scrinfo4) -- +(0,-1.2) node[midway,right]
+								{\btngreen};
+	\draw[->,thick,btngreen] (scrinfo5) -- +(0,-1.2) node[midway,right]
+								{\btngreen};
+	\draw[->,thick,btngreen] (scrinfo6) -- +(0,-1.2) node[midway,right]
+								{\btngreen};
+	\draw[->,thick,btngreen] (scrinfo2bot.center) --
+			(scrinfo6end.center|-scrinfo2bot) node (scrinfo2end) {};
 	\draw[thick,btngreen] (scrver1) -- +(0,-1.5) node (scrver1bot) {};
-	\draw[->,thick,btngreen] (scrver1bot.center) -- (scrinfo2bot.center)
-			node [midway,above] {\btngreen};
 	\draw[thick,btngreen] (scrver2) -- +(0,-1.5) node (scrver2bot) {};
 	\draw[->,thick,btngreen] (scrver2bot.center) -- (scrver1bot.center)
 			node [midway,above] {\btngreen};
 	\draw[thick,btngreen] (scrver3) -- +(0,-1.5) node (scrver3bot) {};
 	\draw[->,thick,btngreen] (scrver3bot.center) -- (scrver2bot.center)
 			node [midway,above] {\btngreen};
+
+	\draw[thick,btngreen] (scrstartpre.center) --
+			(scrstartpre.center|-scrver1bot.center) --
+			(scrver1bot.center) node [midway,above] {\btngreen};
 
 	\node[right=2cm of scralm3] (picsmall)
 				{\includegraphics[height=7cm]{picsmall}};
@@ -214,11 +225,11 @@
 	\node[right=0.3cm of lblseconds.south east] (qosanchor) {};
 	\draw[thick,white,->] ($(lblqos.south)+(0,+0.2)$) -- (qosanchor);
 
-	\path (scrver3.center) -- +(9,-1.5) node[draw] (lblplankopf)
+	\path (scrinfo6.center) -- +(5.7,-4) node[draw] (lblplankopf)
 		{\begin{minipage}{6cm}\begin{center}
 		Ma\_Sys.ma DCF77 VFD Raspi Clock\\
 		Bedienung und Übersicht der Anzeigezustände\\
-		2024-06-16 \qquad \cmd{info@masysma.net}
+		2025-01-05 \qquad \cmd{info@masysma.net}
 		\end{center}\end{minipage}};
 
 	\begin{pgfonlayer}{bg}
@@ -226,7 +237,7 @@
 				(areaalm) {};
 		\node[inner sep=3mm,fill=black!10,fit=(scrdate2) (scrdate8b)]
 				(areadate) {};
-		\node[inner sep=3mm,fill=black!10,fit=(scroption1) (scrver3)]
+		\node[inner sep=3mm,fill=black!10,fit=(scrinfo6) (scrver1)]
 				(areaextra) {};
 	\end{pgfonlayer}
 
@@ -234,8 +245,8 @@
 			(lblareaalm) {\textbf{\huge Wecker-\\einstellung}};
 	\node[below=0.7cm of scrdate8b,xshift=-0.92cm,fill=black!10]
 			(lblareadate) {\textbf{\huge Datumseinstellung}};
-	\node[above=0.3cm of scrver2,text width=5cm,xshift=1.5cm] (lblareaextra)
-			{\textbf{\huge{Einstellungen und Statusinformationen}}};
+	\node[right=5.5cm of scrver3,text width=5cm,yshift=-0.5cm]
+			(lblareaextra) {\textbf{\huge{Statusinformationen}}};
 
 	\begin{pgfonlayer}{bg}
 		\node[inner sep=1mm,fill=black!10,fit=(scrdate8) (lblareadate)]

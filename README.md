@@ -6,10 +6,10 @@ date: 2023/12/17 00:09:58
 lang: de-DE
 author: ["Linux-Fan, Ma_Sys.ma (Ma_Sys.ma@web.de)"]
 keywords: ["dcf77", "uhr", "rp2040", "clock", "raspi", "module", "vfd"]
-x-masysma-version: 1.1.0
+x-masysma-version: 1.3.0
 x-masysma-website: https://masysma.net/37/dcf77_vfd_raspi_clock.xhtml
 x-masysma-repository: https://www.github.com/m7a/bo-dcf77-vfd-raspi-clock
-x-masysma-copyright: (c) 2018-2024 Ma_Sys.ma <info@masysma.net>.
+x-masysma-copyright: (c) 2018-2025 Ma_Sys.ma <info@masysma.net>.
 ---
 Übersicht
 =========
@@ -32,9 +32,12 @@ Repository-Inhaltsübersicht
 
 	bo-dcf77/
 	 |
-	 +-- dcf77_vfd_raspi_block_att/ -- Ressourcendateien zur Webseite
+	 +-- dcf77_vfd_raspi_clock_att/ -- Ressourcendateien zur Webseite
 	 |
-	 +-- doc_gui_statechart/        -- Zustandsiagramm, siehe Abschnitt
+	 +-- doc_bitlayer_statechart/   -- Zustandsdiagramm für den Bitlayer
+	 |                                 passend zum Code: dcf77_bitlayer.ads
+	 |
+	 +-- doc_gui_statechart/        -- Zustandsdiagramm, siehe Abschnitt
 	 |                                 Bedienungsanleitung/Menünavigation
 	 |
 	 +-- release/                   -- Gesicherter Firmware-Binärstand
@@ -44,7 +47,7 @@ Repository-Inhaltsübersicht
 	 +-- src_simulated/             -- Zusatzdateien für Kompilierung zur
 	 |                                 Ausführung auf einem PC-System
 	 |
-	 +-- src_simulated_gui/         -- Java-Simulationsanwendung, siehe
+	 +-- src_simulator_gui/         -- Java-Simulationsanwendung, siehe
 	 |                                 Tests/Simulator
 	 |
 	 +-- telegram_editor/           -- (Java) DCF77-Telegrammeditor, siehe
@@ -70,9 +73,10 @@ Repository-Inhaltsübersicht
 	 +-- README.md                  -- diese Beschreibung
 	 |
 	 +-- LICENSE.txt                -- Lizenz für die Uhr
+	 |
 	 +-- LICENSE-THIRDPARTY.txt     -- Lizenzübersicht für Komponenten
 	 |
-	 +-- dcf77vrd.gpr/alire.toml    -- Alire-Projektdateien zum Kompilieren
+	 +-- dcf77vrd.gpr, alire.toml   -- Alire-Projektdateien zum Kompilieren
 	 |
 	 +-- build.xml                  -- Software-Bauinstruktionen für `ant`
 
@@ -102,13 +106,13 @@ Aufteilung des Bildschirminhalts und kommt dank SPI-Interface mit einer
 überschaubaren Anzahl an Leitungen zur Ansteuerung aus.
 
 Anfänglich wurde ein Arduino Nano v3 eingesetzt, allerdings stellte sich
-nach langer Entwicklungsarbeit an der Software heraus, dass diese zu groß für
-den Chip (und für die AVR-Architektur) geworden war. Daher wurde das Projekt auf
-Basis des Raspberry Pi PICO (RP2040) neugestartet. Dadurch wurde eine Umsetzung
-von den 3.3V IO-Spannung des RP2040 auf die 5V fürs Displaymodul erforderlich.
-Typische Wandlerchips dafür scheinen alle nur als SMD-Bauteile verfügbar zu
-sein. Daher wurde ein „Hack” mittels eines unidirektional genutzten Wandlerchips
-(SN74HCT245N) implementiert.
+nach langer Entwicklungsarbeit an der Software heraus, dass die Software zu groß
+für den Chip (und für die AVR-Architektur) geworden war. Daher wurde das Projekt
+auf Basis des Raspberry Pi PICO (RP2040) neugestartet. Dadurch wurde eine
+Umsetzung von den 3.3V IO-Spannung des RP2040 auf die 5V fürs Displaymodul
+erforderlich. Typische Wandlerchips dafür scheinen alle nur als SMD-Bauteile
+verfügbar zu sein. Daher wurde ein „Hack” mittels eines unidirektional genutzten
+Wandlerchips (SN74HCT245N) implementiert.
 
 Beim Gehäuse wurde anfänglich eine quadratische Version genutzt, in deren
 Mitte dann ein großer Drehknauf plaziert worden wäre, mittels dessen man
@@ -257,12 +261,24 @@ eine logische 0 bzw. 1 zu codieren. Als Endmarkierung (60. Puls) bleibt der
 Puls aus. Intern werden im Programm daher die Ablesungen (Reading) `Bit_0` (0),
 `Bit_1` (1) und `No_Signal` (3) unterschieden.
 
+![Darstellung des zentralen Bitlayer-Zustandsautomaten](dcf77_vfd_raspi_clock_att/blstatechart.svg)
+
 Die unterste Abstraktionsebene stellt der _Bitlayer_ dar: Er ist dafür
-zuständig, die eingehenden Pulslängen digital zu Reading zu codieren. Dazu wird
-eine Zuordnungstabelle von Intervalllängen zu Ablesungen verwendet. Da sich das
-im Laufe der Entwicklung als günstig herausstellte, implementiert der Bitlayer
-auch die Funktion des _Tickers_, der dafür sorgt, dass der Code in definierten
-Zeitintervallen von 100ms ausgeführt wird.
+zuständig, die Pulse zu erkennen und daraus die Ablesung zu berechnen. Von der
+Interrupt Service Routine (ISR) im `DCF77_Low_Level` wird periodisch
+(alle 7 ms) der GPIO-Wert der Antenne eingelesen und als Bit (0/1) in einer
+Variable festgehalten. Der aktuelle Stand dieser Bits wird vom Bitlayer alle
+100 ms abgeholt und mittels zweier deterministischer endlicher Zustandsautomaten
+vorgefiltert, um die Inputs 1, X1, 0, X0 und ANY zu unterscheiden, die
+typischerweise 14-15 GPIO-Werte innerhalb der 100ms als nur-1en (1), nur-0en (0)
+bzw. gemsichte Daten (X1, X0, ANY) zusammenfassen. Diese Inputs gehen dann in
+einen großen Zustandsautomat (vgl. Abbildung), dessen Zustand zwischen mehreren
+Aufrufen des Bitlayers erhalten bleibt. Typischerweise steht beim
+10. Zustandsübergang die Ablesung (Reading) fest und wird an die nächste Ebene
+ausgegeben. `No_Update` (2) wird ausgegeben, solange noch keine Ablesung
+vorliegt. Zusätzlich zu der Verarbeitung implementiert der Bitlayer den
+_Ticker_, der dafür sorgt, dass der Code in definierten Zeitintervallen von
+100 ms ausgeführt wird.
 
 Darüber befindet sich der _Secondlayer_. Die Idee hinter dieser Schicht ist es,
 die Ablesungen der letzten 9 Minuten vorzuhalten und anhand der Muster (bspw.
@@ -317,7 +333,6 @@ Aufgaben:
 
  * Eingabe der Weckzeit
  * Einstellung von Datum- und Uhrzeit
- * Deaktivieren der DCF77-Decodierung (hauptsächlich zu Testzwecken interessant)
 
 ## Zusatzfunktionen
 
@@ -347,7 +362,7 @@ möglich. Alles in diesem Repository enthaltene außer `release/` und
 ~~~
 MIT License
 
-Ma_Sys.ma DCF77 VFD Raspi Clock (c) 2018-2024 Ma_Sys.ma <info@masysma.net>
+Ma_Sys.ma DCF77 VFD Raspi Clock (c) 2018-2025 Ma_Sys.ma <info@masysma.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -539,7 +554,8 @@ die Tests erreicht wird.
 
 ## Serielle Ausgabe
 
-Wenn man die serielle Ausgabe überwachen will, kann man folgenden Befehl nutzen:
+Wenn man die serielle Ausgabe überwachen will, kann man folgenden Befehl nutzen.
+Dabei ist das Seriell-Gerät (`ttyUSB0`) auf das jeweilige System anzupassen:
 
 	picocom --baud 115200 --stopbits 1 --databits 8 --parity n /dev/ttyUSB0
 
@@ -561,13 +577,13 @@ DCF77-Zeitsignal. Dazu muss die externe Antenne angeschlossen werden.
 Anschließend wird das Netzteil angeschlossen und die Uhr synchronisiert
 sich selbständig mit dem Zeitsignal.
 
-Die gelungene Synchronisation kann jederzeit in der unteren linken Ecke
-des Bildschirms abgelesen werden, wobei (+1) die beste Empfangsqualität
-und (-9) eine fehlende Synchronisierung signalisieren.
+Die gelungene Synchronisation kann in der oberen rechten Ecke des Bildschirms
+abgelesen werden, wobei (+1) die beste Empfangsqualität und (-9) eine fehlende
+Synchronisierung signalisieren.
 
-In der Mitte des Bildschirms wird die Uhrzeit dargestellt, darüber das Datum.
-Unten rechts wird die eingestellte Weckzeit angezeigt, sofern der Wecker aktiv
-ist.
+Im linken Teil des Bildschirms wird die Uhrzeit dargestellt, rechts daneben
+der Sekundenzähler und das Datum. Unten rechts wird die eingestellte Weckzeit
+angezeigt, sofern der Wecker aktiv ist.
 
 ## Menünavigation
 
@@ -607,7 +623,7 @@ verharrt in der Position und sichert so den Einschaltzustand des Weckers
 unabhängig vom Stromnetz.
 
 Die aktive Weckfunktion wird durch die orangene Hintergrundbeleuchtung des
-Knofpes und durch Anzeige der Weckzeit auf dem Startbildschirm signalisiert.
+Schalters und durch Anzeige der Weckzeit auf dem Startbildschirm signalisiert.
 
 ### Wecker auslösen
 
@@ -618,7 +634,8 @@ Sollte der Strom ausfallen oder aus anderen Gründen die Uhr bei aktivierterm
 roten Schalter mit der Spannungsversorgung verbunden werden, so aktiviert sich
 der Buzzer sofort (unabhängig von einer eventuell vorher gestellten Weckzeit).
 Damit wird verhindert, dass ein nächtlicher Stromausfall die Weckfunktion außer
-Kraft setzt, allerdings kann es dadurch zu verfrüher Auslösung kommen.
+Kraft setzt, allerdings kann es dadurch zu verfrüher oder verspäteter Auslösung
+(je nach Dauer des Stromausfalls) kommen.
 
 ### Wecker abstellen
 
@@ -636,7 +653,7 @@ Wecker erforderlich sein.
 
 ## Uhrzeit verstellen
 
-Eine verstllte Uhrzeit ist nur solange wirksam, wie kein anderslautendes Signal
+Eine verstellte Uhrzeit ist nur solange wirksam, wie kein anderslautendes Signal
 per DCF77 empfangen wird. Um eine eigene Uhrzeitvorgabe dauerhaft festzulegen
 muss die Antenne abgestöpselt werden. Im Betrieb ohne DCF77-Zeitsignal ist
 jedoch mit einer starken Abweichung über die Zeit zu rechnen!
@@ -647,24 +664,10 @@ Menü betreten und darin können der Reihe nach die Werte für Uhrzeit
 (Jahrhundert, Jahr, Monat, Tag) bearbeitet werden. Das Bearbeiten der Zahlen
 erfolgt analog zum Wecker-Stellen.
 
-## Einstellungen verstellen
-
-Aktuell wird nur _eine_ Einstellungsoption angeboten: _DCF77 Proc._ schaltet
-zwischen dem Verarbeiten der Inhalte des DCF77-Zeitsignals und dem ignorieren
-der empfangenen Bits um. Allerdings ist auch bei Abschalten dieser Einstellung
-die Zeit auf der Uhr nicht gänzlich vom Zeitsignal unabhänig, da der
-Sekundezeiger immernoch grundsätzlich auf Basis des Signalempfangs gesteuert
-wird. Um dies zu verhindern, muss man zusätzlich die Antenne abstöpseln.
-
-Mittels 3x _grün_ kann man vom Startbildschirm ins Einstellungsmenü navigieren.
-Anschließend lässt sich die Einstellung mit _rechts_ auslösen und mit einem
-Druck auf _grün_ umschalten. Zurück zum Startbildschirm gelangt man mit
-2x _rechts_. (Die _RFU Option_ hat keine Bedeutung).
-
 ## Statusinformationen anzeigen
 
-Mittels 4x _grün_ kann man vom Startbildschirm ins Informationsmenü navigieren.
-Drain können mittels _rechts_ verschiedene Bildschirme durchgeschaltet werden.
+Mittels 3x _grün_ kann man vom Startbildschirm ins Informationsmenü navigieren.
+Darin können mittels _rechts_ verschiedene Bildschirme durchgeschaltet werden.
 Ihre Bedeutung ist nachfolgend erläutert.
 
 ### CTRInfo
@@ -674,22 +677,21 @@ Uhrprogramms anzeigen:
 
 Erste Zeile
 
- 1. `Bitlayer.Get_Unidentified`.
- 2. `Bitlayer.Get_Discarded`.
- 3. `Bitlayer.Get_Overflown`.
+ 1. `LL.Get_Fault`
+ 2. `Bitlayer.Get_Unidentified`
+ 3. `Bitlayer.Get_Overflown`
  4. `Bitlayer.Get_Delay / 1000` (typischerweise um die 70)
 
 Zweite Zeile
 
- 1. `LL.Get_Fault`.
- 2. `Secondlayer.Get_Fault`.
- 3. `Minutelayer.Get_Fault`
- 4. Die am Umgebungshelligkeitssensor erkannte Helligkeit
+ 1. `Secondlayer.Get_Fault`.
+ 2. `Minutelayer.Get_Fault`
+ 3. Die am Umgebungshelligkeitssensor erkannte Helligkeit
     (`Light_Sensor_Reading`) im Bereich 0..100. Praktisch werden nur Werte bis
     knapp über 80 erreicht.
 
-Wenn `Unidentified`, `Discarded` oder `LL.Get_Fault` hohe Werte zeigen, kann das
-ein Indikator für gestörten Signalempfang bzw. falsche Antennenausrichtung sein.
+Wenn `Get_Fault` oder `Get_Unidentified` hohe Werte zeigen, kann das ein
+Indikator für gestörten Signalempfang bzw. falsche Antennenausrichtung sein.
 
 ### QOSInfo
 
@@ -714,9 +716,38 @@ Solange die Uhrzeit initial noch nicht synchronisiert ist, ist die
 Empfangsqualität notwendigerweise schlecht, daher ist es normal, dass während
 der Synchronisationsphase die Zähler sekündlich hochzählen.
 
-### Versionsinformationen
+### Bit.
 
-Die hinteren drei Bildschirme geben Auskunft über die Firmwareversion, den
+Auf diesem Bildschirm wird für den _Bitlayer_ dargestellt, in welchem Zustand
+sich dieser befindet. In der oberen rechten Ecke steht der letzte ermittelte
+Input (1, X1, 0, X0, ANY) und un der unteren rechten Ecke ein zugehöriger
+Zählerwert (`Buf_Ctr`).
+
+Dieser Bildschirm dient hauptsächlich dazu, visuell zu beobachten, ob der
+Bilayer-Zustandasautomat in korrekter Weise durchlaufen wird.
+
+### BitOszi
+
+Das „virtuelle Oszilloskop” zeigt die in den Bitlayer eingehenden Daten. In der
+ersten Zeile steht eine Visualisierung der Daten, wie sie von der ISR geholt
+wurden und in der zweiten Zeile eine vorgefilterte-Variante nach Verarbeitung
+durch die Routine `Filter_And_Validate`.
+
+In der Darstellung steht `_` für 0, `*` für 1.
+
+### Last1/2 und Last2/2
+
+Die beiden _Last_-Bildschirme zeigen die zuletzt decodierten Sekunden-Bits für
+bis zu eine Minute, jeweils maximal 16-Bit pro Zeile. Der Cursor `_` zeigt an,
+wo das nächste Bit gelesen wird. Wenn man länger auf einem der Bildschirme
+stehen bleibt, wechselt das Programm automatisch zwischen _Last1/2_ und
+_Last2/2_, sodass das jeweils aktuell gelesene Bit auf dem Schirm steht.
+
+## Versionsinformationen
+
+Mittels 4x _grün_ kann man vom Startbildschirm zum Versionsmenü navigieren.
+
+Die zugehörigen drei Bildschirme geben Auskunft über die Firmwareversion, den
 Softwareentwickler und Kontaktinformationen zum Softwareentwickler.
 
 Abschließende Überlegungen
@@ -750,6 +781,8 @@ Version   Datum                CTR  Beschreibung
                                     Schriftart '6' besser von '5' unterscheidbar
 01.02.00  2024-12-19 23:42:08  48   Synchronisationsverlust bei >2 Wochen
                                     Betriebsdauer behoben (`DCF77_Bitlayer`)
+01.03.00  2025-01-05 14:48:49  50   Komplett überarbeiteter Bitlayer
+                                    Options-Bildschirme entfernt
 
 Hilfreiche Links
 ================
@@ -758,6 +791,10 @@ Interner Link:
 [dcf77_vfd_roehren_bausatz_dcf77_melody(37)](../37/dcf77_vfd_roehren_bausatz_dcf77_melody.xhtml) --
 ein weiteres DCF77-VFD-Projekt, welches beim Ma_Sys.ma dokumentiert ist, jedoch
 in diesem Fall auf Basis eines Bausatzes.
+
+Unter <https://dcf77logs.de/live> gibt es eine Live-Ansicht der aktuellen
+DCF77-Daten, sowie historische Datensätze zum Download. Die Seite ist bei der
+Entwicklung von eigenen DCF77-Projekten sehr hilfreich!
 
 _Blinkenlight Experiments_ (blinkenlight.net) enthält und erklärt ebenfalls eine
 umfangreiche DCF77-Uhrenimplementierung. Diese hat noch eine größere

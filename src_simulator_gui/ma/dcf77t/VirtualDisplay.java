@@ -81,29 +81,45 @@ class VirtualDisplay extends JComponent {
 	}
 
 	void screenshot(ActionEvent ev) {
-		int[] memory    = backend.getMemory();
-		int[] memoryCPY = Arrays.copyOf(memory, memory.length);
-		int screenID    = backend.getScreenOn(0) ? 0 :
-					(backend.getScreenOn(1) ? 1 : -1);
-		if (screenID == -1)
-			return;
-
-		int screenAddressStart = backend.getScreenAddressStart(
-								screenID);
+		boolean isEmpty;
 		BufferedImage img = new BufferedImage(
 					DISPLAY_WIDTH_PX, DISPLAY_HEIGHT_PX,
 					BufferedImage.TYPE_BYTE_BINARY);
-		for (int i = 0; i < SCREEN_NUM_BYTES; i++) {
-			int virtualStartY = (i % SCREEN_HEIGHT_BYTES) * 8;
-			int virtualStartX = i / SCREEN_HEIGHT_BYTES;
-			int currentByte = memoryCPY[i];
-			for (int j = 0; j < 8; j++) {
-				boolean isPixelOn =
-					(((currentByte >> (7 - j)) & 1) == 1);
-				img.setRGB(virtualStartX, virtualStartY + j,
-					isPixelOn ? 0x000000 : 0xffffff);
+		do {
+			int[] memory    = backend.getMemory();
+			int[] memoryCPY = Arrays.copyOf(memory, memory.length);
+			int screenID    = backend.getScreenOn(0) ? 0 :
+					(backend.getScreenOn(1) ? 1 : -1);
+			if (screenID == -1)
+				return;
+
+			int screenAddressStart = backend.getScreenAddressStart(
+								screenID);
+			isEmpty = true;
+			for (int i = 0; i < SCREEN_NUM_BYTES; i++) {
+				int virtualStartY =
+						(i % SCREEN_HEIGHT_BYTES) * 8;
+				int virtualStartX = i / SCREEN_HEIGHT_BYTES;
+				int currentByte = memoryCPY[i];
+				for (int j = 0; j < 8; j++) {
+					boolean isPixelOn = (((currentByte >>
+							(7 - j)) & 1) == 1);
+					if (isPixelOn)
+						isEmpty = false;
+					img.setRGB(virtualStartX,
+							virtualStartY + j,
+							isPixelOn ?  0x000000 :
+								0xffffff);
+				}
 			}
-		}
+			if (isEmpty) {
+				try {
+					Thread.sleep(30);
+				} catch(InterruptedException ex) {
+					// ignore
+				}
+			}
+		} while (isEmpty);
 
 		JFileChooser chooser = new JFileChooser();
 		chooser.setFileFilter(new FileNameExtensionFilter("PNG files",
