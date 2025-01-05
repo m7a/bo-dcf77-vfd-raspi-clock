@@ -6,6 +6,9 @@ with RP.Device;
 with RP.SPI;
 with RP.UART;
 
+-- with System.Atomic_Operations;
+with Atomic.Unsigned_32;
+
 with DCF77_Types;
 use  DCF77_Types;
 
@@ -26,9 +29,7 @@ package DCF77_Low_Level is
 	procedure Delay_Micros(Ctx: in out LL; DT: in Time);
 	procedure Delay_Until(Ctx: in out LL; T: in Time);
 
-	-- Returns False if no new data available. Clears data
-	function Read_Interrupt_Signal(Ctx: in out LL; Signal_Length: out Time;
-					Signal_Begin: out Time) return Boolean;
+	function Read_Interrupt_Signal_And_Clear(Ctx: in out LL) return U32;
 
 	-- Returns True when Button is held down
 	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean;
@@ -60,6 +61,10 @@ private
 		ADC0_Light: RP.ADC.ADC_Channel;
 	end record;
 
+	--type Atomic_U32 is new U32 with Atomic;
+	--package Exchange is new Atomic_Operations.Exchange(Atomic_Type =>
+	--							Atomic_U32);
+
 	-- Digital Inputs
 	DCF:             RP.GPIO.GPIO_Point renames Pico.GP22;
 	Not_Ta_G:        RP.GPIO.GPIO_Point renames Pico.GP15;
@@ -90,13 +95,11 @@ private
 	-- Static Variables for Interrupt Counter.
 	-- Cannot be part of the record for lifecycle reasons
 	-- ISR procedure may run even if context already destroyed!
-	-- Marker value "0" is used to indicate "unset".
-	-- After processing, users should reset the Interrupt_Start_Ticks to 0.
 	Interrupt_Fault_Max: constant Natural := 9999;
-	Interrupt_Start_Ticks:  Time    := 0;
-	Interrupt_Out_Ticks:    Time    := 0;
-	Interrupt_Pending_Read: Boolean := False;
-	Interrupt_Fault:        Natural := 0;
+	Interrupt_Fault: Natural := 0;
+	--Interrupt_Value: Atomic_U32 := 1;
+	Interrupt_Value: aliased Atomic.Unsigned_32.Instance :=
+						Atomic.Unsigned_32.Init(1);
 
 	function Get_Fault(Ctx: in out LL) return Natural is (Interrupt_Fault);
 

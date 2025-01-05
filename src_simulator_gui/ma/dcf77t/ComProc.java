@@ -87,6 +87,8 @@ class ComProc extends Thread {
 			return String.valueOf(System.nanoTime() / 1000);
 		case "read_interrupt_signal":
 			return readInterruptSignal();
+		case "read_interrupt_signal_v2":
+			return readInterruptSignalV2();
 		case "green_button_is_down":
 			return bool2str(ustat.buttons.equals("green"));
 		case "left_button_is_down":
@@ -107,10 +109,16 @@ class ComProc extends Thread {
 		}
 	}
 
+	// deprecated, not used in the standard flow anymore
+	// models must not mix between v1 and v2 usage here
 	private String readInterruptSignal() {
 		long[] iinfo = sim.getInterrupt();
 		return (iinfo == null) ? "none" : (String.valueOf(iinfo[0]) +
 						"," + String.valueOf(iinfo[1]));
+	}
+
+	private String readInterruptSignalV2() {
+		return String.valueOf(sim.nextBits());
 	}
 
 	private static String bool2str(boolean value) {

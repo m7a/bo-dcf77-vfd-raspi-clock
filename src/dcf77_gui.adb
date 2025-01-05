@@ -429,19 +429,23 @@ package body DCF77_GUI is
 			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Info(
 			Title => "CTRInfo",
-			L1 => Num_To_Str_L4(G.S.Bitlayer.Get_Unidentified) &
+			L1 =>   -- EEEE
+				Num_To_Str_L4(G.S.LL.Get_Fault) & " " &
+				-- AAAA
+				Num_To_Str_L4(G.S.Bitlayer.Get_Unidentified) &
 				" " &
-				Num_To_Str_L4(G.S.Bitlayer.Get_Discarded) &
-				" " &
+				-- CC
 				Num_To_Str_L2(G.S.Bitlayer.Get_Overflown) &
 				" " &
+				-- DDD
 				Num_To_Str_L3(Natural(G.S.Bitlayer.Get_Delay /
 									1000)),
-			L2 => Num_To_Str_L4(G.S.LL.Get_Fault) & " " &
-				Num_To_Str_L4(G.S.Secondlayer.Get_Fault) &
-				" " &
-				Num_To_Str_L2(G.S.Minutelayer.Get_Fault) &
-				" " &
+			L2 =>   -- FFFF
+				Num_To_Str_L4(G.S.Secondlayer.Get_Fault) & " " &
+				-- GGGG
+				Num_To_Str_L4(G.S.Minutelayer.Get_Fault) &
+				"    " &
+				-- HHH
 				Num_To_Str_L3(Natural(G.S.Light_Sensor_Reading))
 			);
 			G.Add_Menu(Menu_Home);

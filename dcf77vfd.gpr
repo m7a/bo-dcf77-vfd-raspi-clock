@@ -13,6 +13,7 @@ project Dcf77vfd is
 
 	package Compiler is
 		for Default_Switches("Ada") use (
+			--"-gnat2022",   -- Ada 2022 / only useful w/ Atomic...
 			"-gnatwa",       -- All warnings
 			"-gnatVa",       -- All validity checks
 			"-gnatwe",       -- Warnings as errors

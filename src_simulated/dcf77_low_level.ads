@@ -21,9 +21,7 @@ package DCF77_Low_Level is
 	procedure Delay_Micros(Ctx: in out LL; DT: in Time);
 	procedure Delay_Until(Ctx: in out LL; T: in Time);
 
-	-- Returns False if no new data available. Clears data
-	function Read_Interrupt_Signal(Ctx: in out LL; Signal_Length: out Time;
-					Signal_Begin: out Time) return Boolean;
+	function Read_Interrupt_Signal_And_Clear(Ctx: in out LL) return U32;
 
 	-- Returns True when Button is held down
 	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean;

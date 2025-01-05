@@ -8,6 +8,8 @@ with RP2040_SVD.Interrupts;
 with DCF77_Functions;
 use  DCF77_Functions; -- Inc_Saturated
 
+with Interfaces; -- Shift_Left
+
 package body DCF77_Low_Level is
 
 	-- Disable warnings about this for the entire file since we want to
@@ -81,9 +83,10 @@ package body DCF77_Low_Level is
 	
 	procedure Handle_DCF_Interrupt is
 		use type HAL.UInt32; -- import + operator
-		-- Inverted by antenna design
-		Val: constant Boolean := not DCF.Get;
-		DT: Time;
+		use type U32;        -- operators for Unsigned_32
+
+		Current: U32;
+		Val_Int: U32;
 	begin
 		-- ack and trigger again in 7ms
 		RP2040_SVD.TIMER.TIMER_Periph.INTR.ALARM_1 := True;
@@ -91,37 +94,20 @@ package body DCF77_Low_Level is
 				RP2040_SVD.TIMER.TIMER_Periph.ALARM1 + 7_000;
 		RP2040_SVD.TIMER.TIMER_Periph.INTE.ALARM_1 := True;
 
-		if Val then
-			if Interrupt_Start_Ticks = 0 then
-				Interrupt_Start_Ticks := Time(RP.Timer.Clock);
-			elsif Interrupt_Pending_Read then
-				Inc_Saturated(Interrupt_Fault,
-							Interrupt_Fault_Max);
-				Interrupt_Pending_Read := False;
-				Interrupt_Start_Ticks  := Time(RP.Timer.Clock);
-			end if;
+		-- Inverted by antenna design
+		--Current := Interrupt_Value;
+		Current := Atomic.Unsigned_32.Load(Interrupt_Value);
+		Val_Int := (if DCF.Get then 0 else 1);
+
+		if (Current and 16#8000_0000#) /= 0 or Current = 0 then
+			--Interrupt_Value := 2 or Val_Int;
+			Atomic.Unsigned_32.Store(Interrupt_Value, 2 or Val_Int);
+			Inc_Saturated(Interrupt_Fault, Interrupt_Fault_Max);
 		else
-			if Interrupt_Start_Ticks /= 0 and
-						not Interrupt_Pending_Read then
-				DT := Time(RP.Timer.Clock) -
-							Interrupt_Start_Ticks;
-				-- Act like we never saw the “1” for very
-				-- short spikes
-				if DT < 10_000 then
-					Inc_Saturated(Interrupt_Fault,
-							Interrupt_Fault_Max);
-					Interrupt_Start_Ticks := 0;
-				-- give 2nd chance to complete the signal if
-				-- it appears too short but there were
-				-- definitely multiple “1” readings
-				elsif DT < 30_000 then
-					Inc_Saturated(Interrupt_Fault,
-							Interrupt_Fault_Max);
-				else
-					Interrupt_Out_Ticks    := DT;
-					Interrupt_Pending_Read := True;
-				end if;
-			end if;
+			Atomic.Unsigned_32.Store(Interrupt_Value,
+				Interfaces.Shift_Left(Current, 1) or Val_Int);
+			--Interrupt_Value := Shift_Left(Interrupt_Value, 1) or
+			--						Val_Int;
 		end if;
 	end Handle_DCF_Interrupt;
 
@@ -157,20 +143,14 @@ package body DCF77_Low_Level is
 		end if;
 	end Set_Alarm_LED_Enabled;
 
-	function Read_Interrupt_Signal(Ctx: in out LL;
-				Signal_Length: out Time; Signal_Begin: out Time)
-				return Boolean is
+	--function Read_Interrupt_Signal_And_Clear(Ctx: in out LL) return U32 is
+	--		(U32(Exchange.Atomic_Exchange(Interrupt_Value, 1)));
+	function Read_Interrupt_Signal_And_Clear(Ctx: in out LL) return U32 is
+		RV: U32;
 	begin
-		if Interrupt_Pending_Read then
-			Signal_Length          := Interrupt_Out_Ticks;
-			Signal_Begin           := Interrupt_Start_Ticks;
-			Interrupt_Start_Ticks  := 0;
-			Interrupt_Pending_Read := False;
-			return True;
-		else
-			return False;
-		end if;
-	end Read_Interrupt_Signal;
+		Atomic.Unsigned_32.Exchange(Interrupt_Value, 1, RV);
+		return RV;
+	end Read_Interrupt_Signal_And_Clear;
 
 	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean is
 							(not Not_Ta_G.Get);
@@ -223,10 +203,11 @@ package body DCF77_Low_Level is
 
 	procedure Debug_Dump_Interrupt_Info(Ctx: in out LL) is
 	begin
-		Ctx.Log("IINFO ot=" & Time'Image(Interrupt_Out_Ticks) &
-			" st=" & Time'Image(Interrupt_Start_Ticks) &
-			" pd=" & Boolean'Image(Interrupt_Pending_Read) &
-			" dv=" & Boolean'Image(DCF.Get));
+		--	" i=" & Atomic_U32'Image(Interrupt_Value, 2));
+		Ctx.Log("IINFO d=" & Boolean'Image(DCF.Get) &
+			" f=" & Natural'Image(Interrupt_Fault) &
+			" i=" & U32'Image(
+				Atomic.Unsigned_32.Load(Interrupt_Value)));
 	end Debug_Dump_Interrupt_Info;
 
 end DCF77_Low_Level;

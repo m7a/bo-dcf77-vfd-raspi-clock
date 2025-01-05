@@ -109,7 +109,7 @@ package body DCF77_Minutelayer is
 			Ctx.Leap_Sec_State := Ctx.Leap_Sec_State + 1;
 			if Ctx.Leap_Sec_State >= Leap_Sec_Time_Limit then
 				Ctx.Leap_Sec_State := No_Leap_Sec_Announced;
-				Inc_Saturated(Ctx.Num_Fault, 99);
+				Inc_Saturated(Ctx.Num_Fault, 9999);
 			end if;
 		end if;
 

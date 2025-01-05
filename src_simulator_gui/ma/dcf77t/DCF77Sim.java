@@ -44,9 +44,10 @@ class DCF77Sim {
 	private final String[]             testVectorComments;
 
 	private final AtomicInteger faults = new AtomicInteger(0);
-	private int[] lastMinSec = { 0, 0 };
+	private int[] lastMinSec = { 0, 0 }; // deprecated
 	private long  lastQuery  = -1;
-	private long  lastBegin  = 0;
+	private long  lastBegin  = 0; // deprecated
+	private long  refStart   = 0;
 
 	DCF77Sim() throws IOException {
 		super();
@@ -73,20 +74,99 @@ class DCF77Sim {
 					String[comments.size()]);
 	}
 
-	int getMinutes() {
+	/**
+	 * Note that this implementation does not currently maintain the
+	 * processing state that was originally intended to be maintained...
+	 */
+	long nextBits() {
+		long now = System.nanoTime() / 1_000; // all in µs
+		if (refStart <= 0) {
+			refStart = now;
+			lastQuery = now - 100_000;
+		}
+
+		int bitsRequested = (int)((now - lastQuery) / 7_000);
+		lastQuery = now;
+		if (bitsRequested > 29) {
+			// requested too much
+			faults.incrementAndGet(); // don't care about RV
+			bitsRequested = 29;
+		}
+
+		int secondComplete = (int)((now - refStart) / 1_000_000);
+
+		byte[] windowData = new byte[286];
+		int nowOffset = 143;
+		for (int i = -1; i <= 0; i++) {
+			int secondToRequest = secondComplete + i;
+			int secondOfMinute = secondToRequest % 60;
+			int minute = secondToRequest / 60;
+			int valm;
+
+			if (secondToRequest < 0 ||
+			minute >= testVectorMinutes.length ||
+			secondOfMinute >= testVectorMinutes[minute].length() ||
+			((valm = testVectorMinutes[minute].get(secondOfMinute))
+			& EDIT_MASK) == EDIT_FORCE_INVALID) {
+				for (int j = 0; j < 143; j++)
+					windowData[nowOffset + i * nowOffset +
+									j] = 0;
+				continue;
+			}
+
+			int setTo1 = 0;
+			switch (valm & VALUE_MASK) {
+			case VALUE_BIT_0: setTo1 = 14; break;
+			case VALUE_BIT_1: setTo1 = 28; break;
+			}
+
+			for (int j = 0; j < 143; j++)
+				windowData[nowOffset + i * nowOffset + j] =
+					(j < setTo1) ? (byte)1 : (byte)0;
+		}
+
+		int timingInSecond =
+			(int)(((now - refStart) % 1_000_000) * 143 / 1_000_000);
+
+		//char infoBits[] = new char[bitsRequested + 1];
+		//infoBits[0] = '1';
+
+		long rv = 1;
+		for (int i = -bitsRequested + 1; i <= 0; i++) {
+			rv = (rv << 1) | windowData[nowOffset +
+							timingInSecond + i];
+			//infoBits[bitsRequested + i] = windowData[nowOffset +
+			//		timingInSecond + i] == 0 ? '0' : '1';
+		}
+
+		//System.out.println(new String(infoBits));
+
+		return rv;
+	}
+
+	int getFaults() {
+		return faults.get();
+	}
+
+// -----------------------------------------------------------------------------
+// DEPRECATED - IF A MODEL DECIDES TO CONSISTENTLY ONLY USE THE OLD STYLE IT MAY
+//              STILL WORK THUS NOT DELETED FOR NOW
+// -----------------------------------------------------------------------------
+
+	private int getMinutes() {
 		return testVectorMinutes.length;
 	}
 
-	int getSeconds(int minute) {
+	private int getSeconds(int minute) {
 		return testVectorMinutes[minute].length();
 	}
 
-	int getSecond(int... minSec) {
+	private int getSecond(int... minSec) {
 		return testVectorMinutes[minSec[0]].get(minSec[1]);
 	}
 
 	/** @return null for not found */
-	int[] findUnprocessed(int... start) {
+	private int[] findUnprocessed(int... start) {
 		if (start == null)
 			return null;
 
@@ -165,10 +245,6 @@ class DCF77Sim {
 					" (val=" + val + ", lastMinSec=" +
 					lastMinSec + ")");
 		}
-	}
-
-	int getFaults() {
-		return faults.get();
 	}
 
 }

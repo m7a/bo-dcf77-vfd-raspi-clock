@@ -1,6 +1,4 @@
 with Ada.Text_IO;
-with Ada.Strings.Fixed;
-use  Ada.Strings.Fixed;
 with Ada.Assertions;
 use  Ada.Assertions;
 
@@ -12,8 +10,9 @@ use  Ada.Assertions;
 -- Call                         Reply
 -- ---------------------------  -----------------------------------------
 -- get_time_micros              ack,get_time_micros,<positive value>
--- read_interrupt_signal        ack,interrupt_signal,none
---                              ack,interrupt_signal,<length>,<begin>
+-- ~~read_interrupt_signal~~    ~~ack,interrupt_signal,none~~
+--                              ~~ack,interrupt_signal,<length>,<begin>~~
+-- read_interrupt_signal_v2     ack,read_interrupt_signal_v2,<positive value>
 -- green_button_is_down         ack,green_button_is_down,<0|1>
 -- left_button_is_down          ack,left_button_is_down,<0|1>
 -- right_button_is_down         ack,right_button_is_down,<0|1>
@@ -89,27 +88,16 @@ package body DCF77_Low_Level is
 		Ctx.Delay_Micros(DT);
 	end Delay_Until;
 
-	--             21 -----v
-	-- ack,interrupt_signal,<signal_length>,<signal_begin>
-	-- akc,interrupt_signal,none
-	function Read_Interrupt_Signal(Ctx: in out LL; Signal_Length: out Time;
-				Signal_Begin: out Time) return Boolean is
-		Reply:     constant String  :=
-					Call(Ctx, "read_interrupt_signal");
-		Split_Pos: constant Integer := Index(Reply, ",");
+	-- TODO INCOMPATIBLE API - NEED TO EXTEND THE CODE TO RETURN THE BITS RATHER THAN “SIGNAL LENGTH”/”SIGNAL BEGIN” pairs...
+	function Read_Interrupt_Signal_And_Clear(Ctx: in out LL) return U32 is
+		Reply: constant U32 := U32'Value(
+					Call(Ctx, "read_interrupt_signal_v2"));
 	begin
-		if Split_Pos = 0 then
-			Signal_Length := 0; -- Wmaybe-uninitialized
-			Signal_Begin  := 0;
-			return False;
-		else
-			Signal_Length := Time'Value(Reply(Reply'First ..
-							Split_Pos - 1));
-			Signal_Begin  := Time'Value(Reply(Split_Pos + 1 ..
-							Reply'Last));
-			return True;
-		end if;
-	end Read_Interrupt_Signal;
+		Assert(Reply /= 0,
+			"ISR reply must have a leading 1 and thus cannot be 0");
+		return Reply;
+		--return (2#10000000000#);
+	end Read_Interrupt_Signal_And_Clear;
 
 	function Read_Green_Button_Is_Down(Ctx: in out LL) return Boolean is
 				(Call_Bool(Ctx, "green_button_is_down"));

@@ -8,4 +8,5 @@ maintainers-logins = ["m7a"]
 
 executables = ["dcf77vfd"]
 [[depends-on]]
-pico_bsp = "^2.0.0"
+pico_bsp = "^2.2.0"
+atomic = "^1.0.0"

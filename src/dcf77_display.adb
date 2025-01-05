@@ -56,7 +56,7 @@ package body DCF77_Display is
 	procedure Update(Ctx: in out Disp; It: in Items;
 					New_Brightness: in Brightness
 					:= Display_Brightness_Perc_100) is
-		use type U8;
+		--use type U8;
 		Old_Vscreen: constant U8 := Ctx.Vscreen;
 	begin
 		Ctx.Vscreen := 1 - Ctx.Vscreen;

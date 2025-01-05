@@ -1,0 +1,220 @@
+\documentclass[paper=a4, landscape, DIV9, 9pt, abstracton, headings=normal,
+						captions=tableheading]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,german,ngerman]{babel}
+\usepackage[german]{keystroke}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{kpfonts}
+%\usepackage{scholax}
+\usepackage{microtype}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,shapes.misc,arrows,matrix,fadings,calc,%
+		automata,positioning,decorations.pathreplacing,%
+		decorations.text,fit}
+\newcommand{\cmd}[1]{{\ttfamily#1}}
+\begin{document}
+\thispagestyle{empty}
+% https://www3.nd.edu/~kogge/courses/cse30151-fa17/Public/other/tikz_tutorial.pdf
+\tikzset{->,>=stealth',node distance=2.25cm,%
+	every state/.style={thick},initial text={ },
+	every node/.style={fill=white,fill opacity=0.7,text opacity=1}}
+\begin{tikzpicture}[remember picture,overlay]
+
+	\node[state,initial] (z0) at (-4,-4.5) {Z0};
+	\node[state,right of=z0] (z1) {Z1};
+	\node[state,right of=z1] (z2) {Z2};
+	\node[state,right of=z2] (z3) {Z3};
+	\node[state,right of=z3] (z4) {Z4};
+	\node[state,right of=z4] (z5) {Z5};
+	\node[state,right of=z5] (z6) {Z6};
+	\node[state,right of=z6] (z7) {Z7};
+	\node[state,right of=z7] (z8) {Z8};
+	\node[state,right of=z8] (z9) {Z9};
+
+	\node[state,dotted,right of=z9]      (z0prime) {Z0};
+	\node[state,dotted,right of=z0prime] (z1prime) {Z1};
+	\node[state,dotted,right of=z1prime] (z2prime) {Z2};
+
+	\node[state,below=2.5cm of z1]       (o10)  {O10};
+	\node[state,right of=o10]            (o11)  {O11};
+	\node[state,below=2.5cm of z3]       (o30)  {O30};
+	\node[state,dotted,below=1cm of o30] (o30w) {W$x+2$};
+	\node[state,right of=o30]            (o31)  {O31};
+	\node[state,dotted,below=1cm of o31] (o31w) {W$x+2$};
+	\node[state,below=2.5cm of z5]       (o50)  {O50};
+	\node[state,dotted,below=1cm of o50] (o50w) {W$x+2$};
+	\node[state,right of=o50]            (o51)  {O51};
+	\node[state,dotted,below=1cm of o51] (o51w) {W$x+2$};
+	\node[state,below=2.5cm of z7]       (o70)  {O70};
+	\node[state,dotted,below=1cm of o70] (o70w) {W$x+2$};
+	\node[state,right of=o70]            (o71)  {O71};
+	\node[state,dotted,below=1cm of o71] (o71w) {W$x+2$};
+	\node[state,below=2.5cm of z9]       (o90)  {O90};
+	\node[state,dotted,below=1cm of o90] (o90w) {W$x+2$};
+	\node[state,right of=o90]            (o91)  {O91};
+	\node[state,dotted,below=1cm of o91] (o91w) {W$x+2$};
+
+	\node[state,above=2.5cm of z2]       (o20)  {O20};
+	\node[state,dotted,above=1cm of o20] (o20w) {W$x+2$};
+	\node[state,right of=o20]            (o21)  {O21};
+	\node[state,dotted,above=1cm of o21] (o21w) {W$x+2$};
+	\node[state,above=2.5cm of z4]       (o40)  {O40};
+	\node[state,dotted,above=1cm of o40] (o40w) {W$x+2$};
+	\node[state,right of=o40]            (o41)  {O41};
+	\node[state,dotted,above=1cm of o41] (o41w) {W$x+2$};
+	\node[state,above=2.5cm of z6]       (o60)  {O60};
+	\node[state,dotted,above=1cm of o60] (o60w) {W$x+2$};
+	\node[state,right of=o60]            (o61)  {O61};
+	\node[state,dotted,above=1cm of o61] (o61w) {W$x+2$};
+	\node[state,above=2.5cm of z8]       (o80)  {O80};
+	\node[state,dotted,above=1cm of o80] (o80w) {W$x+2$};
+	\node[state,right of=o80]            (o81)  {O81};
+	\node[state,dotted,above=1cm of o81] (o81w) {W$x+2$};
+	\node[state,above=2.5cm of z0prime]  (o00)  {O00};
+	\node[state,dotted,above=1cm of o00] (o00w) {W$x+2$};
+	\node[state,right of=o00]            (o01)  {O01};
+	\node[state,dotted,above=1cm of o01] (o01w) {W$x+2$};
+
+	\node[state,below=4cm of o11] (w2) {W2};
+	\node[state,right of=w2]      (w3) {W3};
+	\node[state,right of=w3]      (w4) {W4};
+	\node[state,right of=w4]      (w5) {W5};
+	\node[state,right of=w5]      (w6) {W6};
+	\node[state,right of=w6]      (w7) {W7};
+	\node[state,right of=w7]      (w8) {W8};
+
+	\draw[align=center]
+		(z0) edge[below,near start] node{1,\,X1?\\ a2} (o10)
+		(z0) edge[above]            node{else?}        (z1)
+		(z1) edge[above,near start] node{1,\,X1?\\ a2} (o20)
+		(z1) edge[above]            node{else?}        (z2)
+		(z2) edge[left,near start]  node{1,\,X1?\\ a2} (o30)
+		(z2) edge[above]            node{else?}        (z3)
+		(z3) edge[right,near end]   node{1,\,X1?\\ a2} (o40)
+		(z3) edge[above]            node{else?}        (z4)
+		(z4) edge[left,near start]  node{1,\,X1?\\ a2} (o50)
+		(z4) edge[above]            node{else?}        (z5)
+		(z5) edge[right,near end]   node{1,\,X1?\\ a2} (o60)
+		(z5) edge[above]            node{else?}        (z6)
+		(z6) edge[left,near start]  node{1,\,X1?\\ a2} (o70)
+		(z6) edge[above]            node{else?}        (z7)
+		(z7) edge[right,near end]   node{1,\,X1?\\ a2} (o80)
+		(z7) edge[above]            node{else?}        (z8)
+		(z8) edge[left,near start]  node{1,\,X1?\\ a2} (o90)
+		(z8) edge[above]            node{else?}        (z9)
+		(z9) edge[right,near end]   node{1,\,X1?\\ a2} (o00)
+		(z9) edge[above]            node{else? 3!}     (z0prime)
+
+		% confusing because we don't paint other edges between the
+		% dotted entries either...
+		%(z0prime) edge[dotted] (z1prime)
+		%(z1prime) edge[dotted] (z2prime)
+
+		% Put w before O for draw order reasons only
+		(w2)  edge[above]            node{else?}          (w3)
+		(w3)  edge[above]            node{else?}          (w4)
+		(w4)  edge[above]            node{else?}          (w5)
+		(w5)  edge[above]            node{else?}          (w6)
+		(w6)  edge[above]            node{else?}          (w7)
+		(w7)  edge[above]            node{else?}          (w8)
+		(w8)  edge[left,near start]  node{else?}          (z7)
+
+		(o10) edge[above]            node{1?\\ a2=OK}     (o11)
+		(o10) edge[bend right,left]  node{0,\,X0?\\d=0}   (w2)
+		(o10) edge[above,near start] node{0,\,X0?\\d=1}   (w3)
+		(o10) edge[left]             node{else?}          (z2)
+		(o11) edge[left,near end]    node{0,\,X0?\\d=0}   (w2)
+		(o11) edge[right,near end]   node{0,\,X0?\\d=1}   (w3)
+		(o11) edge[right,near end]   node{else?}          (z3)
+
+		(o20) edge[above]            node{1?\\a2=OK}      (o21)
+		(o20) edge[left]             node{0,\,X0?\\d=$x$} (o20w)
+		(o20) edge[left]             node{else?}          (z3)
+		(o21) edge[right]            node{0,\,X0?\\d=$x$} (o21w)
+		(o21) edge[left,near start]  node{else?}          (z4)
+
+		(o30) edge[above]            node{1?\\a2=OK}      (o31)
+		(o30) edge[right]            node{0,\,X0?\\d=$x$} (o30w)
+		(o30) edge[left]             node{else?}          (z4)
+		(o31) edge[right]            node{0,\,X0?\\d=$x$} (o31w)
+		(o31) edge[right,near end]   node{else?}          (z5)
+
+		(o40) edge[above]            node{1?\\a2=OK}      (o41)
+		(o40) edge[left]             node{0,\,X0?\\d=$x$} (o40w)
+		(o40) edge[left]             node{else?}          (z5)
+		(o41) edge[right]            node{0,\,X0?\\d=$x$} (o41w)
+		(o41) edge[left,near start]  node{else?}          (z6)
+
+		(o50) edge[above]            node{1?\\a2=OK}      (o51)
+		(o50) edge[right]            node{0,\,X0?\\d=$x$} (o50w)
+		(o50) edge[left]             node{else?}          (z6)
+		(o51) edge[right]            node{0,\,X0?\\d=$x$} (o51w)
+		(o51) edge[right,near end]   node{else?}          (z7)
+
+		(o60) edge[above]            node{1?\\a2=OK}      (o61)
+		(o60) edge[left]             node{0,\,X0?\\d=$x$} (o60w)
+		(o60) edge[left]             node{else?}          (z7)
+		(o61) edge[right]            node{0,\,X0?\\d=$x$} (o61w)
+		(o61) edge[left,near start]  node{else?}          (z8)
+
+		(o70) edge[above]            node{1?\\a2=OK}      (o71)
+		(o70) edge[right]            node{0,\,X0?\\d=$x$} (o70w)
+		(o70) edge[left]             node{else?}          (z8)
+		(o71) edge[right]            node{0,\,X0?\\d=$x$} (o71w)
+		(o71) edge[right,near end]   node{else?}          (z9)
+
+		(o80) edge[above]            node{1?\\a2=OK}      (o81)
+		(o80) edge[left]             node{0,\,X0?\\d=$x$} (o80w)
+		(o80) edge[left]             node{else?}          (z9)
+		(o81) edge[right]            node{0,\,X0?\\d=$x$} (o81w)
+		(o81) edge[left,near start]  node{else? 3!}       (z0prime)
+
+		(o90) edge[above]            node{1?\\a2=OK}      (o91)
+		(o90) edge[right]            node{0,\,X0?\\d=$x$} (o90w)
+		(o90) edge[left]             node{else? 3!}       (z0prime)
+		(o91) edge[right]            node{0,\,X0?\\d=$x$} (o91w)
+		(o91) edge[right,near end]   node{else? 3!}       (z1prime)
+
+		(o00) edge[above]            node{1?\\a2=OK}      (o01)
+		(o00) edge[left]             node{0,\,X0?\\d=$x$} (o00w)
+		(o00) edge[left]             node{else? 3!}       (z1prime)
+		(o01) edge[right]            node{0,\,X0?\\d=$x$} (o01w)
+		(o01) edge[left,near start]  node{else? 3!}       (z2prime)
+		;
+
+	\path (w8.center) -- +(6,-4) node[draw] (lblplankopf)
+		{\begin{minipage}{6cm}\begin{center}
+		Ma\_Sys.ma DCF77 VFD Raspi Clock\\
+		Bitlayer Decoding State Chart\\
+		2025-01-03 \qquad \cmd{info@masysma.net}
+		\end{center}\end{minipage}};
+
+	\node[left=13cm of lblplankopf.south,anchor=south]
+		{\begin{minipage}{12cm}\begin{tabular}{llll}
+		\textbf{Type} & \textbf{Value} & \textbf{Ada} &
+						\textbf{Description} \\
+		Input  & 1, X1 & \cmd{I\_1}, \cmd{I\_X1} &
+				1 is a sequence of only 1s,
+				X1 allows any prefix\\
+		       & 0, X0 & \cmd{I\_0}, \cmd{I\_X0} &
+			 	0 is a sequence of only 0s, X0 allows any
+				prefix\\
+		       & else  & \cmd{others} & go to this state iff none
+				of the conditions match\\
+		Action & a2    & \cmd{A\_Append} & append
+				(no output, =\dots{} used to match outcome)\\
+		       & d     & \cmd{A\_Decode} & decode
+				(outputs on success, =\dots{} used to
+				match outcome)\\
+		       & else  & \cmd{A\_Ignore} & no operation \\
+		Output & 3     & \cmd{No\_Signal} & no signal\\
+		       & d     & \cmd{Bit\_0}, \cmd{Bit\_1} &
+				generates decoded output on success\\
+		\multicolumn{4}{l}{dotted cirlces represent states which are
+				already depicted elsewhere in the chart}
+		\end{tabular}\end{minipage}};
+\end{tikzpicture}
+\end{document}
