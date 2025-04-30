@@ -261,7 +261,7 @@ eine logische 0 bzw. 1 zu codieren. Als Endmarkierung (60. Puls) bleibt der
 Puls aus. Intern werden im Programm daher die Ablesungen (Reading) `Bit_0` (0),
 `Bit_1` (1) und `No_Signal` (3) unterschieden.
 
-![Darstellung des zentralen Bitlayer-Zustandsautomaten](dcf77_vfd_raspi_clock_att/blstatechart.svg)
+![Darstellung des zentralen Bitlayer-Zustandsautomaten](dcf77_vfd_raspi_clock_att/blstatechart)
 
 Die unterste Abstraktionsebene stellt der _Bitlayer_ dar: Er ist dafür
 zuständig, die Pulse zu erkennen und daraus die Ablesung zu berechnen. Von der
