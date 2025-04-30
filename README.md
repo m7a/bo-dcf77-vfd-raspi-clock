@@ -783,6 +783,7 @@ Version   Datum                CTR  Beschreibung
                                     Betriebsdauer behoben (`DCF77_Bitlayer`)
 01.03.00  2025-01-05 14:48:49  50   Komplett überarbeiteter Bitlayer
                                     Options-Bildschirme entfernt
+01.04.00  2025-04-30 22:02:14  51   Zusätzliche Debuginformationen für Wecker
 
 Hilfreiche Links
 ================

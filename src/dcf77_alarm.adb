@@ -7,13 +7,16 @@ package body DCF77_Alarm is
 
 	procedure Init(Ctx: in out Alarm; LLI: in DCF77_Low_Level.LLP) is
 	begin
-		Ctx.LL             := LLI;
-		Ctx.S              := AL_Start;
-		Ctx.DT_Now         := (others => 0);
-		Ctx.DT_Stop_Buzz   := (others => 0);
-		Ctx.T_AL           := (others => 0);
-		Ctx.Blink_CTR      := 0;
-		Ctx.AL_Has_Changed := False;
+		Ctx.LL                := LLI;
+		Ctx.S                 := AL_Start;
+		Ctx.DT_Now            := (others => 0);
+		Ctx.DT_Stop_Buzz      := (others => 0);
+		Ctx.T_AL              := (others => 0);
+		Ctx.Blink_CTR         := 0;
+		Ctx.AL_Has_Changed    := False;
+		Ctx.Trace_Button_Down := (others => 0);
+		Ctx.Trace_Button_Up   := (others => 0);
+		Ctx.Trace_Alarm_Fired := (others => 0);
 	end Init;
 
 	procedure Process(Ctx: in out Alarm; DT_Now_Prime: in TM) is
@@ -27,15 +30,18 @@ package body DCF77_Alarm is
 			-- known and only the bool info that they wanted to be
 			-- notified remains as encoded by the switch setting...
 			if Is_EN then
+				Ctx.Trace_Button_Down := DT_Now_Prime;
 				Ctx.Start_Buzzing(DT_Now_Prime);
 			else
-				Ctx.S := AL_Disabled;
+				Ctx.Trace_Button_Up := DT_Now_Prime;
+				Ctx.S               := AL_Disabled;
 			end if;
 		when AL_Buzz =>
 			if not Is_EN then
 				Ctx.LL.Set_Buzzer_Enabled(False);
 				Ctx.LL.Set_Alarm_LED_Enabled(False);
-				Ctx.S := AL_Disabled;
+				Ctx.Trace_Button_Up := DT_Now_Prime;
+				Ctx.S               := AL_Disabled;
 			elsif DT_Now_Prime >= Ctx.DT_Stop_Buzz then
 				Ctx.LL.Set_Buzzer_Enabled(False);
 				Ctx.S := AL_Timeout;
@@ -52,8 +58,9 @@ package body DCF77_Alarm is
 		when AL_Disabled =>
 			if Is_EN then
 				Ctx.LL.Set_Alarm_LED_Enabled(True);
-				Ctx.DT_Now := DT_Now_Prime;
-				Ctx.S      := AL_Check;
+				Ctx.DT_Now            := DT_Now_Prime;
+				Ctx.Trace_Button_Down := DT_Now_Prime;
+				Ctx.S                 := AL_Check;
 			end if;
 		when AL_Check =>
 			if Is_EN then
@@ -66,7 +73,8 @@ package body DCF77_Alarm is
 				end if;
 			else
 				Ctx.LL.Set_Alarm_LED_Enabled(False);
-				Ctx.S := AL_Disabled;
+				Ctx.Trace_Button_Up := DT_Now_Prime;
+				Ctx.S               := AL_Disabled;
 			end if;
 		end case;
 		-- reset even if was not relevant...
@@ -81,6 +89,7 @@ package body DCF77_Alarm is
 		-- happens in the meantime!
 		Ctx.DT_Stop_Buzz := DT_Now_Prime;
 		Advance_TM_By_Sec(Ctx.DT_Stop_Buzz, Buzz_Timeout_Seconds);
+		Ctx.Trace_Alarm_Fired := DT_Now_Prime;
 		Ctx.S := AL_Buzz;
 	end Start_Buzzing;
 
@@ -190,5 +199,12 @@ package body DCF77_Alarm is
 		Ctx.T_AL           := T;
 		Ctx.AL_Has_Changed := True;
 	end Set_AL_Time;
+
+	function Get_Trace_Button_Down(Ctx: in Alarm) return TM
+						is (Ctx.Trace_Button_Down);
+	function Get_Trace_Button_Up(Ctx: in Alarm) return TM
+						is (Ctx.Trace_Button_Up);
+	function Get_Trace_Alarm_Fired(Ctx: in Alarm) return TM
+						is (Ctx.Trace_Alarm_Fired);
 
 end DCF77_Alarm;

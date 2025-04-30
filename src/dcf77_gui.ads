@@ -56,7 +56,7 @@ private
 			Select_DT_YH, Select_DT_Y, Select_DT_M, Select_DT_D,
 		Select_Info,
 			Select_I_QOS, Select_I_Bits, Select_I_Bits_Oszi,
-			Select_I_Last_1, Select_I_Last_2,
+			Select_I_Last_1, Select_I_Last_2, Select_I_Alarm,
 		Select_Version,
 			Select_Ver_2, Select_Ver_3
 	);
@@ -119,5 +119,6 @@ private
 	procedure Add_Info_Oszi(G: in out GUI);
 	procedure Add_Last_1(G: in out GUI);
 	procedure Add_Last_2(G: in out GUI);
+	procedure Add_Info_Alarm(G: in out GUI);
 
 end DCF77_GUI;

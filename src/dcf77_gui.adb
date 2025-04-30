@@ -308,9 +308,9 @@ package body DCF77_GUI is
 			elsif Right then
 				G.A := State'Succ(G.A);
 			end if;
-		when Select_I_QOS .. Select_I_Last_1 =>
+		when Select_I_QOS .. Select_I_Last_2 =>
 			Left_Is_Back_Right_Is_Forward;
-		when Select_I_Last_2 =>
+		when Select_I_Alarm =>
 			Left_Is_Back_Right_Is_Home;
 		-- version --
 		when Select_Version =>
@@ -431,6 +431,10 @@ package body DCF77_GUI is
 		when Select_I_Last_2 =>
 			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Last_2;
+			G.Add_Menu(Menu_Home);
+		when Select_I_Alarm =>
+			G.Add_Time_Small(0, 0, Underline_None);
+			G.Add_Info_Alarm;
 			G.Add_Menu(Menu_Home);
 		-- version --
 		when Select_Version =>
@@ -765,5 +769,37 @@ package body DCF77_GUI is
 		end if;
 		G.Add_Info("Last2/2", L3, L4);
 	end Add_Last_2;
+
+	-- DDHHiissDDHHiiss
+	-- FYYYYMM-DDHHiiss
+	procedure Add_Info_Alarm(G: in out GUI) is
+		Trace_Button_Down: constant TM :=
+						G.S.Alarm.Get_Trace_Button_Down;
+		Trace_Button_Up:   constant TM := G.S.Alarm.Get_Trace_Button_Up;
+		Trace_Alarm_Fired: constant TM :=
+						G.S.Alarm.Get_Trace_Alarm_Fired;
+		L3: String(1 .. 16);
+		L4: String(1 .. 16);
+	begin
+		L3(1  ..  2) := Num_To_Str_L2(Trace_Button_Down.D);
+		L3(3  ..  4) := Num_To_Str_L2(Trace_Button_Down.H);
+		L3(5  ..  6) := Num_To_Str_L2(Trace_Button_Down.I);
+		L3(7  ..  8) := Num_To_Str_L2(Trace_Button_Down.S);
+		L3(9  .. 10) := Num_To_Str_L2(Trace_Button_Up.D);
+		L3(11 .. 12) := Num_To_Str_L2(Trace_Button_Up.H);
+		L3(13 .. 14) := Num_To_Str_L2(Trace_Button_Up.I);
+		L3(15 .. 16) := Num_To_Str_L2(Trace_Button_Up.S);
+
+		L4(1)        := 'F';
+		L4(2  ..  5) := Num_To_Str_L4(Trace_Alarm_Fired.Y);
+		L4(6  ..  7) := Num_To_Str_L2(Trace_Alarm_Fired.M);
+		L4(8)        := '-';
+		L4(9  .. 10) := Num_To_Str_L2(Trace_Alarm_Fired.D);
+		L4(11 .. 12) := Num_To_Str_L2(Trace_Alarm_Fired.H);
+		L4(13 .. 14) := Num_To_Str_L2(Trace_Alarm_Fired.I);
+		L4(15 .. 16) := Num_To_Str_L2(Trace_Alarm_Fired.s);
+
+		G.Add_Info("Al[v^F]", L3, L4);
+	end Add_Info_Alarm;
 
 end DCF77_GUI;

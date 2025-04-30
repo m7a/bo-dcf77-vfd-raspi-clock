@@ -21,6 +21,14 @@ package DCF77_Alarm is
 	function Is_Alarm_Enabled(Ctx: in Alarm) return Boolean;
 	procedure Set_AL_Time(Ctx: in out Alarm; T: in Time_T);
 
+	-- GUI Debug API
+	function Get_Trace_Button_Down(Ctx: in Alarm)
+						return DCF77_TM_Layer_Shared.TM;
+	function Get_Trace_Button_Up(Ctx: in Alarm)
+						return DCF77_TM_Layer_Shared.TM;
+	function Get_Trace_Alarm_Fired(Ctx: in Alarm)
+						return DCF77_TM_Layer_Shared.TM;
+
 private
 
 	-- Timeout buzzing after 1.5h as to protect neighbors from alarm clocks
@@ -50,7 +58,7 @@ private
 		AL_Has_Changed: Boolean;
 
 		-- Primary state of the alarm automaton
-		S:  State;
+		S: State;
 
 		-- Store Date and Time of when the alarm checking started
 		DT_Now: DCF77_TM_Layer_Shared.TM;
@@ -61,6 +69,12 @@ private
 
 		-- Maintain state for blinkin in AL_Buzz and AL_Timeout states
 		Blink_CTR: Blink;
+
+		-- Track important transitions to debug “no alarm tripped”
+		-- situations
+		Trace_Button_Down: DCF77_TM_Layer_Shared.TM;
+		Trace_Button_Up:   DCF77_TM_Layer_Shared.TM;
+		Trace_Alarm_Fired: DCF77_TM_Layer_Shared.TM;
 	end record;
 
 	procedure Start_Buzzing(Ctx: in out Alarm;
