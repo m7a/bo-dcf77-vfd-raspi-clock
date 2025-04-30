@@ -409,7 +409,7 @@ package body DCF77_GUI is
 		when Select_Info =>
 			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Info_Ctr;
-			G.Add_Menu(Menu_Home);
+			G.Add_Menu(Menu_Next);
 		when Select_I_QOS =>
 			G.Add_Time_Small(0, 0, Underline_None);
 			G.Add_Info("QOSInfo",
